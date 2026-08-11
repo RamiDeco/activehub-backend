@@ -1,0 +1,450 @@
+{
+  "info": {
+    "name": "ActiveHub API",
+    "description": "Auth + Catálogo + Validación de instructores. Los tokens se guardan solos en variables de colección después de cada login/registro — no hace falta copiar/pegar nada.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "adminEmail", "value": "admin@activehub.com" },
+    { "key": "adminPassword", "value": "AdminPass1" },
+    { "key": "alumnoToken", "value": "" },
+    { "key": "instructorToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "instructorId", "value": "" },
+    { "key": "categoriaId", "value": "" },
+    { "key": "tipoActividadId", "value": "" },
+    { "key": "actividadId", "value": "" },
+    { "key": "claseId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Registrar alumno",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/registro/alumno",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Martina\",\n  \"apellido\": \"Gomez\",\n  \"email\": \"martina@email.com\",\n  \"telefono\": \"2611234567\",\n  \"password\": \"Password1\",\n  \"fechaNacimiento\": \"2000-05-10\",\n  \"intereses\": [\"Running\", \"Yoga\"],\n  \"aceptaTerminos\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('alumnoToken', pm.response.json().token);",
+                  "    console.log('alumnoToken guardado');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar instructor",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/registro/instructor",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Carla\",\n  \"apellido\": \"Nunez\",\n  \"email\": \"carla.instructor@email.com\",\n  \"telefono\": \"2612223344\",\n  \"password\": \"Password1\",\n  \"especialidad\": \"Yoga\",\n  \"aniosExperiencia\": 5,\n  \"descripcion\": \"Instructora de yoga\",\n  \"aceptaTerminos\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('instructorToken', body.token);",
+                  "    pm.collectionVariables.set('instructorId', body.usuario.id);",
+                  "    console.log('instructorToken e instructorId guardados');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login alumno",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"martina@email.com\",\n  \"password\": \"Password1\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('alumnoToken', pm.response.json().token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login instructor",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"carla.instructor@email.com\",\n  \"password\": \"Password1\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('instructorToken', pm.response.json().token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('adminToken', pm.response.json().token);",
+                  "    console.log('adminToken guardado');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me (alumno)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{alumnoToken}}" }],
+            "url": "{{baseUrl}}/api/auth/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Catálogo (público)",
+      "item": [
+        {
+          "name": "Listar categorías",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/categorias" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const bienestar = pm.response.json().find(c => c.nombre === 'Bienestar');",
+                  "    if (bienestar) pm.collectionVariables.set('categoriaId', bienestar.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar tipos de actividad",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/tipos-actividad" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const tipos = pm.response.json();",
+                  "    if (tipos.length) pm.collectionVariables.set('tipoActividadId', tipos[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar tipos por categoría",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/tipos-actividad?categoriaId={{categoriaId}}" }
+        },
+        {
+          "name": "Listar actividades",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/actividades" }
+        },
+        {
+          "name": "Listar actividades (con filtros)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/actividades?categoriaId={{categoriaId}}&nivelIntensidad=Física baja&soloConCupos=true&sort=precio_asc"
+          }
+        },
+        {
+          "name": "Detalle de actividad",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/actividades/{{actividadId}}" }
+        }
+      ]
+    },
+    {
+      "name": "3. Admin - Tipos de actividad",
+      "item": [
+        {
+          "name": "Crear tipo de actividad",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/admin/tipos-actividad",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Yoga\",\n  \"categoriaId\": \"{{categoriaId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('tipoActividadId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar tipo de actividad",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/admin/tipos-actividad/{{tipoActividadId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Yoga y Meditación\",\n  \"categoriaId\": \"{{categoriaId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar tipo de actividad",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/admin/tipos-actividad/{{tipoActividadId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Instructor - Actividades y clases",
+      "item": [
+        {
+          "name": "Crear actividad",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{instructorToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/instructor/actividades",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Yoga Integral\",\n  \"descripcion\": \"Clases de yoga para todos los niveles\",\n  \"tipoActividadId\": \"{{tipoActividadId}}\",\n  \"nivelIntensidad\": \"Física baja\",\n  \"precio\": 3600,\n  \"ubicacion\": \"Godoy Cruz\",\n  \"photoTint\": \"gradient1\",\n  \"cuposMax\": 16\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('actividadId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar actividad",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{instructorToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/instructor/actividades/{{actividadId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Yoga Integral (actualizado)\",\n  \"descripcion\": \"Clases de yoga para todos los niveles\",\n  \"tipoActividadId\": \"{{tipoActividadId}}\",\n  \"nivelIntensidad\": \"Física media\",\n  \"precio\": 4000,\n  \"ubicacion\": \"Godoy Cruz\",\n  \"photoTint\": \"gradient1\",\n  \"cuposMax\": 20\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar actividad",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{instructorToken}}" }],
+            "url": "{{baseUrl}}/api/instructor/actividades/{{actividadId}}"
+          }
+        },
+        {
+          "name": "Crear clase",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{instructorToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/instructor/actividades/{{actividadId}}/clases",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fechaHora\": \"2026-09-01T10:00:00Z\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('claseId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar clase",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{instructorToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/instructor/clases/{{claseId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fechaHora\": \"2026-09-02T11:00:00Z\",\n  \"cuposMax\": 18\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar clase",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{instructorToken}}" }],
+            "url": "{{baseUrl}}/api/instructor/clases/{{claseId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Admin - Validación de instructores",
+      "item": [
+        {
+          "name": "Listar instructores",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/admin/instructores"
+          }
+        },
+        {
+          "name": "Listar instructores PENDIENTE",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/admin/instructores?estadoVerificacion=PENDIENTE"
+          }
+        },
+        {
+          "name": "Obtener instructor",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/admin/instructores/{{instructorId}}"
+          }
+        },
+        {
+          "name": "Aprobar instructor",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/admin/instructores/{{instructorId}}/aprobar"
+          }
+        },
+        {
+          "name": "Rechazar instructor",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/admin/instructores/{{instructorId}}/rechazar",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"La documentación adjunta no es legible\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Admin - Crear otro admin",
+      "item": [
+        {
+          "name": "Crear admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/admin/usuarios/admin",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Roberto\",\n  \"apellido\": \"Nuevo\",\n  \"email\": \"roberto.admin@activehub.com\",\n  \"password\": \"AdminPass1\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
