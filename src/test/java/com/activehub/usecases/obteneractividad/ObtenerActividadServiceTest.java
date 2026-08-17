@@ -13,6 +13,8 @@ import com.activehub.domain.actividad.ClaseRepository;
 import com.activehub.domain.actividad.EstadoClase;
 import com.activehub.domain.actividad.NivelIntensidad;
 import com.activehub.domain.actividad.TipoActividad;
+import com.activehub.domain.inscripcion.EstadoInscripcion;
+import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.error.NoEncontradoException;
 import java.math.BigDecimal;
@@ -35,6 +37,8 @@ class ObtenerActividadServiceTest {
     private ActividadRepository actividadRepository;
     @Mock
     private ClaseRepository claseRepository;
+    @Mock
+    private InscripcionRepository inscripcionRepository;
 
     private ObtenerActividadService service;
     private UUID actividadId;
@@ -42,7 +46,7 @@ class ObtenerActividadServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ObtenerActividadService(actividadRepository, claseRepository);
+        service = new ObtenerActividadService(actividadRepository, claseRepository, inscripcionRepository);
 
         Categoria categoria = new Categoria();
         categoria.setNombre("Bienestar");
@@ -86,6 +90,8 @@ class ObtenerActividadServiceTest {
 
         when(claseRepository.findByActividadIdAndEstadoNotInOrderByFechaHoraAsc(any(), any()))
                 .thenReturn(List.of(clase1));
+        when(inscripcionRepository.countByClaseIdAndEstado(clase1.getId(), EstadoInscripcion.PRE_INSCRIPCION))
+                .thenReturn(3L);
 
         ObtenerActividadResponse response = service.obtener(actividadId);
 
@@ -95,6 +101,7 @@ class ObtenerActividadServiceTest {
         assertThat(response.instructor().nombre()).isEqualTo("Carla");
         assertThat(response.clases()).hasSize(1);
         assertThat(response.clases().get(0).cuposOcupados()).isEqualTo(2);
+        assertThat(response.clases().get(0).cantidadPreInscripcion()).isEqualTo(3);
     }
 
     @Test

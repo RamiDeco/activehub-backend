@@ -1,5 +1,6 @@
 package com.activehub.domain.actividad;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -14,6 +15,8 @@ public interface ClaseRepository extends JpaRepository<Clase, UUID> {
 
     List<Clase> findByActividadIdInAndEstadoNotInOrderByFechaHoraAsc(
             Collection<UUID> actividadIds, Collection<EstadoClase> estados);
+
+    List<Clase> findByEstadoInAndFechaHoraBefore(Collection<EstadoClase> estados, Instant limite);
 
     /**
      * UPDATE atomico condicional: evita la doble ocupacion del ultimo cupo

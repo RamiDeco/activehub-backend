@@ -29,6 +29,6 @@ public record ObtenerActividadResponse(
     public record Instructor(UUID id, String nombre, String apellido) {
     }
 
-    public record Clase(UUID id, Instant fechaHora, String estado, int cuposMax, int cuposOcupados) {
+    public record Clase(UUID id, Instant fechaHora, String estado, int cuposMax, int cuposOcupados, int cantidadPreInscripcion) {
     }
 }

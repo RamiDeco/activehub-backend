@@ -43,11 +43,13 @@ public class ListarRosterClaseService {
                         i.getAlumno().getNombre(),
                         i.getAlumno().getApellido(),
                         i.getAlumno().getTelefono(),
-                        i.getEstado().getEtiqueta()))
+                        i.getEstado().getEtiqueta(),
+                        i.getPresente()))
                 .toList();
 
         int cantidadInscripto = (int) inscripciones.stream().filter(i -> i.getEstado() == EstadoInscripcion.INSCRIPTO).count();
         int cantidadPagoPendiente = (int) inscripciones.stream().filter(i -> i.getEstado() == EstadoInscripcion.PAGO_PENDIENTE).count();
+        int cantidadPreInscripcion = (int) inscripcionRepository.countByClaseIdAndEstado(claseId, EstadoInscripcion.PRE_INSCRIPCION);
 
         return new ListarRosterClaseResponse(
                 clase.getId(),
@@ -56,6 +58,7 @@ public class ListarRosterClaseService {
                 clase.getCuposMax() - clase.getCuposOcupados(),
                 cantidadInscripto,
                 cantidadPagoPendiente,
+                cantidadPreInscripcion,
                 alumnos
         );
     }

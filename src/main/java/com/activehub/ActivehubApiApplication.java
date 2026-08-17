@@ -12,6 +12,7 @@ public class ActivehubApiApplication {
 		// every IANA zone (e.g. America/Buenos_Aires), which fails the handshake.
 		System.setProperty("user.timezone", "UTC");
 		SpringApplication.run(ActivehubApiApplication.class, args);
+		System.out.println("...................Estoy andando...........................");
 	}
 
 }

@@ -14,6 +14,12 @@ public interface InscripcionRepository extends JpaRepository<Inscripcion, UUID> 
 
     List<Inscripcion> findByClaseIdAndEstadoInOrderByCreatedAtAsc(UUID claseId, Collection<EstadoInscripcion> estados);
 
+    List<Inscripcion> findByClaseIdAndEstadoNot(UUID claseId, EstadoInscripcion estado);
+
+    long countByClaseIdAndEstado(UUID claseId, EstadoInscripcion estado);
+
+    boolean existsByClaseIdAndAlumnoIdAndEstado(UUID claseId, UUID alumnoId, EstadoInscripcion estado);
+
     @Query("SELECT i FROM Inscripcion i "
             + "JOIN FETCH i.clase c "
             + "JOIN FETCH c.actividad a "

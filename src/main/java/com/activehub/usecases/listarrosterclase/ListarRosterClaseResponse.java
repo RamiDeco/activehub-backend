@@ -10,8 +10,11 @@ public record ListarRosterClaseResponse(
         int cuposLibres,
         int cantidadInscripto,
         int cantidadPagoPendiente,
+        int cantidadPreInscripcion,
         List<Alumno> alumnos
 ) {
-    public record Alumno(UUID inscripcionId, UUID alumnoId, String nombre, String apellido, String telefono, String estado) {
+    public record Alumno(
+            UUID inscripcionId, UUID alumnoId, String nombre, String apellido, String telefono, String estado, Boolean presente
+    ) {
     }
 }

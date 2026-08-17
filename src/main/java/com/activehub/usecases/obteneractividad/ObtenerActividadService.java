@@ -4,6 +4,8 @@ import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.domain.actividad.ClaseRepository;
 import com.activehub.domain.actividad.EstadoClase;
+import com.activehub.domain.inscripcion.EstadoInscripcion;
+import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.shared.error.NoEncontradoException;
 import java.util.List;
 import java.util.UUID;
@@ -17,10 +19,14 @@ public class ObtenerActividadService {
 
     private final ActividadRepository actividadRepository;
     private final ClaseRepository claseRepository;
+    private final InscripcionRepository inscripcionRepository;
 
-    public ObtenerActividadService(ActividadRepository actividadRepository, ClaseRepository claseRepository) {
+    public ObtenerActividadService(
+            ActividadRepository actividadRepository, ClaseRepository claseRepository, InscripcionRepository inscripcionRepository
+    ) {
         this.actividadRepository = actividadRepository;
         this.claseRepository = claseRepository;
+        this.inscripcionRepository = inscripcionRepository;
     }
 
     @Transactional(readOnly = true)
@@ -34,7 +40,8 @@ public class ObtenerActividadService {
 
         var clases = claseRepository.findByActividadIdAndEstadoNotInOrderByFechaHoraAsc(id, ESTADOS_EXCLUIDOS).stream()
                 .map(c -> new ObtenerActividadResponse.Clase(
-                        c.getId(), c.getFechaHora(), c.getEstado().name(), c.getCuposMax(), c.getCuposOcupados()))
+                        c.getId(), c.getFechaHora(), c.getEstado().name(), c.getCuposMax(), c.getCuposOcupados(),
+                        (int) inscripcionRepository.countByClaseIdAndEstado(c.getId(), EstadoInscripcion.PRE_INSCRIPCION)))
                 .toList();
 
         return new ObtenerActividadResponse(
