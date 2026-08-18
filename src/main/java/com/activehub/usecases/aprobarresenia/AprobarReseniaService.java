@@ -1,5 +1,6 @@
 package com.activehub.usecases.aprobarresenia;
 
+import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.domain.resenia.Resenia;
 import com.activehub.domain.resenia.ReseniaRepository;
 import com.activehub.shared.audit.AuditAccion;
@@ -13,10 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class AprobarReseniaService {
 
     private final ReseniaRepository reseniaRepository;
+    private final ActividadRepository actividadRepository;
     private final AuditService auditService;
 
-    public AprobarReseniaService(ReseniaRepository reseniaRepository, AuditService auditService) {
+    public AprobarReseniaService(
+            ReseniaRepository reseniaRepository, ActividadRepository actividadRepository, AuditService auditService
+    ) {
         this.reseniaRepository = reseniaRepository;
+        this.actividadRepository = actividadRepository;
         this.auditService = auditService;
     }
 
@@ -27,6 +32,7 @@ public class AprobarReseniaService {
 
         resenia.setEnModeracion(false);
         reseniaRepository.save(resenia);
+        actividadRepository.recalcularRating(resenia.getClase().getActividad().getId());
 
         auditService.registrar(actorId, AuditAccion.RESENIA_APROBADA, "Resenia", id, null);
 

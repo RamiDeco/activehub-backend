@@ -1,5 +1,6 @@
 package com.activehub.usecases.rechazarresenia;
 
+import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.domain.resenia.Resenia;
 import com.activehub.domain.resenia.ReseniaRepository;
 import com.activehub.shared.audit.AuditAccion;
@@ -13,10 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class RechazarReseniaService {
 
     private final ReseniaRepository reseniaRepository;
+    private final ActividadRepository actividadRepository;
     private final AuditService auditService;
 
-    public RechazarReseniaService(ReseniaRepository reseniaRepository, AuditService auditService) {
+    public RechazarReseniaService(
+            ReseniaRepository reseniaRepository, ActividadRepository actividadRepository, AuditService auditService
+    ) {
         this.reseniaRepository = reseniaRepository;
+        this.actividadRepository = actividadRepository;
         this.auditService = auditService;
     }
 
@@ -24,9 +29,11 @@ public class RechazarReseniaService {
     public RechazarReseniaResponse rechazar(UUID id, UUID actorId) {
         Resenia resenia = reseniaRepository.findById(id)
                 .orElseThrow(() -> new NoEncontradoException("Reseña no encontrada."));
+        UUID actividadId = resenia.getClase().getActividad().getId();
 
         resenia.marcarBorrado();
         reseniaRepository.save(resenia);
+        actividadRepository.recalcularRating(actividadId);
 
         auditService.registrar(actorId, AuditAccion.RESENIA_RECHAZADA, "Resenia", id, null);
 

@@ -2,10 +2,22 @@ package com.activehub.usecases.eliminaractividad;
 
 import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.ActividadRepository;
+import com.activehub.domain.actividad.Clase;
+import com.activehub.domain.actividad.ClaseRepository;
+import com.activehub.domain.actividad.EstadoClase;
+import com.activehub.domain.inscripcion.EstadoInscripcion;
+import com.activehub.domain.inscripcion.EstadoPago;
+import com.activehub.domain.inscripcion.Inscripcion;
+import com.activehub.domain.inscripcion.InscripcionRepository;
+import com.activehub.domain.inscripcion.Pago;
+import com.activehub.domain.inscripcion.PagoRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
+import com.activehub.shared.payments.PaymentGateway;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,25 +26,61 @@ import org.springframework.transaction.annotation.Transactional;
 public class EliminarActividadService {
 
     private final ActividadRepository actividadRepository;
+    private final ClaseRepository claseRepository;
+    private final InscripcionRepository inscripcionRepository;
+    private final PagoRepository pagoRepository;
+    private final PaymentGateway paymentGateway;
     private final AuditService auditService;
 
-    public EliminarActividadService(ActividadRepository actividadRepository, AuditService auditService) {
+    public EliminarActividadService(
+            ActividadRepository actividadRepository,
+            ClaseRepository claseRepository,
+            InscripcionRepository inscripcionRepository,
+            PagoRepository pagoRepository,
+            PaymentGateway paymentGateway,
+            AuditService auditService
+    ) {
         this.actividadRepository = actividadRepository;
+        this.claseRepository = claseRepository;
+        this.inscripcionRepository = inscripcionRepository;
+        this.pagoRepository = pagoRepository;
+        this.paymentGateway = paymentGateway;
         this.auditService = auditService;
     }
 
     @Transactional
-    public void eliminar(UUID id, UUID instructorId) {
+    public void eliminar(UUID id, UUID actorId, boolean esAdmin) {
         Actividad actividad = actividadRepository.findById(id)
                 .orElseThrow(() -> new NoEncontradoException("Actividad no encontrada."));
 
-        if (!actividad.getInstructor().getId().equals(instructorId)) {
+        if (!esAdmin && !actividad.getInstructor().getId().equals(actorId)) {
             throw new SinPermisoException("No podés eliminar una actividad que no te pertenece.");
+        }
+
+        List<Clase> clasesVigentes = claseRepository.findByActividadIdAndEstadoNotInOrderByFechaHoraAsc(
+                id, EnumSet.of(EstadoClase.Cancelada, EstadoClase.Finalizada));
+
+        for (Clase clase : clasesVigentes) {
+            for (Inscripcion inscripcion : inscripcionRepository.findByClaseIdAndEstadoNot(clase.getId(), EstadoInscripcion.CANCELADA)) {
+                Pago pago = inscripcion.getPago();
+                if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
+                    paymentGateway.cancelarPago(pago.getReferenciaExterna());
+                    pago.setEstado(EstadoPago.Cancelado);
+                    pagoRepository.save(pago);
+                }
+                inscripcion.setEstado(EstadoInscripcion.CANCELADA);
+                inscripcionRepository.save(inscripcion);
+            }
+
+            clase.setEstado(EstadoClase.Cancelada);
+            claseRepository.save(clase);
+
+            auditService.registrar(actorId, AuditAccion.CLASE_CANCELADA, "Clase", clase.getId(), null);
         }
 
         actividad.marcarBorrado();
         actividadRepository.save(actividad);
 
-        auditService.registrar(instructorId, AuditAccion.ACTIVIDAD_ELIMINADA, "Actividad", id, null);
+        auditService.registrar(actorId, AuditAccion.ACTIVIDAD_ELIMINADA, "Actividad", id, null);
     }
 }

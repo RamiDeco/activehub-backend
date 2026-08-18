@@ -28,4 +28,12 @@ public interface InscripcionRepository extends JpaRepository<Inscripcion, UUID> 
             + "AND (:estado IS NULL OR i.estado = :estado) "
             + "ORDER BY i.createdAt DESC")
     List<Inscripcion> findByAlumnoIdConDetalle(@Param("alumnoId") UUID alumnoId, @Param("estado") EstadoInscripcion estado);
+
+    @Query("SELECT i FROM Inscripcion i "
+            + "JOIN FETCH i.clase c "
+            + "JOIN FETCH c.actividad a "
+            + "JOIN FETCH i.alumno al "
+            + "LEFT JOIN FETCH i.pago p "
+            + "ORDER BY i.createdAt DESC")
+    List<Inscripcion> findAllConDetalle();
 }

@@ -2,8 +2,12 @@ package com.activehub.usecases.eliminarresenia;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.activehub.domain.actividad.Actividad;
+import com.activehub.domain.actividad.ActividadRepository;
+import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.resenia.Resenia;
 import com.activehub.domain.resenia.ReseniaRepository;
 import com.activehub.domain.usuario.Usuario;
@@ -25,34 +29,46 @@ class EliminarReseniaServiceTest {
     @Mock
     private ReseniaRepository reseniaRepository;
     @Mock
+    private ActividadRepository actividadRepository;
+    @Mock
     private AuditService auditService;
 
     private EliminarReseniaService service;
     private UUID alumnoId;
     private UUID reseniaId;
+    private UUID actividadId;
     private Resenia resenia;
 
     @BeforeEach
     void setUp() {
-        service = new EliminarReseniaService(reseniaRepository, auditService);
+        service = new EliminarReseniaService(reseniaRepository, actividadRepository, auditService);
 
         alumnoId = UUID.randomUUID();
         Usuario alumno = new Usuario();
         ReflectionTestUtils.setField(alumno, "id", alumnoId);
 
+        actividadId = UUID.randomUUID();
+        Actividad actividad = new Actividad();
+        ReflectionTestUtils.setField(actividad, "id", actividadId);
+
+        Clase clase = new Clase();
+        clase.setActividad(actividad);
+
         reseniaId = UUID.randomUUID();
         resenia = new Resenia();
         resenia.setAlumno(alumno);
+        resenia.setClase(clase);
         ReflectionTestUtils.setField(resenia, "id", reseniaId);
     }
 
     @Test
-    void eliminar_propia_marcaBorrada() {
+    void eliminar_propia_marcaBorradaYRecalculaRating() {
         when(reseniaRepository.findById(reseniaId)).thenReturn(Optional.of(resenia));
 
         service.eliminar(reseniaId, alumnoId);
 
         assertThat(resenia.isDeleted()).isTrue();
+        verify(actividadRepository).recalcularRating(actividadId);
     }
 
     @Test

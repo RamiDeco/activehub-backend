@@ -18,6 +18,12 @@ public interface ClaseRepository extends JpaRepository<Clase, UUID> {
 
     List<Clase> findByEstadoInAndFechaHoraBefore(Collection<EstadoClase> estados, Instant limite);
 
+    @Query("SELECT c FROM Clase c JOIN FETCH c.actividad a WHERE a.instructor.id = :instructorId ORDER BY c.fechaHora ASC")
+    List<Clase> findByInstructorIdConDetalle(@Param("instructorId") UUID instructorId);
+
+    @Query("SELECT c FROM Clase c JOIN FETCH c.actividad a ORDER BY c.fechaHora ASC")
+    List<Clase> findAllConDetalle();
+
     /**
      * UPDATE atomico condicional: evita la doble ocupacion del ultimo cupo
      * bajo pedidos concurrentes sin necesitar un lock explicito ni un
