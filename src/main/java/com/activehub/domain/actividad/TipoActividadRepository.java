@@ -14,4 +14,6 @@ public interface TipoActividadRepository extends JpaRepository<TipoActividad, UU
     boolean existsByNombreIgnoreCaseAndCategoriaIdAndDeletedFalse(String nombre, UUID categoriaId);
 
     Optional<TipoActividad> findByNombreIgnoreCaseAndCategoriaIdAndDeletedFalse(String nombre, UUID categoriaId);
+
+    boolean existsByCategoriaIdAndDeletedFalse(UUID categoriaId);
 }

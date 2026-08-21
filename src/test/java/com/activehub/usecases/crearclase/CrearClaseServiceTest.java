@@ -3,20 +3,27 @@ package com.activehub.usecases.crearclase;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.actividad.ClaseRepository;
+import com.activehub.domain.favorito.ActividadFavorita;
+import com.activehub.domain.favorito.FavoritoRepository;
 import com.activehub.domain.usuario.EstadoVerificacion;
 import com.activehub.domain.usuario.PerfilInstructor;
 import com.activehub.domain.usuario.PerfilInstructorRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.SinPermisoException;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +43,10 @@ class CrearClaseServiceTest {
     @Mock
     private PerfilInstructorRepository perfilInstructorRepository;
     @Mock
+    private FavoritoRepository favoritoRepository;
+    @Mock
+    private NotificacionService notificacionService;
+    @Mock
     private AuditService auditService;
 
     private CrearClaseService service;
@@ -45,7 +56,9 @@ class CrearClaseServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new CrearClaseService(actividadRepository, claseRepository, perfilInstructorRepository, auditService);
+        service = new CrearClaseService(
+                actividadRepository, claseRepository, perfilInstructorRepository, favoritoRepository,
+                notificacionService, auditService);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();
@@ -54,6 +67,7 @@ class CrearClaseServiceTest {
         actividadId = UUID.randomUUID();
         actividad = new Actividad();
         actividad.setInstructor(instructor);
+        actividad.setNombre("Yoga");
         actividad.setCuposMax(20);
         ReflectionTestUtils.setField(actividad, "id", actividadId);
     }
@@ -100,5 +114,28 @@ class CrearClaseServiceTest {
         CrearClaseRequest request = new CrearClaseRequest(Instant.now().plus(3, ChronoUnit.DAYS), 10);
         assertThatThrownBy(() -> service.crear(actividadId, request, instructorId))
                 .isInstanceOf(SinPermisoException.class);
+    }
+
+    @Test
+    void crear_notificaAQuienesTienenLaActividadDeFavorita() {
+        UUID alumnoId = UUID.randomUUID();
+        Usuario alumno = new Usuario();
+        ReflectionTestUtils.setField(alumno, "id", alumnoId);
+        ActividadFavorita favorito = new ActividadFavorita(alumno, actividad);
+
+        when(actividadRepository.findById(actividadId)).thenReturn(Optional.of(actividad));
+        when(perfilInstructorRepository.findByUsuarioId(instructorId)).thenReturn(Optional.of(perfilAprobado()));
+        when(favoritoRepository.findByActividadId(actividadId)).thenReturn(List.of(favorito));
+        when(claseRepository.save(any(Clase.class))).thenAnswer(inv -> {
+            Clase c = inv.getArgument(0);
+            ReflectionTestUtils.setField(c, "id", UUID.randomUUID());
+            return c;
+        });
+
+        CrearClaseRequest request = new CrearClaseRequest(Instant.now().plus(3, ChronoUnit.DAYS), 10);
+        CrearClaseResponse response = service.crear(actividadId, request, instructorId);
+
+        verify(notificacionService).notificar(
+                eq(alumnoId), eq(TipoNotificacion.NUEVO_HORARIO_FAVORITO), any(), eq(response.id()));
     }
 }

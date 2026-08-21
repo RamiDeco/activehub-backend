@@ -1,4 +1,4 @@
-package com.activehub.usecases.cancelarclase;
+package com.activehub.usecases.notificarausenciaprofesor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,7 +28,6 @@ import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,7 +39,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
-class CancelarClaseServiceTest {
+class NotificarAusenciaProfesorServiceTest {
 
     @Mock
     private ClaseRepository claseRepository;
@@ -55,14 +54,15 @@ class CancelarClaseServiceTest {
     @Mock
     private AuditService auditService;
 
-    private CancelarClaseService service;
+    private NotificarAusenciaProfesorService service;
     private UUID instructorId;
     private UUID claseId;
     private Clase clase;
+    private NotificarAusenciaProfesorRequest request;
 
     @BeforeEach
     void setUp() {
-        service = new CancelarClaseService(
+        service = new NotificarAusenciaProfesorService(
                 claseRepository, inscripcionRepository, pagoRepository, paymentGateway, notificacionService, auditService);
 
         instructorId = UUID.randomUUID();
@@ -77,13 +77,14 @@ class CancelarClaseServiceTest {
         clase = new Clase();
         clase.setActividad(actividad);
         clase.setEstado(EstadoClase.Programada);
-        clase.setFechaHora(Instant.parse("2026-09-01T13:00:00Z"));
         ReflectionTestUtils.setField(clase, "id", claseId);
+
+        request = new NotificarAusenciaProfesorRequest("El instructor avisó que no podrá dar la clase.");
     }
 
-    private Inscripcion inscripcionCon(EstadoInscripcion estado, Pago pago) {
+    private Inscripcion inscripcionCon(UUID alumnoId, EstadoInscripcion estado, Pago pago) {
         Usuario alumno = new Usuario();
-        ReflectionTestUtils.setField(alumno, "id", UUID.randomUUID());
+        ReflectionTestUtils.setField(alumno, "id", alumnoId);
 
         Inscripcion inscripcion = new Inscripcion();
         inscripcion.setClase(clase);
@@ -95,79 +96,74 @@ class CancelarClaseServiceTest {
     }
 
     @Test
-    void cancelar_cancelaInscripcionesYPagosRetenidos() {
+    void notificar_cancelaClaseYNotificaAlumnosConPagoRetenido() {
+        UUID alumnoId = UUID.randomUUID();
         Pago pago = new Pago();
         pago.setEstado(EstadoPago.Retenido);
         pago.setMetodo(MetodoPago.MERCADO_PAGO);
         pago.setMonto(new BigDecimal("4500"));
         pago.setReferenciaExterna("ref-abc");
-        Inscripcion inscripto = inscripcionCon(EstadoInscripcion.INSCRIPTO, pago);
+        Inscripcion inscripto = inscripcionCon(alumnoId, EstadoInscripcion.INSCRIPTO, pago);
 
         when(claseRepository.findById(claseId)).thenReturn(Optional.of(clase));
         when(inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA))
                 .thenReturn(List.of(inscripto));
 
-        CancelarClaseResponse response = service.cancelar(claseId, instructorId);
+        NotificarAusenciaProfesorResponse response = service.notificar(claseId, instructorId, request);
 
         assertThat(response.estado()).isEqualTo("Cancelada");
+        assertThat(response.alumnosNotificados()).isEqualTo(1);
         assertThat(clase.getEstado()).isEqualTo(EstadoClase.Cancelada);
         assertThat(inscripto.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         verify(paymentGateway).cancelarPago("ref-abc");
         verify(notificacionService).notificar(
-                eq(inscripto.getAlumno().getId()), eq(TipoNotificacion.CLASE_CANCELADA), any(), eq(claseId));
+                eq(alumnoId), eq(TipoNotificacion.AUSENCIA_PROFESOR), eq(request.mensaje()), eq(claseId));
     }
 
     @Test
-    void cancelar_pagoEfectivo_noLoToca() {
-        Pago pago = new Pago();
-        pago.setEstado(EstadoPago.Efectivo);
-        pago.setMetodo(MetodoPago.EFECTIVO);
-        pago.setMonto(new BigDecimal("4500"));
-        Inscripcion pendiente = inscripcionCon(EstadoInscripcion.PAGO_PENDIENTE, pago);
-
+    void notificar_sinInscripciones_noNotificaANadie() {
         when(claseRepository.findById(claseId)).thenReturn(Optional.of(clase));
         when(inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA))
-                .thenReturn(List.of(pendiente));
+                .thenReturn(List.of());
 
-        service.cancelar(claseId, instructorId);
+        NotificarAusenciaProfesorResponse response = service.notificar(claseId, instructorId, request);
 
-        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Efectivo);
-        assertThat(pendiente.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
-        verify(paymentGateway, never()).cancelarPago(any());
+        assertThat(response.alumnosNotificados()).isEqualTo(0);
+        verify(notificacionService, never()).notificar(any(), any(), any(), any());
     }
 
     @Test
-    void cancelar_yaCancelada_lanzaValidacion() {
+    void notificar_yaCancelada_lanzaValidacion() {
         clase.setEstado(EstadoClase.Cancelada);
         when(claseRepository.findById(claseId)).thenReturn(Optional.of(clase));
 
-        assertThatThrownBy(() -> service.cancelar(claseId, instructorId))
+        assertThatThrownBy(() -> service.notificar(claseId, instructorId, request))
                 .isInstanceOf(ValidacionException.class);
     }
 
     @Test
-    void cancelar_yaFinalizada_lanzaValidacion() {
+    void notificar_yaFinalizada_lanzaValidacion() {
         clase.setEstado(EstadoClase.Finalizada);
         when(claseRepository.findById(claseId)).thenReturn(Optional.of(clase));
 
-        assertThatThrownBy(() -> service.cancelar(claseId, instructorId))
+        assertThatThrownBy(() -> service.notificar(claseId, instructorId, request))
                 .isInstanceOf(ValidacionException.class);
     }
 
     @Test
-    void cancelar_noDueño_lanzaSinPermiso() {
+    void notificar_noDueño_lanzaSinPermiso() {
         when(claseRepository.findById(claseId)).thenReturn(Optional.of(clase));
 
-        assertThatThrownBy(() -> service.cancelar(claseId, UUID.randomUUID()))
+        assertThatThrownBy(() -> service.notificar(claseId, UUID.randomUUID(), request))
                 .isInstanceOf(SinPermisoException.class);
     }
 
     @Test
-    void cancelar_inexistente_lanzaNoEncontrado() {
+    void notificar_inexistente_lanzaNoEncontrado() {
         when(claseRepository.findById(claseId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.cancelar(claseId, instructorId))
+        assertThatThrownBy(() -> service.notificar(claseId, instructorId, request))
                 .isInstanceOf(NoEncontradoException.class);
     }
 }

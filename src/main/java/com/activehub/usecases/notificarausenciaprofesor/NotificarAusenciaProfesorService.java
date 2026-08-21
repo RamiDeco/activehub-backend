@@ -1,4 +1,4 @@
-package com.activehub.usecases.cancelarclase;
+package com.activehub.usecases.notificarausenciaprofesor;
 
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.actividad.ClaseRepository;
@@ -14,7 +14,6 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
-import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
@@ -23,7 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class CancelarClaseService {
+public class NotificarAusenciaProfesorService {
 
     private final ClaseRepository claseRepository;
     private final InscripcionRepository inscripcionRepository;
@@ -32,7 +31,7 @@ public class CancelarClaseService {
     private final NotificacionService notificacionService;
     private final AuditService auditService;
 
-    public CancelarClaseService(
+    public NotificarAusenciaProfesorService(
             ClaseRepository claseRepository,
             InscripcionRepository inscripcionRepository,
             PagoRepository pagoRepository,
@@ -49,24 +48,22 @@ public class CancelarClaseService {
     }
 
     @Transactional
-    public CancelarClaseResponse cancelar(UUID claseId, UUID instructorId) {
+    public NotificarAusenciaProfesorResponse notificar(
+            UUID claseId, UUID instructorId, NotificarAusenciaProfesorRequest request) {
         Clase clase = claseRepository.findById(claseId)
                 .orElseThrow(() -> new NoEncontradoException("Clase no encontrada."));
 
         if (!clase.getActividad().getInstructor().getId().equals(instructorId)) {
-            throw new SinPermisoException("No podés cancelar una clase que no te pertenece.");
+            throw new SinPermisoException("No podés notificar la ausencia de una clase que no te pertenece.");
         }
-
         if (clase.getEstado() == EstadoClase.Cancelada) {
             throw new ValidacionException("Esta clase ya está cancelada.");
         }
         if (clase.getEstado() == EstadoClase.Finalizada) {
-            throw new ValidacionException("No podés cancelar una clase que ya finalizó.");
+            throw new ValidacionException("No podés notificar la ausencia de una clase que ya finalizó.");
         }
 
-        String mensaje = "El instructor canceló la clase de \"" + clase.getActividad().getNombre()
-                + "\" del " + NotificacionMensajes.formatFechaHora(clase.getFechaHora())
-                + ". Tu inscripción fue cancelada.";
+        int notificados = 0;
         for (Inscripcion inscripcion : inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA)) {
             Pago pago = inscripcion.getPago();
             if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
@@ -78,14 +75,17 @@ public class CancelarClaseService {
             inscripcionRepository.save(inscripcion);
 
             notificacionService.notificar(
-                    inscripcion.getAlumno().getId(), TipoNotificacion.CLASE_CANCELADA, mensaje, clase.getId());
+                    inscripcion.getAlumno().getId(), TipoNotificacion.AUSENCIA_PROFESOR, request.mensaje(), claseId);
+            notificados++;
         }
 
         clase.setEstado(EstadoClase.Cancelada);
         claseRepository.save(clase);
 
-        auditService.registrar(instructorId, AuditAccion.CLASE_CANCELADA, "Clase", clase.getId(), null);
+        auditService.registrar(
+                instructorId, AuditAccion.AUSENCIA_PROFESOR_NOTIFICADA, "Clase", clase.getId(),
+                "alumnosNotificados=" + notificados);
 
-        return new CancelarClaseResponse(clase.getId(), clase.getEstado().name());
+        return new NotificarAusenciaProfesorResponse(clase.getId(), clase.getEstado().name(), notificados);
     }
 }
