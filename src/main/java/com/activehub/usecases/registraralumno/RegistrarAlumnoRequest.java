@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -21,6 +22,7 @@ public record RegistrarAlumnoRequest(
         ) String password,
         @NotNull(message = "La fecha de nacimiento es obligatoria") LocalDate fechaNacimiento,
         List<String> intereses,
+        @Size(max = 500, message = "Máximo 500 caracteres") String condicionSalud,
         @AssertTrue(message = "Tenés que aceptar los términos y condiciones") boolean aceptaTerminos
 ) {
 }

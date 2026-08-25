@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.activehub.domain.usuario.PerfilAlumno;
 import com.activehub.domain.usuario.PerfilAlumnoRepository;
 import com.activehub.domain.usuario.Rol;
 import com.activehub.domain.usuario.RolNombre;
@@ -28,6 +29,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -60,7 +62,7 @@ class RegistrarAlumnoServiceTest {
     private RegistrarAlumnoRequest requestValido() {
         return new RegistrarAlumnoRequest(
                 "Martina", "Gómez", "martina@email.com", "2611234567", "Password1",
-                LocalDate.of(2000, 5, 10), List.of("Running", "Yoga"), true);
+                LocalDate.of(2000, 5, 10), List.of("Running", "Yoga"), null, true);
     }
 
     @Test
@@ -89,6 +91,33 @@ class RegistrarAlumnoServiceTest {
         verify(usuarioRepository).saveAndFlush(any(Usuario.class));
         verify(perfilAlumnoRepository).save(any());
         verify(auditService).registrar(any(UUID.class), eq(AuditAccion.REGISTRO_ALUMNO), eq("Usuario"), any(UUID.class), isNull());
+    }
+
+    @Test
+    void registrarAlumno_conCondicionSalud_laGuardaEnElPerfil() {
+        Rol rolAlumno = new Rol();
+        rolAlumno.setNombre(RolNombre.ALUMNO);
+
+        when(usuarioRepository.existsByEmailIgnoreCaseAndDeletedFalse("martina@email.com")).thenReturn(false);
+        when(rolRepository.findByNombre(RolNombre.ALUMNO)).thenReturn(Optional.of(rolAlumno));
+        when(passwordEncoder.encode("Password1")).thenReturn("hash-bcrypt");
+        when(usuarioRepository.saveAndFlush(any(Usuario.class))).thenAnswer(invocation -> {
+            Usuario u = invocation.getArgument(0);
+            ReflectionTestUtils.setField(u, "id", UUID.randomUUID());
+            ReflectionTestUtils.setField(u, "createdAt", Instant.now());
+            return u;
+        });
+        when(jwtService.emitir(any(UUID.class), anyString(), eq(RolNombre.ALUMNO))).thenReturn("token-jwt");
+
+        RegistrarAlumnoRequest request = new RegistrarAlumnoRequest(
+                "Martina", "Gómez", "martina@email.com", "2611234567", "Password1",
+                LocalDate.of(2000, 5, 10), List.of("Running"), "Asma leve, evitar esfuerzo prolongado.", true);
+
+        service.registrar(request);
+
+        ArgumentCaptor<PerfilAlumno> captor = ArgumentCaptor.forClass(PerfilAlumno.class);
+        verify(perfilAlumnoRepository).save(captor.capture());
+        assertThat(captor.getValue().getCondicionSalud()).isEqualTo("Asma leve, evitar esfuerzo prolongado.");
     }
 
     @Test

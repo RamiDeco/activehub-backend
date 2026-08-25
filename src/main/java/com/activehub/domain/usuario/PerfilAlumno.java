@@ -33,6 +33,9 @@ public class PerfilAlumno extends BaseEntity {
     @Column(name = "interes", nullable = false, length = 100)
     private List<String> intereses = new ArrayList<>();
 
+    @Column(name = "condicion_salud", columnDefinition = "TEXT")
+    private String condicionSalud;
+
     public PerfilAlumno(Usuario usuario, List<String> intereses) {
         this.usuario = usuario;
         this.intereses = intereses != null ? new ArrayList<>(intereses) : new ArrayList<>();

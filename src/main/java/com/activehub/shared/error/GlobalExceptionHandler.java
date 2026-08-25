@@ -14,6 +14,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -76,6 +77,22 @@ public class GlobalExceptionHandler {
                 ApiErrorCode.VALIDACION.name(),
                 "El parámetro '%s' tiene un valor inválido.".formatted(ex.getName()),
                 Map.of(ex.getName(), "Valor inválido."),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(ApiErrorCode.VALIDACION.getStatus()).body(body);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleArchivoDemasiadoGrande(
+            MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        // Error del cliente (archivo mas grande que spring.servlet.multipart.max-file-size),
+        // no una falla del servidor.
+        ApiError body = new ApiError(
+                Instant.now(),
+                ApiErrorCode.VALIDACION.getStatus().value(),
+                ApiErrorCode.VALIDACION.name(),
+                "El archivo supera el tamaño máximo permitido (5 MB).",
+                null,
                 request.getRequestURI()
         );
         return ResponseEntity.status(ApiErrorCode.VALIDACION.getStatus()).body(body);

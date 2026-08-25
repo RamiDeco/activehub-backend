@@ -62,6 +62,7 @@ public class RegistrarAlumnoService {
         usuario = usuarioRepository.saveAndFlush(usuario);
 
         PerfilAlumno perfilAlumno = new PerfilAlumno(usuario, request.intereses());
+        perfilAlumno.setCondicionSalud(request.condicionSalud());
         perfilAlumnoRepository.save(perfilAlumno);
 
         auditService.registrar(usuario.getId(), AuditAccion.REGISTRO_ALUMNO, "Usuario", usuario.getId(), null);
