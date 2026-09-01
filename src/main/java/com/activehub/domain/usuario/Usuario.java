@@ -53,4 +53,7 @@ public class Usuario extends BaseEntity {
 
     @Column(name = "cantidad_penalizaciones", nullable = false)
     private int cantidadPenalizaciones = 0;
+
+    @Column(name = "foto_path")
+    private String fotoPath;
 }

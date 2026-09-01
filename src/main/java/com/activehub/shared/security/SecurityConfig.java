@@ -44,7 +44,8 @@ public class SecurityConfig {
                                 "/api/categorias",
                                 "/api/tipos-actividad",
                                 "/api/actividades",
-                                "/api/actividades/**"
+                                "/api/actividades/**",
+                                "/api/fotos/**"
                         ).permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(eh -> eh

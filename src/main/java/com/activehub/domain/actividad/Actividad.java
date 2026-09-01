@@ -53,4 +53,13 @@ public class Actividad extends BaseEntity {
 
     @Column(name = "cupos_max", nullable = false)
     private int cuposMax;
+
+    @Column
+    private Double latitud;
+
+    @Column
+    private Double longitud;
+
+    @Column(name = "foto_path")
+    private String fotoPath;
 }

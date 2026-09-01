@@ -15,7 +15,9 @@ public record ActualizarActividadResponse(
         String ubicacion,
         String photoTint,
         BigDecimal rating,
-        int cuposMax
+        int cuposMax,
+        Double latitud,
+        Double longitud
 ) {
     public record TipoActividad(UUID id, String nombre) {
     }

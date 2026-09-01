@@ -12,6 +12,9 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.NotificacionMensajes;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,19 +27,22 @@ public class CrearReseniaService {
     private final ReseniaRepository reseniaRepository;
     private final UsuarioRepository usuarioRepository;
     private final AuditService auditService;
+    private final NotificacionService notificacionService;
 
     public CrearReseniaService(
             ClaseRepository claseRepository,
             InscripcionRepository inscripcionRepository,
             ReseniaRepository reseniaRepository,
             UsuarioRepository usuarioRepository,
-            AuditService auditService
+            AuditService auditService,
+            NotificacionService notificacionService
     ) {
         this.claseRepository = claseRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.reseniaRepository = reseniaRepository;
         this.usuarioRepository = usuarioRepository;
         this.auditService = auditService;
+        this.notificacionService = notificacionService;
     }
 
     @Transactional
@@ -61,6 +67,13 @@ public class CrearReseniaService {
         resenia.setComentario(request.comentario());
         resenia.setEnModeracion(true);
         resenia = reseniaRepository.saveAndFlush(resenia);
+
+        notificacionService.notificar(
+                clase.getActividad().getInstructor().getId(),
+                TipoNotificacion.NUEVA_RESENIA,
+                "Recibiste una nueva reseña en la clase de \"" + clase.getActividad().getNombre()
+                        + "\" del " + NotificacionMensajes.formatFechaHora(clase.getFechaHora()) + ".",
+                resenia.getId());
 
         auditService.registrar(alumnoId, AuditAccion.RESENIA_CREADA, "Resenia", resenia.getId(), null);
 

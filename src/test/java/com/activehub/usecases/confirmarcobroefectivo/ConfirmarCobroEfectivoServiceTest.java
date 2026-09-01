@@ -2,6 +2,9 @@ package com.activehub.usecases.confirmarcobroefectivo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.activehub.domain.actividad.Actividad;
@@ -13,6 +16,9 @@ import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,29 +35,39 @@ class ConfirmarCobroEfectivoServiceTest {
     private InscripcionRepository inscripcionRepository;
     @Mock
     private AuditService auditService;
+    @Mock
+    private NotificacionService notificacionService;
 
     private ConfirmarCobroEfectivoService service;
     private UUID inscripcionId;
     private UUID instructorId;
+    private UUID alumnoId;
     private Inscripcion inscripcion;
 
     @BeforeEach
     void setUp() {
-        service = new ConfirmarCobroEfectivoService(inscripcionRepository, auditService);
+        service = new ConfirmarCobroEfectivoService(inscripcionRepository, auditService, notificacionService);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();
         ReflectionTestUtils.setField(instructor, "id", instructorId);
 
         Actividad actividad = new Actividad();
+        actividad.setNombre("Running");
         actividad.setInstructor(instructor);
 
         Clase clase = new Clase();
         clase.setActividad(actividad);
+        clase.setFechaHora(Instant.parse("2026-08-20T12:00:00Z"));
+
+        alumnoId = UUID.randomUUID();
+        Usuario alumno = new Usuario();
+        ReflectionTestUtils.setField(alumno, "id", alumnoId);
 
         inscripcionId = UUID.randomUUID();
         inscripcion = new Inscripcion();
         inscripcion.setClase(clase);
+        inscripcion.setAlumno(alumno);
         inscripcion.setEstado(EstadoInscripcion.PAGO_PENDIENTE);
         ReflectionTestUtils.setField(inscripcion, "id", inscripcionId);
     }
@@ -63,6 +79,7 @@ class ConfirmarCobroEfectivoServiceTest {
         ConfirmarCobroEfectivoResponse response = service.confirmar(inscripcionId, instructorId);
 
         assertThat(response.estado()).isEqualTo("Inscripto");
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.COBRO_EFECTIVO_CONFIRMADO), any(), eq(inscripcionId));
     }
 
     @Test

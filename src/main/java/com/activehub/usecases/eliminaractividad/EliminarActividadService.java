@@ -15,6 +15,9 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
+import com.activehub.shared.notificacion.NotificacionMensajes;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
 import java.util.EnumSet;
 import java.util.List;
@@ -31,6 +34,7 @@ public class EliminarActividadService {
     private final PagoRepository pagoRepository;
     private final PaymentGateway paymentGateway;
     private final AuditService auditService;
+    private final NotificacionService notificacionService;
 
     public EliminarActividadService(
             ActividadRepository actividadRepository,
@@ -38,7 +42,8 @@ public class EliminarActividadService {
             InscripcionRepository inscripcionRepository,
             PagoRepository pagoRepository,
             PaymentGateway paymentGateway,
-            AuditService auditService
+            AuditService auditService,
+            NotificacionService notificacionService
     ) {
         this.actividadRepository = actividadRepository;
         this.claseRepository = claseRepository;
@@ -46,6 +51,7 @@ public class EliminarActividadService {
         this.pagoRepository = pagoRepository;
         this.paymentGateway = paymentGateway;
         this.auditService = auditService;
+        this.notificacionService = notificacionService;
     }
 
     @Transactional
@@ -61,6 +67,7 @@ public class EliminarActividadService {
                 id, EnumSet.of(EstadoClase.Cancelada, EstadoClase.Finalizada));
 
         for (Clase clase : clasesVigentes) {
+            String contexto = "la clase de \"" + actividad.getNombre() + "\" del " + NotificacionMensajes.formatFechaHora(clase.getFechaHora());
             for (Inscripcion inscripcion : inscripcionRepository.findByClaseIdAndEstadoNot(clase.getId(), EstadoInscripcion.CANCELADA)) {
                 Pago pago = inscripcion.getPago();
                 if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
@@ -70,12 +77,27 @@ public class EliminarActividadService {
                 }
                 inscripcion.setEstado(EstadoInscripcion.CANCELADA);
                 inscripcionRepository.save(inscripcion);
+
+                notificacionService.notificar(
+                        inscripcion.getAlumno().getId(),
+                        TipoNotificacion.ACTIVIDAD_ELIMINADA,
+                        "Se eliminó la actividad \"" + actividad.getNombre() + "\" y tu inscripción a " + contexto + " fue cancelada.",
+                        actividad.getId());
             }
 
             clase.setEstado(EstadoClase.Cancelada);
             claseRepository.save(clase);
 
             auditService.registrar(actorId, AuditAccion.CLASE_CANCELADA, "Clase", clase.getId(), null);
+        }
+
+        boolean loBorraUnAdmin = esAdmin && !actividad.getInstructor().getId().equals(actorId);
+        if (loBorraUnAdmin) {
+            notificacionService.notificar(
+                    actividad.getInstructor().getId(),
+                    TipoNotificacion.ACTIVIDAD_ELIMINADA,
+                    "Un administrador eliminó tu actividad \"" + actividad.getNombre() + "\" y se cancelaron sus clases e inscripciones.",
+                    actividad.getId());
         }
 
         actividad.marcarBorrado();

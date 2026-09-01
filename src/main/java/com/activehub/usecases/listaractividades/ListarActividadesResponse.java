@@ -16,7 +16,9 @@ public record ListarActividadesResponse(
         String photoTint,
         BigDecimal rating,
         int cuposMax,
-        ProximaClase proximaClase
+        ProximaClase proximaClase,
+        Double latitud,
+        Double longitud
 ) {
     public record TipoActividad(UUID id, String nombre) {
     }

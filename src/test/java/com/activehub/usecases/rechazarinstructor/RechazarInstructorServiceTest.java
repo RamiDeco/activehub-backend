@@ -11,6 +11,8 @@ import com.activehub.domain.usuario.PerfilInstructorRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +29,8 @@ class RechazarInstructorServiceTest {
     private PerfilInstructorRepository perfilInstructorRepository;
     @Mock
     private AuditService auditService;
+    @Mock
+    private NotificacionService notificacionService;
 
     private RechazarInstructorService service;
     private UUID usuarioId;
@@ -34,7 +38,7 @@ class RechazarInstructorServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RechazarInstructorService(perfilInstructorRepository, auditService);
+        service = new RechazarInstructorService(perfilInstructorRepository, auditService, notificacionService);
 
         usuarioId = UUID.randomUUID();
         Usuario usuario = new Usuario();
@@ -52,6 +56,7 @@ class RechazarInstructorServiceTest {
         assertThat(response.estadoVerificacion()).isEqualTo("RECHAZADO");
         assertThat(response.motivoRechazo()).isEqualTo("Documentación incompleta");
         verify(auditService).registrar(any(UUID.class), eq(AuditAccion.INSTRUCTOR_RECHAZADO), eq("PerfilInstructor"), eq(usuarioId), eq("Documentación incompleta"));
+        verify(notificacionService).notificar(eq(usuarioId), eq(TipoNotificacion.INSTRUCTOR_RECHAZADO), any(), eq(usuarioId));
     }
 
     @Test

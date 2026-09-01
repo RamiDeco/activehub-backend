@@ -11,6 +11,9 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.NotificacionMensajes;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.UUID;
@@ -27,6 +30,7 @@ public class CrearDenunciaService {
     private final DenunciaRepository denunciaRepository;
     private final UsuarioRepository usuarioRepository;
     private final AuditService auditService;
+    private final NotificacionService notificacionService;
     private final Clock clock;
 
     public CrearDenunciaService(
@@ -35,6 +39,7 @@ public class CrearDenunciaService {
             DenunciaRepository denunciaRepository,
             UsuarioRepository usuarioRepository,
             AuditService auditService,
+            NotificacionService notificacionService,
             Clock clock
     ) {
         this.claseRepository = claseRepository;
@@ -42,6 +47,7 @@ public class CrearDenunciaService {
         this.denunciaRepository = denunciaRepository;
         this.usuarioRepository = usuarioRepository;
         this.auditService = auditService;
+        this.notificacionService = notificacionService;
         this.clock = clock;
     }
 
@@ -65,6 +71,13 @@ public class CrearDenunciaService {
         denuncia.setAlumno(usuarioRepository.getReferenceById(alumnoId));
         denuncia.setMotivo(request.motivo());
         denuncia = denunciaRepository.saveAndFlush(denuncia);
+
+        notificacionService.notificar(
+                clase.getActividad().getInstructor().getId(),
+                TipoNotificacion.DENUNCIA_RECIBIDA,
+                "Recibiste una denuncia por inasistencia a la clase de \"" + clase.getActividad().getNombre()
+                        + "\" del " + NotificacionMensajes.formatFechaHora(clase.getFechaHora()) + ".",
+                denuncia.getId());
 
         auditService.registrar(alumnoId, AuditAccion.DENUNCIA_CREADA, "Denuncia", denuncia.getId(), null);
 

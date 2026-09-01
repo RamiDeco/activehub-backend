@@ -1,5 +1,6 @@
 package com.activehub.usecases.crearactividad;
 
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -19,6 +20,10 @@ public record CrearActividadRequest(
         @DecimalMin(value = "0", message = "El precio no puede ser negativo") BigDecimal precio,
         @NotBlank(message = "La ubicación es obligatoria") String ubicacion,
         @NotBlank(message = "El color/imagen es obligatorio") String photoTint,
-        @Min(value = 1, message = "Los cupos máximos deben ser al menos 1") int cuposMax
+        @Min(value = 1, message = "Los cupos máximos deben ser al menos 1") int cuposMax,
+        @DecimalMin(value = "-90", message = "La latitud debe estar entre -90 y 90")
+        @DecimalMax(value = "90", message = "La latitud debe estar entre -90 y 90") Double latitud,
+        @DecimalMin(value = "-180", message = "La longitud debe estar entre -180 y 180")
+        @DecimalMax(value = "180", message = "La longitud debe estar entre -180 y 180") Double longitud
 ) {
 }

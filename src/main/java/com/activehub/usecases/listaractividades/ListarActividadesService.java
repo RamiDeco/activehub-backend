@@ -118,7 +118,9 @@ public class ListarActividadesService {
                 a.getPhotoTint(),
                 a.getRating(),
                 a.getCuposMax(),
-                proximaDto
+                proximaDto,
+                a.getLatitud(),
+                a.getLongitud()
         );
     }
 }

@@ -57,7 +57,9 @@ public class ObtenerActividadService {
                 actividad.getPhotoTint(),
                 actividad.getRating(),
                 actividad.getCuposMax(),
-                clases
+                clases,
+                actividad.getLatitud(),
+                actividad.getLongitud()
         );
     }
 }

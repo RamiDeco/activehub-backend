@@ -8,6 +8,9 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.NotificacionMensajes;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,10 +20,14 @@ public class ConfirmarCobroEfectivoService {
 
     private final InscripcionRepository inscripcionRepository;
     private final AuditService auditService;
+    private final NotificacionService notificacionService;
 
-    public ConfirmarCobroEfectivoService(InscripcionRepository inscripcionRepository, AuditService auditService) {
+    public ConfirmarCobroEfectivoService(
+            InscripcionRepository inscripcionRepository, AuditService auditService, NotificacionService notificacionService
+    ) {
         this.inscripcionRepository = inscripcionRepository;
         this.auditService = auditService;
+        this.notificacionService = notificacionService;
     }
 
     @Transactional
@@ -38,6 +45,14 @@ public class ConfirmarCobroEfectivoService {
 
         inscripcion.setEstado(EstadoInscripcion.INSCRIPTO);
         inscripcionRepository.save(inscripcion);
+
+        notificacionService.notificar(
+                inscripcion.getAlumno().getId(),
+                TipoNotificacion.COBRO_EFECTIVO_CONFIRMADO,
+                "Confirmaron tu pago en efectivo de la clase de \"" + inscripcion.getClase().getActividad().getNombre()
+                        + "\" del " + NotificacionMensajes.formatFechaHora(inscripcion.getClase().getFechaHora())
+                        + ". Quedaste inscripto.",
+                inscripcion.getId());
 
         auditService.registrar(instructorId, AuditAccion.COBRO_EFECTIVO_CONFIRMADO, "Inscripcion", inscripcion.getId(), null);
 

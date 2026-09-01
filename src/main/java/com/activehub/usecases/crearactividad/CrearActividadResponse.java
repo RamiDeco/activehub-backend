@@ -18,7 +18,9 @@ public record CrearActividadResponse(
         String photoTint,
         BigDecimal rating,
         int cuposMax,
-        List<Clase> clases
+        List<Clase> clases,
+        Double latitud,
+        Double longitud
 ) {
     public record TipoActividad(UUID id, String nombre) {
     }

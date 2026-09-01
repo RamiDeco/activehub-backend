@@ -24,6 +24,8 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.InscripcionYaExisteException;
 import com.activehub.shared.error.SinCuposDisponiblesException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -56,23 +58,33 @@ class InscribirseServiceTest {
     private PaymentGateway paymentGateway;
     @Mock
     private AuditService auditService;
+    @Mock
+    private NotificacionService notificacionService;
 
     private InscribirseService service;
     private UUID claseId;
     private UUID alumnoId;
+    private UUID instructorId;
     private Clase clase;
 
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(AHORA, ZoneOffset.UTC);
         service = new InscribirseService(
-                claseRepository, inscripcionRepository, pagoRepository, usuarioRepository, paymentGateway, auditService, clock);
+                claseRepository, inscripcionRepository, pagoRepository, usuarioRepository, paymentGateway, auditService,
+                notificacionService, clock);
 
         claseId = UUID.randomUUID();
         alumnoId = UUID.randomUUID();
+        instructorId = UUID.randomUUID();
+
+        Usuario instructor = new Usuario();
+        ReflectionTestUtils.setField(instructor, "id", instructorId);
 
         Actividad actividad = new Actividad();
         actividad.setPrecio(new BigDecimal("4500"));
+        actividad.setNombre("Running");
+        actividad.setInstructor(instructor);
         ReflectionTestUtils.setField(actividad, "id", UUID.randomUUID());
 
         clase = new Clase();
@@ -115,6 +127,8 @@ class InscribirseServiceTest {
         assertThat(response.pagoId()).isNotNull();
         verify(claseRepository).ocuparCupo(claseId);
         verify(paymentGateway).iniciarPago(any(), org.mockito.ArgumentMatchers.eq(450000L));
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), any(), any());
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.NUEVA_INSCRIPCION), any(), any());
     }
 
     @Test
@@ -130,6 +144,7 @@ class InscribirseServiceTest {
 
         assertThat(response.estado()).isEqualTo("PagoPendiente");
         verify(paymentGateway, never()).iniciarPago(any(), org.mockito.ArgumentMatchers.anyLong());
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), any(), any());
     }
 
     @Test

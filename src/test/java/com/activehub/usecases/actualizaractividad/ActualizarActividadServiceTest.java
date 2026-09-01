@@ -2,6 +2,9 @@ package com.activehub.usecases.actualizaractividad;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.activehub.domain.actividad.Actividad;
@@ -17,6 +20,7 @@ import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
+import com.activehub.shared.error.ValidacionException;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
@@ -81,7 +85,13 @@ class ActualizarActividadServiceTest {
     private ActualizarActividadRequest requestValido() {
         return new ActualizarActividadRequest(
                 "Running actualizado", "nueva desc", tipo.getId(), "Física media",
-                new BigDecimal("5000"), "Nueva ubicacion", "gradient2", 20);
+                new BigDecimal("5000"), "Nueva ubicacion", "gradient2", 20, null, null);
+    }
+
+    private ActualizarActividadRequest requestConCoordenadas(Double latitud, Double longitud) {
+        return new ActualizarActividadRequest(
+                "Running actualizado", "nueva desc", tipo.getId(), "Física media",
+                new BigDecimal("5000"), "Nueva ubicacion", "gradient2", 20, latitud, longitud);
     }
 
     @Test
@@ -113,5 +123,33 @@ class ActualizarActividadServiceTest {
 
         assertThatThrownBy(() -> service.actualizar(actividadId, requestValido(), instructorId))
                 .isInstanceOf(NoEncontradoException.class);
+    }
+
+    @Test
+    void actualizar_conCoordenadas_lasPersisteYDevuelve() {
+        when(actividadRepository.findById(actividadId)).thenReturn(Optional.of(actividad));
+        PerfilInstructor perfil = new PerfilInstructor(actividad.getInstructor(), "Running", 6, "d");
+        perfil.setEstadoVerificacion(EstadoVerificacion.APROBADO);
+        when(perfilInstructorRepository.findByUsuarioId(instructorId)).thenReturn(Optional.of(perfil));
+        when(tipoActividadRepository.findById(tipo.getId())).thenReturn(Optional.of(tipo));
+
+        ActualizarActividadResponse response = service.actualizar(actividadId, requestConCoordenadas(-32.8908, -68.8272), instructorId);
+
+        assertThat(response.latitud()).isEqualTo(-32.8908);
+        assertThat(response.longitud()).isEqualTo(-68.8272);
+    }
+
+    @Test
+    void actualizar_soloLongitudSinLatitud_lanzaValidacion() {
+        when(actividadRepository.findById(actividadId)).thenReturn(Optional.of(actividad));
+        PerfilInstructor perfil = new PerfilInstructor(actividad.getInstructor(), "Running", 6, "d");
+        perfil.setEstadoVerificacion(EstadoVerificacion.APROBADO);
+        when(perfilInstructorRepository.findByUsuarioId(instructorId)).thenReturn(Optional.of(perfil));
+        when(tipoActividadRepository.findById(tipo.getId())).thenReturn(Optional.of(tipo));
+
+        assertThatThrownBy(() -> service.actualizar(actividadId, requestConCoordenadas(null, -68.8272), instructorId))
+                .isInstanceOf(ValidacionException.class);
+
+        verify(actividadRepository, never()).save(any());
     }
 }

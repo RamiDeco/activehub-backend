@@ -1,5 +1,7 @@
 package com.activehub.usecases.resolverdenuncia;
 
+import com.activehub.domain.actividad.Actividad;
+import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.denuncia.Denuncia;
 import com.activehub.domain.denuncia.DenunciaRepository;
 import com.activehub.domain.denuncia.EstadoDenuncia;
@@ -18,6 +20,9 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.NotificacionMensajes;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -33,6 +38,7 @@ public class ResolverDenunciaService {
     private final PenalizacionRepository penalizacionRepository;
     private final PaymentGateway paymentGateway;
     private final AuditService auditService;
+    private final NotificacionService notificacionService;
 
     public ResolverDenunciaService(
             DenunciaRepository denunciaRepository,
@@ -41,7 +47,8 @@ public class ResolverDenunciaService {
             UsuarioRepository usuarioRepository,
             PenalizacionRepository penalizacionRepository,
             PaymentGateway paymentGateway,
-            AuditService auditService
+            AuditService auditService,
+            NotificacionService notificacionService
     ) {
         this.denunciaRepository = denunciaRepository;
         this.inscripcionRepository = inscripcionRepository;
@@ -50,6 +57,7 @@ public class ResolverDenunciaService {
         this.penalizacionRepository = penalizacionRepository;
         this.paymentGateway = paymentGateway;
         this.auditService = auditService;
+        this.notificacionService = notificacionService;
     }
 
     @Transactional
@@ -79,9 +87,38 @@ public class ResolverDenunciaService {
 
         denuncia.setEstado(EstadoDenuncia.RESUELTA);
 
+        notificarResolucion(denuncia, accion);
+
         auditService.registrar(actorId, AuditAccion.DENUNCIA_RESUELTA, "Denuncia", id, accion.name());
 
         return new ResolverDenunciaResponse(denuncia.getId(), denuncia.getEstado().getEtiqueta());
+    }
+
+    private void notificarResolucion(Denuncia denuncia, AccionResolucion accion) {
+        Clase clase = denuncia.getClase();
+        Actividad actividad = clase.getActividad();
+        String contexto = "la clase de \"" + actividad.getNombre() + "\" del " + NotificacionMensajes.formatFechaHora(clase.getFechaHora());
+
+        String mensajeAlumno = switch (accion) {
+            case REINTEGRAR -> "Se resolvió tu denuncia sobre " + contexto + ": te reintegramos el pago.";
+            case SUSPENDER -> "Se resolvió tu denuncia sobre " + contexto + ": el instructor fue suspendido.";
+            case PENALIZAR -> "Se resolvió tu denuncia sobre " + contexto + ": se le aplicó una penalización al instructor.";
+            case DESESTIMAR -> "Se desestimó tu denuncia sobre " + contexto + ".";
+        };
+        notificacionService.notificar(denuncia.getAlumno().getId(), TipoNotificacion.DENUNCIA_RESUELTA, mensajeAlumno, denuncia.getId());
+
+        if (accion == AccionResolucion.SUSPENDER || accion == AccionResolucion.PENALIZAR || accion == AccionResolucion.DESESTIMAR) {
+            Usuario instructor = actividad.getInstructor();
+            String mensajeInstructor = accion == AccionResolucion.SUSPENDER
+                    ? "Fuiste suspendido por una denuncia sobre " + contexto + "."
+                    : accion == AccionResolucion.PENALIZAR
+                            ? "Se te aplicó una penalización económica por una denuncia sobre " + contexto + "."
+                            : "Una denuncia en tu contra sobre " + contexto + " fue desestimada.";
+            TipoNotificacion tipo = accion == AccionResolucion.SUSPENDER ? TipoNotificacion.INSTRUCTOR_SUSPENDIDO
+                    : accion == AccionResolucion.PENALIZAR ? TipoNotificacion.PENALIZACION_APLICADA
+                    : TipoNotificacion.DENUNCIA_DESESTIMADA;
+            notificacionService.notificar(instructor.getId(), tipo, mensajeInstructor, denuncia.getId());
+        }
     }
 
     private void reintegrar(Denuncia denuncia) {

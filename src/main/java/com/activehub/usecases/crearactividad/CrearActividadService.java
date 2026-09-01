@@ -13,6 +13,7 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
+import com.activehub.shared.error.ValidacionException;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -57,6 +58,10 @@ public class CrearActividadService {
         Usuario instructor = usuarioRepository.findById(instructorId)
                 .orElseThrow(() -> new NoEncontradoException("Instructor no encontrado."));
 
+        if ((request.latitud() == null) != (request.longitud() == null)) {
+            throw new ValidacionException("Latitud y longitud deben enviarse juntas, o ninguna de las dos.");
+        }
+
         Actividad actividad = new Actividad();
         actividad.setNombre(request.nombre().trim());
         actividad.setDescripcion(request.descripcion().trim());
@@ -67,6 +72,8 @@ public class CrearActividadService {
         actividad.setUbicacion(request.ubicacion().trim());
         actividad.setPhotoTint(request.photoTint());
         actividad.setCuposMax(request.cuposMax());
+        actividad.setLatitud(request.latitud());
+        actividad.setLongitud(request.longitud());
         actividad = actividadRepository.saveAndFlush(actividad);
 
         auditService.registrar(instructorId, AuditAccion.ACTIVIDAD_CREADA, "Actividad", actividad.getId(), null);
@@ -84,7 +91,9 @@ public class CrearActividadService {
                 actividad.getPhotoTint(),
                 actividad.getRating(),
                 actividad.getCuposMax(),
-                List.of()
+                List.of(),
+                actividad.getLatitud(),
+                actividad.getLongitud()
         );
     }
 }

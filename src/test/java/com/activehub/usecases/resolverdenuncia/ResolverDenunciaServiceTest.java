@@ -3,6 +3,7 @@ package com.activehub.usecases.resolverdenuncia;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,8 +27,11 @@ import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,6 +58,8 @@ class ResolverDenunciaServiceTest {
     private PaymentGateway paymentGateway;
     @Mock
     private AuditService auditService;
+    @Mock
+    private NotificacionService notificacionService;
 
     private ResolverDenunciaService service;
     private UUID denunciaId;
@@ -67,7 +73,7 @@ class ResolverDenunciaServiceTest {
     void setUp() {
         service = new ResolverDenunciaService(
                 denunciaRepository, inscripcionRepository, pagoRepository, usuarioRepository, penalizacionRepository,
-                paymentGateway, auditService);
+                paymentGateway, auditService, notificacionService);
 
         instructorId = UUID.randomUUID();
         instructor = new Usuario();
@@ -75,11 +81,13 @@ class ResolverDenunciaServiceTest {
         ReflectionTestUtils.setField(instructor, "id", instructorId);
 
         Actividad actividad = new Actividad();
+        actividad.setNombre("Running");
         actividad.setInstructor(instructor);
 
         claseId = UUID.randomUUID();
         Clase clase = new Clase();
         clase.setActividad(actividad);
+        clase.setFechaHora(Instant.parse("2026-08-20T12:00:00Z"));
         ReflectionTestUtils.setField(clase, "id", claseId);
 
         alumnoId = UUID.randomUUID();
@@ -120,6 +128,8 @@ class ResolverDenunciaServiceTest {
         assertThat(inscripcion.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         verify(paymentGateway).cancelarPago("ref-1");
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId));
+        verify(notificacionService, never()).notificar(eq(instructorId), any(), any(), any());
     }
 
     @Test
@@ -149,6 +159,8 @@ class ResolverDenunciaServiceTest {
         assertThat(response.estado()).isEqualTo("Resuelta");
         assertThat(instructor.getEstado()).isEqualTo(EstadoUsuario.SUSPENDIDO);
         verify(usuarioRepository).save(instructor);
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId));
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.INSTRUCTOR_SUSPENDIDO), any(), eq(denunciaId));
     }
 
     @Test
@@ -158,6 +170,8 @@ class ResolverDenunciaServiceTest {
         assertThat(instructor.getCantidadPenalizaciones()).isEqualTo(1);
         verify(penalizacionRepository).save(any());
         verify(usuarioRepository).save(instructor);
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId));
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.PENALIZACION_APLICADA), any(), eq(denunciaId));
     }
 
     @Test
@@ -167,6 +181,8 @@ class ResolverDenunciaServiceTest {
         assertThat(response.estado()).isEqualTo("Resuelta");
         assertThat(instructor.getEstado()).isEqualTo(EstadoUsuario.ACTIVO);
         assertThat(instructor.getCantidadPenalizaciones()).isEqualTo(0);
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId));
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.DENUNCIA_DESESTIMADA), any(), eq(denunciaId));
     }
 
     @Test

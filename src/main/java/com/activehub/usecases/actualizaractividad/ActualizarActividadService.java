@@ -11,6 +11,7 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
+import com.activehub.shared.error.ValidacionException;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +56,10 @@ public class ActualizarActividadService {
         TipoActividad tipo = tipoActividadRepository.findById(request.tipoActividadId())
                 .orElseThrow(() -> new NoEncontradoException("Tipo de actividad no encontrado."));
 
+        if ((request.latitud() == null) != (request.longitud() == null)) {
+            throw new ValidacionException("Latitud y longitud deben enviarse juntas, o ninguna de las dos.");
+        }
+
         actividad.setNombre(request.nombre().trim());
         actividad.setDescripcion(request.descripcion().trim());
         actividad.setTipoActividad(tipo);
@@ -63,6 +68,8 @@ public class ActualizarActividadService {
         actividad.setUbicacion(request.ubicacion().trim());
         actividad.setPhotoTint(request.photoTint());
         actividad.setCuposMax(request.cuposMax());
+        actividad.setLatitud(request.latitud());
+        actividad.setLongitud(request.longitud());
         actividadRepository.save(actividad);
 
         auditService.registrar(instructorId, AuditAccion.ACTIVIDAD_ACTUALIZADA, "Actividad", actividad.getId(), null);
@@ -80,7 +87,9 @@ public class ActualizarActividadService {
                 actividad.getUbicacion(),
                 actividad.getPhotoTint(),
                 actividad.getRating(),
-                actividad.getCuposMax()
+                actividad.getCuposMax(),
+                actividad.getLatitud(),
+                actividad.getLongitud()
         );
     }
 }

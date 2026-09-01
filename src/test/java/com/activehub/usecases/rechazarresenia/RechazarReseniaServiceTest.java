@@ -2,6 +2,8 @@ package com.activehub.usecases.rechazarresenia;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -10,8 +12,12 @@ import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.resenia.Resenia;
 import com.activehub.domain.resenia.ReseniaRepository;
+import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,26 +36,36 @@ class RechazarReseniaServiceTest {
     private ActividadRepository actividadRepository;
     @Mock
     private AuditService auditService;
+    @Mock
+    private NotificacionService notificacionService;
 
     private RechazarReseniaService service;
     private UUID reseniaId;
     private UUID actividadId;
+    private UUID alumnoId;
     private Resenia resenia;
 
     @BeforeEach
     void setUp() {
-        service = new RechazarReseniaService(reseniaRepository, actividadRepository, auditService);
+        service = new RechazarReseniaService(reseniaRepository, actividadRepository, auditService, notificacionService);
 
         actividadId = UUID.randomUUID();
         Actividad actividad = new Actividad();
+        actividad.setNombre("Running");
         ReflectionTestUtils.setField(actividad, "id", actividadId);
 
         Clase clase = new Clase();
         clase.setActividad(actividad);
+        clase.setFechaHora(Instant.parse("2026-08-01T00:00:00Z"));
+
+        alumnoId = UUID.randomUUID();
+        Usuario alumno = new Usuario();
+        ReflectionTestUtils.setField(alumno, "id", alumnoId);
 
         reseniaId = UUID.randomUUID();
         resenia = new Resenia();
         resenia.setClase(clase);
+        resenia.setAlumno(alumno);
         ReflectionTestUtils.setField(resenia, "id", reseniaId);
     }
 
@@ -61,6 +77,7 @@ class RechazarReseniaServiceTest {
 
         assertThat(resenia.isDeleted()).isTrue();
         verify(actividadRepository).recalcularRating(actividadId);
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.RESENIA_RECHAZADA), any(), eq(reseniaId));
     }
 
     @Test

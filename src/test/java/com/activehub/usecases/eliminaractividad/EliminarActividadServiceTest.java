@@ -3,6 +3,7 @@ package com.activehub.usecases.eliminaractividad;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -23,8 +24,11 @@ import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -50,6 +54,8 @@ class EliminarActividadServiceTest {
     private PaymentGateway paymentGateway;
     @Mock
     private AuditService auditService;
+    @Mock
+    private NotificacionService notificacionService;
 
     private EliminarActividadService service;
     private UUID actividadId;
@@ -59,7 +65,8 @@ class EliminarActividadServiceTest {
     @BeforeEach
     void setUp() {
         service = new EliminarActividadService(
-                actividadRepository, claseRepository, inscripcionRepository, pagoRepository, paymentGateway, auditService);
+                actividadRepository, claseRepository, inscripcionRepository, pagoRepository, paymentGateway, auditService,
+                notificacionService);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();
@@ -67,6 +74,7 @@ class EliminarActividadServiceTest {
 
         actividadId = UUID.randomUUID();
         actividad = new Actividad();
+        actividad.setNombre("Running");
         actividad.setInstructor(instructor);
         ReflectionTestUtils.setField(actividad, "id", actividadId);
     }
@@ -80,6 +88,7 @@ class EliminarActividadServiceTest {
 
         assertThat(actividad.isDeleted()).isTrue();
         verify(actividadRepository).save(actividad);
+        verify(notificacionService, never()).notificar(eq(instructorId), any(), any(), any());
     }
 
     @Test
@@ -91,6 +100,7 @@ class EliminarActividadServiceTest {
 
         assertThat(actividad.isDeleted()).isTrue();
         verify(actividadRepository).save(actividad);
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.ACTIVIDAD_ELIMINADA), any(), eq(actividadId));
     }
 
     @Test
@@ -100,9 +110,14 @@ class EliminarActividadServiceTest {
         Clase clase = new Clase();
         clase.setActividad(actividad);
         clase.setEstado(EstadoClase.Programada);
+        clase.setFechaHora(Instant.parse("2026-08-20T12:00:00Z"));
         UUID claseId = UUID.randomUUID();
         ReflectionTestUtils.setField(clase, "id", claseId);
         when(claseRepository.findByActividadIdAndEstadoNotInOrderByFechaHoraAsc(any(), any())).thenReturn(List.of(clase));
+
+        UUID alumnoId = UUID.randomUUID();
+        Usuario alumno = new Usuario();
+        ReflectionTestUtils.setField(alumno, "id", alumnoId);
 
         Pago pago = new Pago();
         pago.setEstado(EstadoPago.Retenido);
@@ -111,6 +126,7 @@ class EliminarActividadServiceTest {
         pago.setReferenciaExterna("ref-1");
         Inscripcion inscripcion = new Inscripcion();
         inscripcion.setEstado(EstadoInscripcion.INSCRIPTO);
+        inscripcion.setAlumno(alumno);
         inscripcion.setPago(pago);
         when(inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA)).thenReturn(List.of(inscripcion));
 
@@ -120,6 +136,7 @@ class EliminarActividadServiceTest {
         assertThat(inscripcion.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         verify(paymentGateway).cancelarPago("ref-1");
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.ACTIVIDAD_ELIMINADA), any(), eq(actividadId));
     }
 
     @Test

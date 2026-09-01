@@ -23,6 +23,7 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
+import com.activehub.shared.error.ValidacionException;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
@@ -76,7 +77,13 @@ class CrearActividadServiceTest {
     private CrearActividadRequest requestValido() {
         return new CrearActividadRequest(
                 "Running en grupo", "Salidas grupales", tipo.getId(), "Física alta",
-                new BigDecimal("4500"), "Parque Gral. San Martín", "gradient", 16);
+                new BigDecimal("4500"), "Parque Gral. San Martín", "gradient", 16, null, null);
+    }
+
+    private CrearActividadRequest requestConCoordenadas(Double latitud, Double longitud) {
+        return new CrearActividadRequest(
+                "Running en grupo", "Salidas grupales", tipo.getId(), "Física alta",
+                new BigDecimal("4500"), "Parque Gral. San Martín", "gradient", 16, latitud, longitud);
     }
 
     private PerfilInstructor perfilAprobado() {
@@ -123,5 +130,34 @@ class CrearActividadServiceTest {
 
         assertThatThrownBy(() -> service.crear(requestValido(), instructorId))
                 .isInstanceOf(NoEncontradoException.class);
+    }
+
+    @Test
+    void crear_conCoordenadas_lasPersisteYDevuelve() {
+        when(perfilInstructorRepository.findByUsuarioId(instructorId)).thenReturn(Optional.of(perfilAprobado()));
+        when(tipoActividadRepository.findById(tipo.getId())).thenReturn(Optional.of(tipo));
+        when(usuarioRepository.findById(instructorId)).thenReturn(Optional.of(instructor));
+        when(actividadRepository.saveAndFlush(any(Actividad.class))).thenAnswer(inv -> {
+            Actividad a = inv.getArgument(0);
+            ReflectionTestUtils.setField(a, "id", UUID.randomUUID());
+            return a;
+        });
+
+        CrearActividadResponse response = service.crear(requestConCoordenadas(-32.8908, -68.8272), instructorId);
+
+        assertThat(response.latitud()).isEqualTo(-32.8908);
+        assertThat(response.longitud()).isEqualTo(-68.8272);
+    }
+
+    @Test
+    void crear_soloLatitudSinLongitud_lanzaValidacion() {
+        when(perfilInstructorRepository.findByUsuarioId(instructorId)).thenReturn(Optional.of(perfilAprobado()));
+        when(tipoActividadRepository.findById(tipo.getId())).thenReturn(Optional.of(tipo));
+        when(usuarioRepository.findById(instructorId)).thenReturn(Optional.of(instructor));
+
+        assertThatThrownBy(() -> service.crear(requestConCoordenadas(-32.8908, null), instructorId))
+                .isInstanceOf(ValidacionException.class);
+
+        verify(actividadRepository, never()).saveAndFlush(any());
     }
 }

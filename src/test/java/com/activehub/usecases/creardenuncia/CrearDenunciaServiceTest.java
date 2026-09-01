@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.actividad.ClaseRepository;
 import com.activehub.domain.denuncia.Denuncia;
@@ -15,6 +16,8 @@ import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -43,22 +46,35 @@ class CrearDenunciaServiceTest {
     private UsuarioRepository usuarioRepository;
     @Mock
     private AuditService auditService;
+    @Mock
+    private NotificacionService notificacionService;
 
     private CrearDenunciaService service;
     private UUID claseId;
     private UUID alumnoId;
+    private UUID instructorId;
     private Clase clase;
     private CrearDenunciaRequest request;
 
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(AHORA, ZoneOffset.UTC);
-        service = new CrearDenunciaService(claseRepository, inscripcionRepository, denunciaRepository, usuarioRepository, auditService, clock);
+        service = new CrearDenunciaService(
+                claseRepository, inscripcionRepository, denunciaRepository, usuarioRepository, auditService, notificacionService, clock);
 
         claseId = UUID.randomUUID();
         alumnoId = UUID.randomUUID();
+        instructorId = UUID.randomUUID();
+
+        Usuario instructor = new Usuario();
+        ReflectionTestUtils.setField(instructor, "id", instructorId);
+        Actividad actividad = new Actividad();
+        actividad.setNombre("Running");
+        actividad.setInstructor(instructor);
+
         clase = new Clase();
         clase.setFechaHora(AHORA.minus(Duration.ofHours(2)));
+        clase.setActividad(actividad);
         ReflectionTestUtils.setField(clase, "id", claseId);
 
         request = new CrearDenunciaRequest("El instructor no se presentó.");
@@ -86,6 +102,9 @@ class CrearDenunciaServiceTest {
 
         assertThat(response.estado()).isEqualTo("Pendiente");
         assertThat(response.motivo()).isEqualTo("El instructor no se presentó.");
+        org.mockito.Mockito.verify(notificacionService).notificar(
+                org.mockito.ArgumentMatchers.eq(instructorId), org.mockito.ArgumentMatchers.eq(TipoNotificacion.DENUNCIA_RECIBIDA),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     }
 
     @Test
