@@ -2,14 +2,19 @@ server:
   port: ${PORT:8080}
 
 spring:
-  application:
-    name: activehub-api
-  servlet:
-    multipart:
-      max-file-size: 5MB
-      max-request-size: 5MB
+  config:
+    import: optional:file:./.env[.properties]
+    application:
+      name: activehub-api
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/activehub?user=activehub&password=activehub}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/activehub}
+    username: ${DATABASE_USERNAME:activehub}
+    password: ${DATABASE_PASSWORD:XXX}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+      minimum-idle: 1
+      connection-timeout: 30000
+      max-lifetime: 1500000
   jpa:
     hibernate:
       ddl-auto: validate
@@ -17,9 +22,13 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        jdbc:
+          time_zone: UTC
   flyway:
     enabled: true
     locations: classpath:db/migration
+    schemas: public
+    default-schema: public
 
 app:
   jwt:
