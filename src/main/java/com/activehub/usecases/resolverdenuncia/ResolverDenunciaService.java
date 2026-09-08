@@ -70,8 +70,8 @@ public class ResolverDenunciaService {
 
         switch (accion) {
             case REINTEGRAR -> reintegrar(denuncia);
-            case SUSPENDER -> suspenderInstructor(denuncia);
-            case PENALIZAR -> penalizarInstructor(denuncia);
+            case SUSPENDER -> suspenderInstructor(denuncia, actorId);
+            case PENALIZAR -> penalizarInstructor(denuncia, actorId);
             case DESESTIMAR -> {
                 // sin efecto secundario: se desestima y se cierra el caso.
             }
@@ -100,22 +100,31 @@ public class ResolverDenunciaService {
                 });
     }
 
-    private void suspenderInstructor(Denuncia denuncia) {
+    private void suspenderInstructor(Denuncia denuncia, UUID actorId) {
         Usuario instructor = denuncia.getClase().getActividad().getInstructor();
         instructor.setEstado(EstadoUsuario.SUSPENDIDO);
         usuarioRepository.save(instructor);
+        // RN-14: la suspensión es una operación crítica y necesita su propio registro. Antes
+        // solo quedaba la fila DENUNCIA_RESUELTA, sin rastro sobre el usuario sancionado.
+        auditService.registrar(
+                actorId, AuditAccion.USUARIO_ESTADO_ACTUALIZADO, "Usuario", instructor.getId(), "SUSPENDIDO");
     }
 
-    private void penalizarInstructor(Denuncia denuncia) {
+    private void penalizarInstructor(Denuncia denuncia, UUID actorId) {
         Usuario instructor = denuncia.getClase().getActividad().getInstructor();
 
         Penalizacion penalizacion = new Penalizacion();
         penalizacion.setUsuario(instructor);
         penalizacion.setTipo(TipoPenalizacion.ECONOMICA);
         penalizacion.setMotivo(denuncia.getMotivo());
-        penalizacionRepository.save(penalizacion);
+        // Vínculo con su origen: habilita el "Ver denuncia" del listado (criterio 6).
+        penalizacion.setDenuncia(denuncia);
+        penalizacion = penalizacionRepository.saveAndFlush(penalizacion);
 
         instructor.setCantidadPenalizaciones(instructor.getCantidadPenalizaciones() + 1);
         usuarioRepository.save(instructor);
+
+        auditService.registrar(
+                actorId, AuditAccion.PENALIZACION_APLICADA, "Penalizacion", penalizacion.getId(), "ECONOMICA");
     }
 }

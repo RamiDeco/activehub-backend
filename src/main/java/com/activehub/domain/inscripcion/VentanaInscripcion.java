@@ -11,7 +11,9 @@ import java.time.Instant;
  */
 public final class VentanaInscripcion {
 
-    private static final Duration UMBRAL_PREINSCRIPCION = Duration.ofDays(4);
+    /** Publico: lo usa tambien el job que pasa las clases de Programada a Habilitada. */
+    public static final Duration UMBRAL_PREINSCRIPCION = Duration.ofDays(4);
+
     private static final Duration UMBRAL_CIERRE = Duration.ofHours(1);
 
     private VentanaInscripcion() {

@@ -8,6 +8,13 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+<<<<<<< Updated upstream
+=======
+import com.activehub.shared.notificacion.NotificacionMensajes;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
+import com.activehub.shared.security.InstructorVerificadoGuard;
+>>>>>>> Stashed changes
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,14 +24,31 @@ public class ConfirmarCobroEfectivoService {
 
     private final InscripcionRepository inscripcionRepository;
     private final AuditService auditService;
+<<<<<<< Updated upstream
 
     public ConfirmarCobroEfectivoService(InscripcionRepository inscripcionRepository, AuditService auditService) {
         this.inscripcionRepository = inscripcionRepository;
         this.auditService = auditService;
+=======
+    private final NotificacionService notificacionService;
+    private final InstructorVerificadoGuard instructorVerificadoGuard;
+
+    public ConfirmarCobroEfectivoService(
+            InscripcionRepository inscripcionRepository,
+            AuditService auditService,
+            NotificacionService notificacionService,
+            InstructorVerificadoGuard instructorVerificadoGuard
+    ) {
+        this.inscripcionRepository = inscripcionRepository;
+        this.auditService = auditService;
+        this.notificacionService = notificacionService;
+        this.instructorVerificadoGuard = instructorVerificadoGuard;
+>>>>>>> Stashed changes
     }
 
     @Transactional
     public ConfirmarCobroEfectivoResponse confirmar(UUID id, UUID instructorId) {
+        instructorVerificadoGuard.exigirVerificado(instructorId, "confirmar cobros");
         Inscripcion inscripcion = inscripcionRepository.findById(id)
                 .orElseThrow(() -> new NoEncontradoException("Inscripción no encontrada."));
 

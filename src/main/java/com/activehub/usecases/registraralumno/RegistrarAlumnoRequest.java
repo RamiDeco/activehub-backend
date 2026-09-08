@@ -16,11 +16,13 @@ public record RegistrarAlumnoRequest(
         @NotBlank(message = "El teléfono es obligatorio") String telefono,
         @NotBlank(message = "La contraseña es obligatoria")
         @Pattern(
-                regexp = "^(?=.*[A-Za-z])(?=.*\\d).{8,}$",
-                message = "La contraseña debe tener al menos 8 caracteres, una letra y un número"
+                regexp = "^(?=.*[A-Z])(?=.*\\d).{8,}$",
+                message = "La contraseña debe tener al menos 8 caracteres, una mayúscula y un número"
         ) String password,
         @NotNull(message = "La fecha de nacimiento es obligatoria") LocalDate fechaNacimiento,
         List<String> intereses,
         @AssertTrue(message = "Tenés que aceptar los términos y condiciones") boolean aceptaTerminos
 ) {
 }
+
+

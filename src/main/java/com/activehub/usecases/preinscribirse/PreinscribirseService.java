@@ -13,6 +13,7 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.InscripcionYaExisteException;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.time.Clock;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ public class PreinscribirseService {
     private final InscripcionRepository inscripcionRepository;
     private final UsuarioRepository usuarioRepository;
     private final AuditService auditService;
+    private final InstructorVerificadoGuard instructorVerificadoGuard;
     private final Clock clock;
 
     public PreinscribirseService(
@@ -32,12 +34,14 @@ public class PreinscribirseService {
             InscripcionRepository inscripcionRepository,
             UsuarioRepository usuarioRepository,
             AuditService auditService,
+            InstructorVerificadoGuard instructorVerificadoGuard,
             Clock clock
     ) {
         this.claseRepository = claseRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.usuarioRepository = usuarioRepository;
         this.auditService = auditService;
+        this.instructorVerificadoGuard = instructorVerificadoGuard;
         this.clock = clock;
     }
 
@@ -49,6 +53,8 @@ public class PreinscribirseService {
         if (clase.getEstado() == EstadoClase.Cancelada || clase.getEstado() == EstadoClase.Finalizada) {
             throw new ValidacionException("Esta clase ya no admite inscripciones.");
         }
+        // RN-16: si al instructor le revocaron la verificación, su oferta deja de ser reservable.
+        instructorVerificadoGuard.exigirOfertaVigente(clase.getActividad().getInstructor().getId());
 
         if (!VentanaInscripcion.esVentanaPreInscripcion(clock.instant(), clase.getFechaHora())) {
             throw new ValidacionException("Faltan 4 días o menos para la clase: ya podés inscribirte directamente.");

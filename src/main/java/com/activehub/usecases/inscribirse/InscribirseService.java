@@ -19,6 +19,7 @@ import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinCuposDisponiblesException;
 import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.time.Clock;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,11 @@ public class InscribirseService {
     private final UsuarioRepository usuarioRepository;
     private final PaymentGateway paymentGateway;
     private final AuditService auditService;
+<<<<<<< Updated upstream
+=======
+    private final NotificacionService notificacionService;
+    private final InstructorVerificadoGuard instructorVerificadoGuard;
+>>>>>>> Stashed changes
     private final Clock clock;
 
     public InscribirseService(
@@ -42,6 +48,11 @@ public class InscribirseService {
             UsuarioRepository usuarioRepository,
             PaymentGateway paymentGateway,
             AuditService auditService,
+<<<<<<< Updated upstream
+=======
+            NotificacionService notificacionService,
+            InstructorVerificadoGuard instructorVerificadoGuard,
+>>>>>>> Stashed changes
             Clock clock
     ) {
         this.claseRepository = claseRepository;
@@ -50,6 +61,11 @@ public class InscribirseService {
         this.usuarioRepository = usuarioRepository;
         this.paymentGateway = paymentGateway;
         this.auditService = auditService;
+<<<<<<< Updated upstream
+=======
+        this.notificacionService = notificacionService;
+        this.instructorVerificadoGuard = instructorVerificadoGuard;
+>>>>>>> Stashed changes
         this.clock = clock;
     }
 
@@ -61,6 +77,8 @@ public class InscribirseService {
         if (clase.getEstado() == EstadoClase.Cancelada || clase.getEstado() == EstadoClase.Finalizada) {
             throw new ValidacionException("Esta clase ya no admite inscripciones.");
         }
+        // RN-16: si al instructor le revocaron la verificación, su oferta deja de ser reservable.
+        instructorVerificadoGuard.exigirOfertaVigente(clase.getActividad().getInstructor().getId());
 
         var ahora = clock.instant();
         if (!VentanaInscripcion.esVentanaInscripcion(ahora, clase.getFechaHora())) {

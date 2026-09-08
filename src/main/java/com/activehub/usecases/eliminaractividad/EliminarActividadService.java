@@ -18,6 +18,7 @@ import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.payments.PaymentGateway;
 import java.util.EnumSet;
 import java.util.List;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,13 +33,21 @@ public class EliminarActividadService {
     private final PaymentGateway paymentGateway;
     private final AuditService auditService;
 
+    private final InstructorVerificadoGuard instructorVerificadoGuard;
+
     public EliminarActividadService(
             ActividadRepository actividadRepository,
             ClaseRepository claseRepository,
             InscripcionRepository inscripcionRepository,
             PagoRepository pagoRepository,
             PaymentGateway paymentGateway,
+<<<<<<< Updated upstream
             AuditService auditService
+=======
+            AuditService auditService,
+            NotificacionService notificacionService,
+            InstructorVerificadoGuard instructorVerificadoGuard
+>>>>>>> Stashed changes
     ) {
         this.actividadRepository = actividadRepository;
         this.claseRepository = claseRepository;
@@ -46,6 +55,11 @@ public class EliminarActividadService {
         this.pagoRepository = pagoRepository;
         this.paymentGateway = paymentGateway;
         this.auditService = auditService;
+<<<<<<< Updated upstream
+=======
+        this.notificacionService = notificacionService;
+        this.instructorVerificadoGuard = instructorVerificadoGuard;
+>>>>>>> Stashed changes
     }
 
     @Transactional
@@ -55,6 +69,11 @@ public class EliminarActividadService {
 
         if (!esAdmin && !actividad.getInstructor().getId().equals(actorId)) {
             throw new SinPermisoException("No podés eliminar una actividad que no te pertenece.");
+        }
+        // El admin no necesita perfil de instructor verificado: la guarda solo aplica
+        // cuando el que borra es el propio instructor.
+        if (!esAdmin) {
+            instructorVerificadoGuard.exigirVerificado(actorId, "eliminar actividades");
         }
 
         List<Clase> clasesVigentes = claseRepository.findByActividadIdAndEstadoNotInOrderByFechaHoraAsc(

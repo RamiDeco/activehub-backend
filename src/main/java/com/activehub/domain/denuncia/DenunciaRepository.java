@@ -9,6 +9,9 @@ public interface DenunciaRepository extends JpaRepository<Denuncia, UUID> {
 
     boolean existsByClaseIdAndAlumnoId(UUID claseId, UUID alumnoId);
 
+    /** Denuncias abiertas (no Resueltas) sobre una clase: retienen la liberacion del pago. */
+    boolean existsByClaseIdAndEstadoNot(UUID claseId, EstadoDenuncia estado);
+
     @Query("SELECT d FROM Denuncia d "
             + "JOIN FETCH d.alumno "
             + "JOIN FETCH d.clase c JOIN FETCH c.actividad a JOIN FETCH a.instructor "

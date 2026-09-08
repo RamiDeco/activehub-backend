@@ -16,6 +16,18 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+<<<<<<< Updated upstream
+=======
+    schemas: public
+    default-schema: public
+  servlet:
+    multipart:
+      # El limite por archivo tiene que coincidir con el que promete la UI de registro
+      # ("PDF, JPG o PNG · hasta 5 MB"). Con el default de Spring (1 MB) un adjunto valido
+      # segun la pantalla era rechazado por el servidor.
+      max-file-size: 5MB
+      max-request-size: 30MB
+>>>>>>> Stashed changes
 
 app:
   jwt:

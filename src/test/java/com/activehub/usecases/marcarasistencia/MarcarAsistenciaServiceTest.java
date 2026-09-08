@@ -11,6 +11,7 @@ import com.activehub.domain.inscripcion.Inscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
@@ -31,6 +32,9 @@ class MarcarAsistenciaServiceTest {
     @Mock
     private AuditService auditService;
 
+    @org.mockito.Mock private InstructorVerificadoGuard instructorVerificadoGuard;
+
+
     private MarcarAsistenciaService service;
     private UUID instructorId;
     private UUID inscripcionId;
@@ -38,7 +42,7 @@ class MarcarAsistenciaServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new MarcarAsistenciaService(inscripcionRepository, auditService);
+        service = new MarcarAsistenciaService(inscripcionRepository, auditService, instructorVerificadoGuard);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();

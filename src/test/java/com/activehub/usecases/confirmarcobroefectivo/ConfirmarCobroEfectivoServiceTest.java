@@ -11,6 +11,7 @@ import com.activehub.domain.inscripcion.Inscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
 import java.util.Optional;
@@ -30,6 +31,9 @@ class ConfirmarCobroEfectivoServiceTest {
     @Mock
     private AuditService auditService;
 
+    @org.mockito.Mock private InstructorVerificadoGuard instructorVerificadoGuard;
+
+
     private ConfirmarCobroEfectivoService service;
     private UUID inscripcionId;
     private UUID instructorId;
@@ -37,7 +41,11 @@ class ConfirmarCobroEfectivoServiceTest {
 
     @BeforeEach
     void setUp() {
+<<<<<<< Updated upstream
         service = new ConfirmarCobroEfectivoService(inscripcionRepository, auditService);
+=======
+        service = new ConfirmarCobroEfectivoService(inscripcionRepository, auditService, notificacionService, instructorVerificadoGuard);
+>>>>>>> Stashed changes
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();
