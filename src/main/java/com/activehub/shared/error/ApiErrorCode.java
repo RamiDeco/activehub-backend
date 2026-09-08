@@ -13,6 +13,7 @@ public enum ApiErrorCode {
     CATEGORIA_EN_USO(HttpStatus.CONFLICT),
     SIN_CUPOS_DISPONIBLES(HttpStatus.CONFLICT),
     INSCRIPCION_YA_EXISTE(HttpStatus.CONFLICT),
+    ERROR_PAGO(HttpStatus.BAD_GATEWAY),
     ERROR_INTERNO(HttpStatus.INTERNAL_SERVER_ERROR);
 
     private final HttpStatus status;

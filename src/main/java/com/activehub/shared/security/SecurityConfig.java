@@ -38,7 +38,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/registro/alumno",
                                 "/api/auth/registro/instructor",
-                                "/api/auth/login"
+                                "/api/auth/login",
+                                "/api/payments/process"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/categorias",

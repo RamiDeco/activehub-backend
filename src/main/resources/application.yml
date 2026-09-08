@@ -26,3 +26,5 @@ app:
     password: ${ADMIN_SEED_PASSWORD:}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  mercadopago:
+    access-token: ${MP_ACCESS_TOKEN}
