@@ -165,10 +165,17 @@ class ResolverDenunciaServiceTest {
 
     @Test
     void resolver_penalizar_creaPenalizacionYSumaContadorDelInstructor() {
+        // saveAndFlush: la penalización necesita id propio para poder auditarla.
+        when(penalizacionRepository.saveAndFlush(any())).thenAnswer(inv -> {
+            com.activehub.domain.penalizacion.Penalizacion p = inv.getArgument(0);
+            ReflectionTestUtils.setField(p, "id", UUID.randomUUID());
+            return p;
+        });
+
         service.resolver(denunciaId, req(AccionResolucion.PENALIZAR), UUID.randomUUID());
 
         assertThat(instructor.getCantidadPenalizaciones()).isEqualTo(1);
-        verify(penalizacionRepository).save(any());
+        verify(penalizacionRepository).saveAndFlush(any());
         verify(usuarioRepository).save(instructor);
         verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId));
         verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.PENALIZACION_APLICADA), any(), eq(denunciaId));

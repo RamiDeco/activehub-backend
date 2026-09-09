@@ -21,6 +21,7 @@ import com.activehub.domain.inscripcion.PagoRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import com.activehub.shared.error.InscripcionYaExisteException;
 import com.activehub.shared.error.SinCuposDisponiblesException;
 import com.activehub.shared.error.ValidacionException;
@@ -61,6 +62,9 @@ class InscribirseServiceTest {
     @Mock
     private NotificacionService notificacionService;
 
+    @org.mockito.Mock private InstructorVerificadoGuard instructorVerificadoGuard;
+
+
     private InscribirseService service;
     private UUID claseId;
     private UUID alumnoId;
@@ -72,7 +76,7 @@ class InscribirseServiceTest {
         Clock clock = Clock.fixed(AHORA, ZoneOffset.UTC);
         service = new InscribirseService(
                 claseRepository, inscripcionRepository, pagoRepository, usuarioRepository, paymentGateway, auditService,
-                notificacionService, clock);
+                notificacionService, instructorVerificadoGuard, clock);
 
         claseId = UUID.randomUUID();
         alumnoId = UUID.randomUUID();

@@ -38,6 +38,8 @@ public class ListarActividadesService {
             BigDecimal precioMax, boolean soloConCupos, UUID instructorId, String sort) {
 
         List<Specification<Actividad>> partes = new ArrayList<>();
+        // El catálogo público solo muestra oferta de instructores verificados (RN-16).
+        partes.add(ActividadSpecifications.deInstructorVerificado());
         partes.add(ActividadSpecifications.conTexto(texto));
         partes.add(ActividadSpecifications.conCategoria(categoriaId));
         partes.add(ActividadSpecifications.conTipo(tipoActividadId));

@@ -18,6 +18,7 @@ import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,13 +33,16 @@ public class CancelarClaseService {
     private final NotificacionService notificacionService;
     private final AuditService auditService;
 
+    private final InstructorVerificadoGuard instructorVerificadoGuard;
+
     public CancelarClaseService(
             ClaseRepository claseRepository,
             InscripcionRepository inscripcionRepository,
             PagoRepository pagoRepository,
             PaymentGateway paymentGateway,
             NotificacionService notificacionService,
-            AuditService auditService
+            AuditService auditService,
+            InstructorVerificadoGuard instructorVerificadoGuard
     ) {
         this.claseRepository = claseRepository;
         this.inscripcionRepository = inscripcionRepository;
@@ -46,10 +50,12 @@ public class CancelarClaseService {
         this.paymentGateway = paymentGateway;
         this.notificacionService = notificacionService;
         this.auditService = auditService;
+        this.instructorVerificadoGuard = instructorVerificadoGuard;
     }
 
     @Transactional
     public CancelarClaseResponse cancelar(UUID claseId, UUID instructorId) {
+        instructorVerificadoGuard.exigirVerificado(instructorId, "cancelar clases");
         Clase clase = claseRepository.findById(claseId)
                 .orElseThrow(() -> new NoEncontradoException("Clase no encontrada."));
 

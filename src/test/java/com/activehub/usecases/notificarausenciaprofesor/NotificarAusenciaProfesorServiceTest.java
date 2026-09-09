@@ -21,6 +21,7 @@ import com.activehub.domain.inscripcion.Pago;
 import com.activehub.domain.inscripcion.PagoRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
@@ -54,6 +55,9 @@ class NotificarAusenciaProfesorServiceTest {
     @Mock
     private AuditService auditService;
 
+    @org.mockito.Mock private InstructorVerificadoGuard instructorVerificadoGuard;
+
+
     private NotificarAusenciaProfesorService service;
     private UUID instructorId;
     private UUID claseId;
@@ -63,7 +67,7 @@ class NotificarAusenciaProfesorServiceTest {
     @BeforeEach
     void setUp() {
         service = new NotificarAusenciaProfesorService(
-                claseRepository, inscripcionRepository, pagoRepository, paymentGateway, notificacionService, auditService);
+                claseRepository, inscripcionRepository, pagoRepository, paymentGateway, notificacionService, auditService, instructorVerificadoGuard);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();

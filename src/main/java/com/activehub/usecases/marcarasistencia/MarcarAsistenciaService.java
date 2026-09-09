@@ -8,6 +8,7 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,13 +19,21 @@ public class MarcarAsistenciaService {
     private final InscripcionRepository inscripcionRepository;
     private final AuditService auditService;
 
-    public MarcarAsistenciaService(InscripcionRepository inscripcionRepository, AuditService auditService) {
+    private final InstructorVerificadoGuard instructorVerificadoGuard;
+
+    public MarcarAsistenciaService(
+            InscripcionRepository inscripcionRepository,
+            AuditService auditService,
+            InstructorVerificadoGuard instructorVerificadoGuard
+    ) {
         this.inscripcionRepository = inscripcionRepository;
         this.auditService = auditService;
+        this.instructorVerificadoGuard = instructorVerificadoGuard;
     }
 
     @Transactional
     public MarcarAsistenciaResponse marcar(UUID inscripcionId, MarcarAsistenciaRequest request, UUID instructorId) {
+        instructorVerificadoGuard.exigirVerificado(instructorId, "registrar asistencia");
         Inscripcion inscripcion = inscripcionRepository.findById(inscripcionId)
                 .orElseThrow(() -> new NoEncontradoException("Inscripción no encontrada."));
 

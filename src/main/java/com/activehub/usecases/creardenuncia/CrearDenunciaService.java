@@ -2,6 +2,7 @@ package com.activehub.usecases.creardenuncia;
 
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.actividad.ClaseRepository;
+import com.activehub.domain.actividad.EstadoClase;
 import com.activehub.domain.denuncia.Denuncia;
 import com.activehub.domain.denuncia.DenunciaRepository;
 import com.activehub.domain.inscripcion.EstadoInscripcion;
@@ -58,6 +59,12 @@ public class CrearDenunciaService {
 
         if (!inscripcionRepository.existsByClaseIdAndAlumnoIdAndEstado(claseId, alumnoId, EstadoInscripcion.INSCRIPTO)) {
             throw new ValidacionException("Solo podés denunciar clases en las que estuviste inscripto.");
+        }
+        // RN-18: la clase tiene que estar Finalizada, igual que en crearresenia. No alcanza
+        // con que haya pasado la hora de inicio: una clase que sigue en Programada/Habilitada
+        // todavia no se dicto a los ojos del sistema.
+        if (clase.getEstado() != EstadoClase.Finalizada) {
+            throw new ValidacionException("Solo podés denunciar clases que ya finalizaron.");
         }
         if (Duration.between(clase.getFechaHora(), clock.instant()).compareTo(UMBRAL_DENUNCIA) < 0) {
             throw new ValidacionException("Todavía no pasó 1 hora desde el inicio de la clase.");

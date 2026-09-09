@@ -14,6 +14,7 @@ import com.activehub.domain.inscripcion.Inscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.notificacion.NotificacionService;
@@ -38,6 +39,9 @@ class ConfirmarCobroEfectivoServiceTest {
     @Mock
     private NotificacionService notificacionService;
 
+    @org.mockito.Mock private InstructorVerificadoGuard instructorVerificadoGuard;
+
+
     private ConfirmarCobroEfectivoService service;
     private UUID inscripcionId;
     private UUID instructorId;
@@ -46,7 +50,7 @@ class ConfirmarCobroEfectivoServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ConfirmarCobroEfectivoService(inscripcionRepository, auditService, notificacionService);
+        service = new ConfirmarCobroEfectivoService(inscripcionRepository, auditService, notificacionService, instructorVerificadoGuard);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();

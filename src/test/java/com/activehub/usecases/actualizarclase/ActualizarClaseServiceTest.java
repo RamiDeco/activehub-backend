@@ -10,6 +10,7 @@ import com.activehub.domain.actividad.ClaseRepository;
 import com.activehub.domain.actividad.EstadoClase;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
 import java.time.Instant;
@@ -31,6 +32,9 @@ class ActualizarClaseServiceTest {
     @Mock
     private AuditService auditService;
 
+    @org.mockito.Mock private InstructorVerificadoGuard instructorVerificadoGuard;
+
+
     private ActualizarClaseService service;
     private UUID claseId;
     private UUID instructorId;
@@ -38,7 +42,7 @@ class ActualizarClaseServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ActualizarClaseService(claseRepository, auditService);
+        service = new ActualizarClaseService(claseRepository, auditService, instructorVerificadoGuard);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();

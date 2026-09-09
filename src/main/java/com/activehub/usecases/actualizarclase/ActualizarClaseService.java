@@ -8,6 +8,7 @@ import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
 import java.util.Map;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,13 +19,21 @@ public class ActualizarClaseService {
     private final ClaseRepository claseRepository;
     private final AuditService auditService;
 
-    public ActualizarClaseService(ClaseRepository claseRepository, AuditService auditService) {
+    private final InstructorVerificadoGuard instructorVerificadoGuard;
+
+    public ActualizarClaseService(
+            ClaseRepository claseRepository,
+            AuditService auditService,
+            InstructorVerificadoGuard instructorVerificadoGuard
+    ) {
         this.claseRepository = claseRepository;
         this.auditService = auditService;
+        this.instructorVerificadoGuard = instructorVerificadoGuard;
     }
 
     @Transactional
     public ActualizarClaseResponse actualizar(UUID id, ActualizarClaseRequest request, UUID instructorId) {
+        instructorVerificadoGuard.exigirVerificado(instructorId, "editar clases");
         Clase clase = claseRepository.findById(id)
                 .orElseThrow(() -> new NoEncontradoException("Clase no encontrada."));
 

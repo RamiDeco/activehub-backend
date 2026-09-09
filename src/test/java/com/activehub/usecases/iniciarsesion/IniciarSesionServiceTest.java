@@ -14,6 +14,7 @@ import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.security.IntentosLoginService;
 import com.activehub.shared.error.CredencialesInvalidasException;
 import com.activehub.shared.error.UsuarioSuspendidoException;
 import com.activehub.shared.security.JwtService;
@@ -40,11 +41,14 @@ class IniciarSesionServiceTest {
     @Mock
     private AuditService auditService;
 
+    @org.mockito.Mock private IntentosLoginService intentosLoginService;
+
+
     private IniciarSesionService service;
 
     @BeforeEach
     void setUp() {
-        service = new IniciarSesionService(usuarioRepository, passwordEncoder, jwtService, auditService);
+        service = new IniciarSesionService(usuarioRepository, passwordEncoder, jwtService, auditService, intentosLoginService);
     }
 
     private Usuario usuarioActivo() {
@@ -66,7 +70,7 @@ class IniciarSesionServiceTest {
     @Test
     void login_credencialesValidas_devuelveTokenYUsuario_yAuditaLoginOk() {
         Usuario usuario = usuarioActivo();
-        when(usuarioRepository.findByEmailIgnoreCaseAndDeletedFalse("martina@email.com")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmailConRol("martina@email.com")).thenReturn(Optional.of(usuario));
         when(passwordEncoder.matches("Password1", "hash-bcrypt")).thenReturn(true);
         when(jwtService.emitir(usuario.getId(), usuario.getEmail(), RolNombre.ALUMNO)).thenReturn("token-jwt");
 
@@ -80,7 +84,7 @@ class IniciarSesionServiceTest {
     @Test
     void login_passwordIncorrecta_lanzaCredencialesInvalidasException_yAuditaLoginFallido() {
         Usuario usuario = usuarioActivo();
-        when(usuarioRepository.findByEmailIgnoreCaseAndDeletedFalse("martina@email.com")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmailConRol("martina@email.com")).thenReturn(Optional.of(usuario));
         when(passwordEncoder.matches("incorrecta", "hash-bcrypt")).thenReturn(false);
 
         assertThatThrownBy(() -> service.login(new IniciarSesionRequest("martina@email.com", "incorrecta")))
@@ -91,7 +95,7 @@ class IniciarSesionServiceTest {
 
     @Test
     void login_emailInexistente_lanzaCredencialesInvalidasException_conMismoMensajeQuePasswordIncorrecta() {
-        when(usuarioRepository.findByEmailIgnoreCaseAndDeletedFalse("no-existe@email.com")).thenReturn(Optional.empty());
+        when(usuarioRepository.findByEmailConRol("no-existe@email.com")).thenReturn(Optional.empty());
 
         CredencialesInvalidasException exSinPassword = new CredencialesInvalidasException();
 
@@ -104,7 +108,7 @@ class IniciarSesionServiceTest {
     void login_usuarioSuspendido_lanzaUsuarioSuspendidoException_noCredencialesInvalidas() {
         Usuario usuario = usuarioActivo();
         usuario.setEstado(EstadoUsuario.SUSPENDIDO);
-        when(usuarioRepository.findByEmailIgnoreCaseAndDeletedFalse("martina@email.com")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmailConRol("martina@email.com")).thenReturn(Optional.of(usuario));
         when(passwordEncoder.matches("Password1", "hash-bcrypt")).thenReturn(true);
 
         assertThatThrownBy(() -> service.login(new IniciarSesionRequest("martina@email.com", "Password1")))

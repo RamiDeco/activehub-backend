@@ -22,6 +22,7 @@ import com.activehub.domain.inscripcion.Pago;
 import com.activehub.domain.inscripcion.PagoRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.notificacion.NotificacionService;
@@ -57,6 +58,9 @@ class EliminarActividadServiceTest {
     @Mock
     private NotificacionService notificacionService;
 
+    @org.mockito.Mock private InstructorVerificadoGuard instructorVerificadoGuard;
+
+
     private EliminarActividadService service;
     private UUID actividadId;
     private UUID instructorId;
@@ -66,7 +70,7 @@ class EliminarActividadServiceTest {
     void setUp() {
         service = new EliminarActividadService(
                 actividadRepository, claseRepository, inscripcionRepository, pagoRepository, paymentGateway, auditService,
-                notificacionService);
+                notificacionService, instructorVerificadoGuard);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();

@@ -14,8 +14,8 @@ public record RegistrarInstructorRequest(
         @NotBlank(message = "El teléfono es obligatorio") String telefono,
         @NotBlank(message = "La contraseña es obligatoria")
         @Pattern(
-                regexp = "^(?=.*[A-Za-z])(?=.*\\d).{8,}$",
-                message = "La contraseña debe tener al menos 8 caracteres, una letra y un número"
+                regexp = "^(?=.*[A-Z])(?=.*\\d).{8,}$",
+                message = "La contraseña debe tener al menos 8 caracteres, una mayúscula y un número"
         ) String password,
         LocalDate fechaNacimiento,
         @NotBlank(message = "La especialidad es obligatoria") String especialidad,
@@ -24,3 +24,5 @@ public record RegistrarInstructorRequest(
         @AssertTrue(message = "Tenés que aceptar los términos y condiciones") boolean aceptaTerminos
 ) {
 }
+
+

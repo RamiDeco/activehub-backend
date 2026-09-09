@@ -15,6 +15,7 @@ import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import java.util.List;
 import java.util.Optional;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,9 @@ class ListarRosterClaseServiceTest {
     @Mock
     private InscripcionRepository inscripcionRepository;
 
+    @org.mockito.Mock private InstructorVerificadoGuard instructorVerificadoGuard;
+
+
     private ListarRosterClaseService service;
     private UUID instructorId;
     private UUID claseId;
@@ -38,7 +42,7 @@ class ListarRosterClaseServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ListarRosterClaseService(claseRepository, inscripcionRepository);
+        service = new ListarRosterClaseService(claseRepository, inscripcionRepository, instructorVerificadoGuard);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();

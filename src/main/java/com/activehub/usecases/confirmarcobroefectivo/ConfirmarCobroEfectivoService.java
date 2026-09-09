@@ -11,6 +11,7 @@ import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,17 +22,23 @@ public class ConfirmarCobroEfectivoService {
     private final InscripcionRepository inscripcionRepository;
     private final AuditService auditService;
     private final NotificacionService notificacionService;
+    private final InstructorVerificadoGuard instructorVerificadoGuard;
 
     public ConfirmarCobroEfectivoService(
-            InscripcionRepository inscripcionRepository, AuditService auditService, NotificacionService notificacionService
+            InscripcionRepository inscripcionRepository,
+            AuditService auditService,
+            NotificacionService notificacionService,
+            InstructorVerificadoGuard instructorVerificadoGuard
     ) {
         this.inscripcionRepository = inscripcionRepository;
         this.auditService = auditService;
         this.notificacionService = notificacionService;
+        this.instructorVerificadoGuard = instructorVerificadoGuard;
     }
 
     @Transactional
     public ConfirmarCobroEfectivoResponse confirmar(UUID id, UUID instructorId) {
+        instructorVerificadoGuard.exigirVerificado(instructorId, "confirmar cobros");
         Inscripcion inscripcion = inscripcionRepository.findById(id)
                 .orElseThrow(() -> new NoEncontradoException("Inscripción no encontrada."));
 

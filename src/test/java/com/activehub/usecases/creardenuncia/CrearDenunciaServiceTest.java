@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.actividad.ClaseRepository;
+import com.activehub.domain.actividad.EstadoClase;
 import com.activehub.domain.denuncia.Denuncia;
 import com.activehub.domain.denuncia.DenunciaRepository;
 import com.activehub.domain.inscripcion.EstadoInscripcion;
@@ -74,6 +75,7 @@ class CrearDenunciaServiceTest {
 
         clase = new Clase();
         clase.setFechaHora(AHORA.minus(Duration.ofHours(2)));
+        clase.setEstado(EstadoClase.Finalizada);
         clase.setActividad(actividad);
         ReflectionTestUtils.setField(clase, "id", claseId);
 
@@ -115,6 +117,20 @@ class CrearDenunciaServiceTest {
 
         assertThatThrownBy(() -> service.crear(claseId, request, alumnoId))
                 .isInstanceOf(ValidacionException.class);
+    }
+
+    @Test
+    void crear_claseNoFinalizada_lanzaValidacion() {
+        // RN-18: no alcanza con que haya pasado la hora de inicio; la clase tiene que
+        // estar Finalizada, igual que exige crearresenia.
+        clase.setEstado(EstadoClase.Habilitada);
+        when(claseRepository.findById(claseId)).thenReturn(Optional.of(clase));
+        when(inscripcionRepository.existsByClaseIdAndAlumnoIdAndEstado(claseId, alumnoId, EstadoInscripcion.INSCRIPTO))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> service.crear(claseId, request, alumnoId))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessageContaining("finalizaron");
     }
 
     @Test

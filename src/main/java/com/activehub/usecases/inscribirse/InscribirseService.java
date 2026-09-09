@@ -22,6 +22,7 @@ import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.time.Clock;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ public class InscribirseService {
     private final PaymentGateway paymentGateway;
     private final AuditService auditService;
     private final NotificacionService notificacionService;
+    private final InstructorVerificadoGuard instructorVerificadoGuard;
     private final Clock clock;
 
     public InscribirseService(
@@ -47,6 +49,7 @@ public class InscribirseService {
             PaymentGateway paymentGateway,
             AuditService auditService,
             NotificacionService notificacionService,
+            InstructorVerificadoGuard instructorVerificadoGuard,
             Clock clock
     ) {
         this.claseRepository = claseRepository;
@@ -56,6 +59,7 @@ public class InscribirseService {
         this.paymentGateway = paymentGateway;
         this.auditService = auditService;
         this.notificacionService = notificacionService;
+        this.instructorVerificadoGuard = instructorVerificadoGuard;
         this.clock = clock;
     }
 
@@ -67,6 +71,8 @@ public class InscribirseService {
         if (clase.getEstado() == EstadoClase.Cancelada || clase.getEstado() == EstadoClase.Finalizada) {
             throw new ValidacionException("Esta clase ya no admite inscripciones.");
         }
+        // RN-16: si al instructor le revocaron la verificación, su oferta deja de ser reservable.
+        instructorVerificadoGuard.exigirOfertaVigente(clase.getActividad().getInstructor().getId());
 
         var ahora = clock.instant();
         if (!VentanaInscripcion.esVentanaInscripcion(ahora, clase.getFechaHora())) {
