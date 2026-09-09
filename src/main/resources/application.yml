@@ -16,8 +16,6 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-<<<<<<< Updated upstream
-=======
     schemas: public
     default-schema: public
   servlet:
@@ -27,7 +25,6 @@ spring:
       # segun la pantalla era rechazado por el servidor.
       max-file-size: 5MB
       max-request-size: 30MB
->>>>>>> Stashed changes
 
 app:
   jwt:

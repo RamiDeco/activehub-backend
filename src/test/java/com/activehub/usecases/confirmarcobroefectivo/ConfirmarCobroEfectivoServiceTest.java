@@ -41,11 +41,7 @@ class ConfirmarCobroEfectivoServiceTest {
 
     @BeforeEach
     void setUp() {
-<<<<<<< Updated upstream
-        service = new ConfirmarCobroEfectivoService(inscripcionRepository, auditService);
-=======
         service = new ConfirmarCobroEfectivoService(inscripcionRepository, auditService, notificacionService, instructorVerificadoGuard);
->>>>>>> Stashed changes
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();

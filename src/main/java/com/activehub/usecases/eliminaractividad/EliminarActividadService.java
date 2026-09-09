@@ -41,13 +41,9 @@ public class EliminarActividadService {
             InscripcionRepository inscripcionRepository,
             PagoRepository pagoRepository,
             PaymentGateway paymentGateway,
-<<<<<<< Updated upstream
-            AuditService auditService
-=======
             AuditService auditService,
             NotificacionService notificacionService,
             InstructorVerificadoGuard instructorVerificadoGuard
->>>>>>> Stashed changes
     ) {
         this.actividadRepository = actividadRepository;
         this.claseRepository = claseRepository;
@@ -55,11 +51,8 @@ public class EliminarActividadService {
         this.pagoRepository = pagoRepository;
         this.paymentGateway = paymentGateway;
         this.auditService = auditService;
-<<<<<<< Updated upstream
-=======
         this.notificacionService = notificacionService;
         this.instructorVerificadoGuard = instructorVerificadoGuard;
->>>>>>> Stashed changes
     }
 
     @Transactional

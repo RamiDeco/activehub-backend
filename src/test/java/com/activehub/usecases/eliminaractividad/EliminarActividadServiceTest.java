@@ -63,12 +63,8 @@ class EliminarActividadServiceTest {
     @BeforeEach
     void setUp() {
         service = new EliminarActividadService(
-<<<<<<< Updated upstream
-                actividadRepository, claseRepository, inscripcionRepository, pagoRepository, paymentGateway, auditService);
-=======
                 actividadRepository, claseRepository, inscripcionRepository, pagoRepository, paymentGateway, auditService,
                 notificacionService, instructorVerificadoGuard);
->>>>>>> Stashed changes
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();

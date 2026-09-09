@@ -60,11 +60,8 @@ class CrearDenunciaServiceTest {
         alumnoId = UUID.randomUUID();
         clase = new Clase();
         clase.setFechaHora(AHORA.minus(Duration.ofHours(2)));
-<<<<<<< Updated upstream
-=======
         clase.setEstado(EstadoClase.Finalizada);
         clase.setActividad(actividad);
->>>>>>> Stashed changes
         ReflectionTestUtils.setField(clase, "id", claseId);
 
         request = new CrearDenunciaRequest("El instructor no se presentó.");

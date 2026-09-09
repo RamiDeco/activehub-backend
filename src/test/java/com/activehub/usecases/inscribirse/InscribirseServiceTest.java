@@ -70,12 +70,8 @@ class InscribirseServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(AHORA, ZoneOffset.UTC);
         service = new InscribirseService(
-<<<<<<< Updated upstream
-                claseRepository, inscripcionRepository, pagoRepository, usuarioRepository, paymentGateway, auditService, clock);
-=======
                 claseRepository, inscripcionRepository, pagoRepository, usuarioRepository, paymentGateway, auditService,
                 notificacionService, instructorVerificadoGuard, clock);
->>>>>>> Stashed changes
 
         claseId = UUID.randomUUID();
         alumnoId = UUID.randomUUID();

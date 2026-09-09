@@ -34,11 +34,8 @@ public class InscribirseService {
     private final UsuarioRepository usuarioRepository;
     private final PaymentGateway paymentGateway;
     private final AuditService auditService;
-<<<<<<< Updated upstream
-=======
     private final NotificacionService notificacionService;
     private final InstructorVerificadoGuard instructorVerificadoGuard;
->>>>>>> Stashed changes
     private final Clock clock;
 
     public InscribirseService(
@@ -48,11 +45,8 @@ public class InscribirseService {
             UsuarioRepository usuarioRepository,
             PaymentGateway paymentGateway,
             AuditService auditService,
-<<<<<<< Updated upstream
-=======
             NotificacionService notificacionService,
             InstructorVerificadoGuard instructorVerificadoGuard,
->>>>>>> Stashed changes
             Clock clock
     ) {
         this.claseRepository = claseRepository;
@@ -61,11 +55,8 @@ public class InscribirseService {
         this.usuarioRepository = usuarioRepository;
         this.paymentGateway = paymentGateway;
         this.auditService = auditService;
-<<<<<<< Updated upstream
-=======
         this.notificacionService = notificacionService;
         this.instructorVerificadoGuard = instructorVerificadoGuard;
->>>>>>> Stashed changes
         this.clock = clock;
     }
 
