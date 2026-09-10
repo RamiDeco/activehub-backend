@@ -19,7 +19,13 @@ target/
 *.iws
 *.iml
 *.ipr
+
+### Secretos locales ###
+# El .env lleva la contraseña de Supabase y el secreto de firma de los JWT.
+# `.env.example` sí se versiona: documenta qué variables hacen falta, sin valores.
 .env
+.env.*
+!.env.example
 
 ### NetBeans ###
 /nbproject/private/
