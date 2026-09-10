@@ -40,9 +40,15 @@ public class SecurityConfig {
                                 "/api/auth/registro/instructor",
                                 "/api/auth/login"
                         ).permitAll()
+                        // El catálogo público. Las tres listas de taxonomía van juntas
+                        // porque el frontend las pide en un mismo Promise.all al arrancar,
+                        // antes de que haya sesión: si una sola queda autenticada, la
+                        // promesa entera se rechaza y la landing muestra el estado de error
+                        // en vez del catálogo. Pasó exactamente eso al sumar los niveles.
                         .requestMatchers(HttpMethod.GET,
                                 "/api/categorias",
                                 "/api/tipos-actividad",
+                                "/api/niveles-intensidad",
                                 "/api/actividades",
                                 "/api/actividades/**",
                                 "/api/fotos/**"

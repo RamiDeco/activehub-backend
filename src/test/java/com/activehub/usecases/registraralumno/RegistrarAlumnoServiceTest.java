@@ -51,24 +51,31 @@ class RegistrarAlumnoServiceTest {
     @Mock
     private AuditService auditService;
 
+    @Mock
+    private com.activehub.domain.actividad.TipoActividadRepository tipoActividadRepository;
+
+    /** Interés de prueba: desde V19 los intereses son ids de TipoActividad. */
+    private static final UUID RUNNING_ID = UUID.randomUUID();
+
     private RegistrarAlumnoService service;
 
     @BeforeEach
     void setUp() {
         service = new RegistrarAlumnoService(
-                usuarioRepository, rolRepository, perfilAlumnoRepository, passwordEncoder, jwtService, auditService);
+                usuarioRepository, rolRepository, perfilAlumnoRepository, tipoActividadRepository,
+                passwordEncoder, jwtService, auditService);
     }
 
     private RegistrarAlumnoRequest requestValido() {
         return new RegistrarAlumnoRequest(
-                "Martina", "Gómez", "martina@email.com", "2611234567", "Password1",
-                LocalDate.of(2000, 5, 10), List.of("Running", "Yoga"), null, true);
+                "Martina", "Gómez", "martina@email.com", "2611234567", null, "Password1",
+                LocalDate.of(2000, 5, 10), List.of(RUNNING_ID), null, true);
     }
 
     @Test
     void registrarAlumno_datosValidos_creaUsuarioYPerfilAlumno_devuelveTokenYUsuario() {
         Rol rolAlumno = new Rol();
-        rolAlumno.setNombre(RolNombre.ALUMNO);
+        rolAlumno.setNombre(RolNombre.ALUMNO.name());
 
         when(usuarioRepository.existsByEmailIgnoreCaseAndDeletedFalse("martina@email.com")).thenReturn(false);
         when(rolRepository.findByNombre(RolNombre.ALUMNO)).thenReturn(Optional.of(rolAlumno));
@@ -79,7 +86,7 @@ class RegistrarAlumnoServiceTest {
             ReflectionTestUtils.setField(u, "createdAt", Instant.now());
             return u;
         });
-        when(jwtService.emitir(any(UUID.class), anyString(), eq(RolNombre.ALUMNO))).thenReturn("token-jwt");
+        when(jwtService.emitir(any(UUID.class), anyString(), eq(RolNombre.ALUMNO.name()))).thenReturn("token-jwt");
 
         RegistrarAlumnoResponse response = service.registrar(requestValido());
 
@@ -96,7 +103,7 @@ class RegistrarAlumnoServiceTest {
     @Test
     void registrarAlumno_conCondicionSalud_laGuardaEnElPerfil() {
         Rol rolAlumno = new Rol();
-        rolAlumno.setNombre(RolNombre.ALUMNO);
+        rolAlumno.setNombre(RolNombre.ALUMNO.name());
 
         when(usuarioRepository.existsByEmailIgnoreCaseAndDeletedFalse("martina@email.com")).thenReturn(false);
         when(rolRepository.findByNombre(RolNombre.ALUMNO)).thenReturn(Optional.of(rolAlumno));
@@ -107,11 +114,11 @@ class RegistrarAlumnoServiceTest {
             ReflectionTestUtils.setField(u, "createdAt", Instant.now());
             return u;
         });
-        when(jwtService.emitir(any(UUID.class), anyString(), eq(RolNombre.ALUMNO))).thenReturn("token-jwt");
+        when(jwtService.emitir(any(UUID.class), anyString(), eq(RolNombre.ALUMNO.name()))).thenReturn("token-jwt");
 
         RegistrarAlumnoRequest request = new RegistrarAlumnoRequest(
-                "Martina", "Gómez", "martina@email.com", "2611234567", "Password1",
-                LocalDate.of(2000, 5, 10), List.of("Running"), "Asma leve, evitar esfuerzo prolongado.", true);
+                "Martina", "Gómez", "martina@email.com", "2611234567", null, "Password1",
+                LocalDate.of(2000, 5, 10), List.of(RUNNING_ID), "Asma leve, evitar esfuerzo prolongado.", true);
 
         service.registrar(request);
 

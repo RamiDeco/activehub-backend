@@ -22,7 +22,7 @@ public class RegistrarAdminController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('usuarios.gestionar')")
     public ResponseEntity<RegistrarAdminResponse> registrar(
             @Valid @RequestBody RegistrarAdminRequest request, Authentication authentication) {
         UUID actorId = (UUID) authentication.getPrincipal();

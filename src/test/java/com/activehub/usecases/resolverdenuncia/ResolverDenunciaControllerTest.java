@@ -37,7 +37,7 @@ class ResolverDenunciaControllerTest {
     @Test
     void resolver_bodyValido_devuelve200() {
         when(resolverDenunciaService.resolver(any(), any(), any()))
-                .thenReturn(new ResolverDenunciaResponse(DENUNCIA_ID, "Resuelta"));
+                .thenReturn(new ResolverDenunciaResponse(DENUNCIA_ID, "Resuelta", "DESESTIMAR"));
 
         assertThat(mvc.post().uri("/api/admin/denuncias/{id}/resolver", DENUNCIA_ID)
                 .principal(principal())

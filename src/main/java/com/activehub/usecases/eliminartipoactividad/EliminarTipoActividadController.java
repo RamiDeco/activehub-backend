@@ -20,7 +20,7 @@ public class EliminarTipoActividadController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('taxonomia.gestionar')")
     public ResponseEntity<Void> eliminar(@PathVariable UUID id, Authentication authentication) {
         UUID actorId = (UUID) authentication.getPrincipal();
         eliminarTipoActividadService.eliminar(id, actorId);

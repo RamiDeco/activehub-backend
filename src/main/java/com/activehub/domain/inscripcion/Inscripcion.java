@@ -51,10 +51,6 @@ public class Inscripcion {
     @OneToOne(mappedBy = "inscripcion", fetch = FetchType.LAZY)
     private Pago pago;
 
-    /** Null = todavia no marcada por el instructor. */
-    @Column
-    private Boolean presente;
-
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

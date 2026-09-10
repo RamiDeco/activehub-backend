@@ -21,7 +21,7 @@ public class ActualizarTipoActividadController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('taxonomia.gestionar')")
     public ActualizarTipoActividadResponse actualizar(
             @PathVariable UUID id,
             @Valid @RequestBody ActualizarTipoActividadRequest request,

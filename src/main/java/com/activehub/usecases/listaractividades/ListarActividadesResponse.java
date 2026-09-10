@@ -9,17 +9,20 @@ public record ListarActividadesResponse(
         String nombre,
         TipoActividad tipoActividad,
         Categoria categoria,
-        String nivelIntensidad,
+        NivelIntensidad nivelIntensidad,
         Instructor instructor,
         BigDecimal precio,
         String ubicacion,
         String photoTint,
         BigDecimal rating,
-        int cuposMax,
+        int duracionMin,
         ProximaClase proximaClase,
         Double latitud,
         Double longitud
 ) {
+    public record NivelIntensidad(UUID id, String nombre) {
+    }
+
     public record TipoActividad(UUID id, String nombre) {
     }
 

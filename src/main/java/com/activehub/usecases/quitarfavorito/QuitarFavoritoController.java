@@ -21,7 +21,7 @@ public class QuitarFavoritoController {
     }
 
     @DeleteMapping
-    @PreAuthorize("hasRole('ALUMNO')")
+    @PreAuthorize("@permisos.puede('catalogo.explorar')")
     public ResponseEntity<Void> quitar(@PathVariable UUID actividadId, Authentication authentication) {
         UUID alumnoId = (UUID) authentication.getPrincipal();
         quitarFavoritoService.quitar(actividadId, alumnoId);

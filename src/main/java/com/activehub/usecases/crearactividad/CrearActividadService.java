@@ -3,6 +3,7 @@ package com.activehub.usecases.crearactividad;
 import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.domain.actividad.NivelIntensidad;
+import com.activehub.domain.actividad.NivelIntensidadRepository;
 import com.activehub.domain.actividad.TipoActividad;
 import com.activehub.domain.actividad.TipoActividadRepository;
 import com.activehub.domain.usuario.EstadoVerificacion;
@@ -24,6 +25,7 @@ public class CrearActividadService {
 
     private final ActividadRepository actividadRepository;
     private final TipoActividadRepository tipoActividadRepository;
+    private final NivelIntensidadRepository nivelIntensidadRepository;
     private final UsuarioRepository usuarioRepository;
     private final PerfilInstructorRepository perfilInstructorRepository;
     private final AuditService auditService;
@@ -31,12 +33,14 @@ public class CrearActividadService {
     public CrearActividadService(
             ActividadRepository actividadRepository,
             TipoActividadRepository tipoActividadRepository,
+            NivelIntensidadRepository nivelIntensidadRepository,
             UsuarioRepository usuarioRepository,
             PerfilInstructorRepository perfilInstructorRepository,
             AuditService auditService
     ) {
         this.actividadRepository = actividadRepository;
         this.tipoActividadRepository = tipoActividadRepository;
+        this.nivelIntensidadRepository = nivelIntensidadRepository;
         this.usuarioRepository = usuarioRepository;
         this.perfilInstructorRepository = perfilInstructorRepository;
         this.auditService = auditService;
@@ -55,6 +59,9 @@ public class CrearActividadService {
         TipoActividad tipo = tipoActividadRepository.findById(request.tipoActividadId())
                 .orElseThrow(() -> new NoEncontradoException("Tipo de actividad no encontrado."));
 
+        NivelIntensidad nivel = nivelIntensidadRepository.findById(request.nivelIntensidadId())
+                .orElseThrow(() -> new NoEncontradoException("Nivel de intensidad no encontrado."));
+
         Usuario instructor = usuarioRepository.findById(instructorId)
                 .orElseThrow(() -> new NoEncontradoException("Instructor no encontrado."));
 
@@ -66,12 +73,12 @@ public class CrearActividadService {
         actividad.setNombre(request.nombre().trim());
         actividad.setDescripcion(request.descripcion().trim());
         actividad.setTipoActividad(tipo);
-        actividad.setNivelIntensidad(NivelIntensidad.fromEtiqueta(request.nivelIntensidad()));
+        actividad.setNivelIntensidad(nivel);
         actividad.setInstructor(instructor);
         actividad.setPrecio(request.precio());
         actividad.setUbicacion(request.ubicacion().trim());
         actividad.setPhotoTint(request.photoTint());
-        actividad.setCuposMax(request.cuposMax());
+        actividad.setDuracionMin(request.duracionMin());
         actividad.setLatitud(request.latitud());
         actividad.setLongitud(request.longitud());
         actividad = actividadRepository.saveAndFlush(actividad);
@@ -84,13 +91,13 @@ public class CrearActividadService {
                 actividad.getDescripcion(),
                 new CrearActividadResponse.TipoActividad(tipo.getId(), tipo.getNombre()),
                 new CrearActividadResponse.Categoria(tipo.getCategoria().getId(), tipo.getCategoria().getNombre()),
-                actividad.getNivelIntensidad().getEtiqueta(),
+                new CrearActividadResponse.NivelIntensidad(nivel.getId(), nivel.getNombre()),
                 new CrearActividadResponse.Instructor(instructor.getId(), instructor.getNombre(), instructor.getApellido()),
                 actividad.getPrecio(),
                 actividad.getUbicacion(),
                 actividad.getPhotoTint(),
                 actividad.getRating(),
-                actividad.getCuposMax(),
+                actividad.getDuracionMin(),
                 List.of(),
                 actividad.getLatitud(),
                 actividad.getLongitud()

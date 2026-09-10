@@ -19,7 +19,7 @@ public class ListarMisFavoritosController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ALUMNO')")
+    @PreAuthorize("@permisos.puede('catalogo.explorar')")
     public List<UUID> listar(Authentication authentication) {
         UUID alumnoId = (UUID) authentication.getPrincipal();
         return listarMisFavoritosService.listar(alumnoId);

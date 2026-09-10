@@ -9,6 +9,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 
+    /** Cuantas cuentas activas tiene ese rol (tarjeta de "Roles y permisos"). */
+    long countByRolIdAndDeletedFalse(UUID rolId);
+
     Optional<Usuario> findByEmailIgnoreCaseAndDeletedFalse(String email);
 
     /**
@@ -22,7 +25,16 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     @Query("SELECT u FROM Usuario u JOIN FETCH u.rol WHERE lower(u.email) = lower(:email) AND u.deleted = false")
     Optional<Usuario> findByEmailConRol(@Param("email") String email);
 
+    /**
+     * Login por DNI (nota de credenciales de la epica E1A: "el modulo de Autenticacion admite
+     * ademas el ingreso por DNI"). Mismo JOIN FETCH y misma razon que {@link #findByEmailConRol}.
+     */
+    @Query("SELECT u FROM Usuario u JOIN FETCH u.rol WHERE u.dni = :dni AND u.deleted = false")
+    Optional<Usuario> findByDniConRol(@Param("dni") String dni);
+
     boolean existsByEmailIgnoreCaseAndDeletedFalse(String email);
+
+    boolean existsByDniAndDeletedFalse(String dni);
 
     List<Usuario> findAllByOrderByCreatedAtDesc();
 }

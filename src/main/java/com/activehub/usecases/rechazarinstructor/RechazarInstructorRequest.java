@@ -1,4 +1,5 @@
 package com.activehub.usecases.rechazarinstructor;
 
-public record RechazarInstructorRequest(String motivo) {
+import com.activehub.shared.error.SinHtml;
+public record RechazarInstructorRequest(@SinHtml String motivo) {
 }

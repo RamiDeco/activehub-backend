@@ -21,7 +21,7 @@ public class NotificarAusenciaProfesorController {
     }
 
     @PostMapping("/{id}/notificar-ausencia")
-    @PreAuthorize("hasRole('INSTRUCTOR')")
+    @PreAuthorize("@permisos.puede('clases.gestionar')")
     public NotificarAusenciaProfesorResponse notificar(
             @PathVariable UUID id, @Valid @RequestBody NotificarAusenciaProfesorRequest request,
             Authentication authentication) {

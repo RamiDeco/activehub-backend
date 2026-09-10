@@ -14,8 +14,9 @@ public interface ReseniaRepository extends JpaRepository<Resenia, UUID> {
             + "WHERE r.enModeracion = true ORDER BY r.createdAt ASC")
     List<Resenia> findPendientesConDetalle();
 
+    /** Aprobadas por el admin y no ocultadas por una denuncia resuelta. */
     @Query("SELECT r FROM Resenia r JOIN FETCH r.alumno "
-            + "WHERE r.clase.actividad.id = :actividadId AND r.enModeracion = false "
+            + "WHERE r.clase.actividad.id = :actividadId AND r.enModeracion = false AND r.oculta = false "
             + "ORDER BY r.createdAt DESC")
     List<Resenia> findVisiblesPorActividad(@Param("actividadId") UUID actividadId);
 

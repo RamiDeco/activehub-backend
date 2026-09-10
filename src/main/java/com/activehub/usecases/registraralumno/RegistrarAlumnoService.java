@@ -1,6 +1,8 @@
 package com.activehub.usecases.registraralumno;
 
 import com.activehub.domain.usuario.EstadoUsuario;
+import com.activehub.domain.actividad.TipoActividad;
+import com.activehub.domain.actividad.TipoActividadRepository;
 import com.activehub.domain.usuario.PerfilAlumno;
 import com.activehub.domain.usuario.PerfilAlumnoRepository;
 import com.activehub.domain.usuario.RolNombre;
@@ -9,8 +11,10 @@ import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.error.DniEnUsoException;
 import com.activehub.shared.error.EmailEnUsoException;
 import com.activehub.shared.security.JwtService;
+import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +25,7 @@ public class RegistrarAlumnoService {
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final PerfilAlumnoRepository perfilAlumnoRepository;
+    private final TipoActividadRepository tipoActividadRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuditService auditService;
@@ -29,6 +34,7 @@ public class RegistrarAlumnoService {
             UsuarioRepository usuarioRepository,
             RolRepository rolRepository,
             PerfilAlumnoRepository perfilAlumnoRepository,
+            TipoActividadRepository tipoActividadRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
             AuditService auditService
@@ -36,6 +42,7 @@ public class RegistrarAlumnoService {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
         this.perfilAlumnoRepository = perfilAlumnoRepository;
+        this.tipoActividadRepository = tipoActividadRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.auditService = auditService;
@@ -47,6 +54,13 @@ public class RegistrarAlumnoService {
             throw new EmailEnUsoException();
         }
 
+        // Precondición de E1A-HU03: "no debe existir una cuenta activa con el mismo correo
+        // electrónico (o DNI)".
+        String dni = request.dni() != null && !request.dni().isBlank() ? request.dni().trim() : null;
+        if (dni != null && usuarioRepository.existsByDniAndDeletedFalse(dni)) {
+            throw new DniEnUsoException();
+        }
+
         var rolAlumno = rolRepository.findByNombre(RolNombre.ALUMNO)
                 .orElseThrow(() -> new IllegalStateException("Rol ALUMNO no encontrado, revisar la migracion V2."));
 
@@ -54,6 +68,7 @@ public class RegistrarAlumnoService {
         usuario.setNombre(request.nombre());
         usuario.setApellido(request.apellido());
         usuario.setEmail(request.email().trim().toLowerCase());
+        usuario.setDni(dni);
         usuario.setPasswordHash(passwordEncoder.encode(request.password()));
         usuario.setTelefono(request.telefono());
         usuario.setFechaNacimiento(request.fechaNacimiento());
@@ -61,13 +76,23 @@ public class RegistrarAlumnoService {
         usuario.setEstado(EstadoUsuario.ACTIVO);
         usuario = usuarioRepository.saveAndFlush(usuario);
 
-        PerfilAlumno perfilAlumno = new PerfilAlumno(usuario, request.intereses());
+        // Los intereses son ids de TipoActividad (V19). Se ignora en silencio cualquier id que
+        // ya no exista: no vale la pena abortar un alta por un interés que se dio de baja.
+        List<TipoActividad> intereses = request.intereses() == null
+                ? List.of()
+                : request.intereses().stream()
+                        .distinct()
+                        .map(id -> tipoActividadRepository.findById(id).orElse(null))
+                        .filter(java.util.Objects::nonNull)
+                        .toList();
+
+        PerfilAlumno perfilAlumno = new PerfilAlumno(usuario, intereses);
         perfilAlumno.setCondicionSalud(request.condicionSalud());
         perfilAlumnoRepository.save(perfilAlumno);
 
         auditService.registrar(usuario.getId(), AuditAccion.REGISTRO_ALUMNO, "Usuario", usuario.getId(), null);
 
-        String token = jwtService.emitir(usuario.getId(), usuario.getEmail(), RolNombre.ALUMNO);
+        String token = jwtService.emitir(usuario.getId(), usuario.getEmail(), RolNombre.ALUMNO.name());
 
         return new RegistrarAlumnoResponse(token, new RegistrarAlumnoResponse.Usuario(
                 usuario.getId(),
@@ -76,7 +101,7 @@ public class RegistrarAlumnoService {
                 usuario.getEmail(),
                 usuario.getTelefono(),
                 usuario.getFechaNacimiento(),
-                rolAlumno.getNombre().name(),
+                rolAlumno.getNombre(),
                 usuario.getEstado().name(),
                 usuario.getCantidadPenalizaciones(),
                 usuario.getCreatedAt()

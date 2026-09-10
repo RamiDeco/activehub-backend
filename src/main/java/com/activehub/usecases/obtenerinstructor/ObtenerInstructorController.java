@@ -18,7 +18,7 @@ public class ObtenerInstructorController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('instructores.validar')")
     public ObtenerInstructorResponse obtener(@PathVariable UUID id) {
         return obtenerInstructorService.obtener(id);
     }

@@ -6,6 +6,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.activehub.domain.actividad.Actividad;
+import com.activehub.domain.actividad.ActividadImagen;
+import com.activehub.domain.actividad.ActividadImagenRepository;
 import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.domain.actividad.Categoria;
 import com.activehub.domain.actividad.Clase;
@@ -39,6 +41,8 @@ class ObtenerActividadServiceTest {
     private ClaseRepository claseRepository;
     @Mock
     private InscripcionRepository inscripcionRepository;
+    @Mock
+    private ActividadImagenRepository actividadImagenRepository;
 
     private ObtenerActividadService service;
     private UUID actividadId;
@@ -46,7 +50,8 @@ class ObtenerActividadServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ObtenerActividadService(actividadRepository, claseRepository, inscripcionRepository);
+        service = new ObtenerActividadService(
+                actividadRepository, claseRepository, inscripcionRepository, actividadImagenRepository);
 
         Categoria categoria = new Categoria();
         categoria.setNombre("Bienestar");
@@ -67,12 +72,12 @@ class ObtenerActividadServiceTest {
         actividad.setNombre("Yoga Integral");
         actividad.setDescripcion("desc");
         actividad.setTipoActividad(tipo);
-        actividad.setNivelIntensidad(NivelIntensidad.FISICA_BAJA);
+        actividad.setNivelIntensidad(nivel("Física baja"));
         actividad.setInstructor(instructor);
         actividad.setPrecio(new BigDecimal("3600"));
         actividad.setUbicacion("Mendoza");
         actividad.setPhotoTint("gradient");
-        actividad.setCuposMax(16);
+        actividad.setDuracionMin(60);
         ReflectionTestUtils.setField(actividad, "id", actividadId);
     }
 
@@ -84,6 +89,7 @@ class ObtenerActividadServiceTest {
         clase1.setActividad(actividad);
         clase1.setFechaHora(Instant.now().plus(1, ChronoUnit.DAYS));
         clase1.setEstado(EstadoClase.Programada);
+        clase1.setHoraFin(clase1.getFechaHora().plus(1, ChronoUnit.HOURS));
         clase1.setCuposMax(16);
         clase1.setCuposOcupados(2);
         ReflectionTestUtils.setField(clase1, "id", UUID.randomUUID());
@@ -92,6 +98,7 @@ class ObtenerActividadServiceTest {
                 .thenReturn(List.of(clase1));
         when(inscripcionRepository.countByClaseIdAndEstado(clase1.getId(), EstadoInscripcion.PRE_INSCRIPCION))
                 .thenReturn(3L);
+        when(actividadImagenRepository.findByActividadIdOrderByOrdenAsc(actividadId)).thenReturn(List.of());
 
         ObtenerActividadResponse response = service.obtener(actividadId);
 
@@ -99,9 +106,24 @@ class ObtenerActividadServiceTest {
         assertThat(response.tipoActividad().nombre()).isEqualTo("Yoga");
         assertThat(response.categoria().nombre()).isEqualTo("Bienestar");
         assertThat(response.instructor().nombre()).isEqualTo("Carla");
+        assertThat(response.duracionMin()).isEqualTo(60);
         assertThat(response.clases()).hasSize(1);
         assertThat(response.clases().get(0).cuposOcupados()).isEqualTo(2);
+        assertThat(response.clases().get(0).horaFin()).isEqualTo(clase1.getHoraFin());
         assertThat(response.clases().get(0).cantidadPreInscripcion()).isEqualTo(3);
+    }
+
+    @Test
+    void obtener_devuelveLaGaleriaDeImagenes() {
+        when(actividadRepository.findById(actividadId)).thenReturn(Optional.of(actividad));
+        when(claseRepository.findByActividadIdAndEstadoNotInOrderByFechaHoraAsc(any(), any())).thenReturn(List.of());
+
+        ActividadImagen imagen = new ActividadImagen();
+        UUID imagenId = UUID.randomUUID();
+        ReflectionTestUtils.setField(imagen, "id", imagenId);
+        when(actividadImagenRepository.findByActividadIdOrderByOrdenAsc(actividadId)).thenReturn(List.of(imagen));
+
+        assertThat(service.obtener(actividadId).imagenes()).containsExactly(imagenId);
     }
 
     @Test
@@ -110,5 +132,13 @@ class ObtenerActividadServiceTest {
 
         assertThatThrownBy(() -> service.obtener(actividadId))
                 .isInstanceOf(NoEncontradoException.class);
+    }
+
+    private static NivelIntensidad nivel(String nombre) {
+        NivelIntensidad n = new NivelIntensidad();
+        n.setNombre(nombre);
+        n.setDescripcion("desc");
+        ReflectionTestUtils.setField(n, "id", UUID.randomUUID());
+        return n;
     }
 }

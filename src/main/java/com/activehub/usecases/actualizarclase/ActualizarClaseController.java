@@ -21,7 +21,7 @@ public class ActualizarClaseController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('INSTRUCTOR')")
+    @PreAuthorize("@permisos.puede('clases.gestionar')")
     public ActualizarClaseResponse actualizar(
             @PathVariable UUID id,
             @Valid @RequestBody ActualizarClaseRequest request,

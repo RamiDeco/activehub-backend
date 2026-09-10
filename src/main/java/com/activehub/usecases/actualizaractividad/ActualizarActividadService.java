@@ -3,6 +3,7 @@ package com.activehub.usecases.actualizaractividad;
 import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.domain.actividad.NivelIntensidad;
+import com.activehub.domain.actividad.NivelIntensidadRepository;
 import com.activehub.domain.actividad.TipoActividad;
 import com.activehub.domain.actividad.TipoActividadRepository;
 import com.activehub.domain.usuario.EstadoVerificacion;
@@ -21,17 +22,20 @@ public class ActualizarActividadService {
 
     private final ActividadRepository actividadRepository;
     private final TipoActividadRepository tipoActividadRepository;
+    private final NivelIntensidadRepository nivelIntensidadRepository;
     private final PerfilInstructorRepository perfilInstructorRepository;
     private final AuditService auditService;
 
     public ActualizarActividadService(
             ActividadRepository actividadRepository,
             TipoActividadRepository tipoActividadRepository,
+            NivelIntensidadRepository nivelIntensidadRepository,
             PerfilInstructorRepository perfilInstructorRepository,
             AuditService auditService
     ) {
         this.actividadRepository = actividadRepository;
         this.tipoActividadRepository = tipoActividadRepository;
+        this.nivelIntensidadRepository = nivelIntensidadRepository;
         this.perfilInstructorRepository = perfilInstructorRepository;
         this.auditService = auditService;
     }
@@ -56,6 +60,9 @@ public class ActualizarActividadService {
         TipoActividad tipo = tipoActividadRepository.findById(request.tipoActividadId())
                 .orElseThrow(() -> new NoEncontradoException("Tipo de actividad no encontrado."));
 
+        NivelIntensidad nivel = nivelIntensidadRepository.findById(request.nivelIntensidadId())
+                .orElseThrow(() -> new NoEncontradoException("Nivel de intensidad no encontrado."));
+
         if ((request.latitud() == null) != (request.longitud() == null)) {
             throw new ValidacionException("Latitud y longitud deben enviarse juntas, o ninguna de las dos.");
         }
@@ -63,11 +70,11 @@ public class ActualizarActividadService {
         actividad.setNombre(request.nombre().trim());
         actividad.setDescripcion(request.descripcion().trim());
         actividad.setTipoActividad(tipo);
-        actividad.setNivelIntensidad(NivelIntensidad.fromEtiqueta(request.nivelIntensidad()));
+        actividad.setNivelIntensidad(nivel);
         actividad.setPrecio(request.precio());
         actividad.setUbicacion(request.ubicacion().trim());
         actividad.setPhotoTint(request.photoTint());
-        actividad.setCuposMax(request.cuposMax());
+        actividad.setDuracionMin(request.duracionMin());
         actividad.setLatitud(request.latitud());
         actividad.setLongitud(request.longitud());
         actividadRepository.save(actividad);
@@ -80,14 +87,14 @@ public class ActualizarActividadService {
                 actividad.getDescripcion(),
                 new ActualizarActividadResponse.TipoActividad(tipo.getId(), tipo.getNombre()),
                 new ActualizarActividadResponse.Categoria(tipo.getCategoria().getId(), tipo.getCategoria().getNombre()),
-                actividad.getNivelIntensidad().getEtiqueta(),
+                new ActualizarActividadResponse.NivelIntensidad(nivel.getId(), nivel.getNombre()),
                 new ActualizarActividadResponse.Instructor(
                         actividad.getInstructor().getId(), actividad.getInstructor().getNombre(), actividad.getInstructor().getApellido()),
                 actividad.getPrecio(),
                 actividad.getUbicacion(),
                 actividad.getPhotoTint(),
                 actividad.getRating(),
-                actividad.getCuposMax(),
+                actividad.getDuracionMin(),
                 actividad.getLatitud(),
                 actividad.getLongitud()
         );

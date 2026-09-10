@@ -22,7 +22,7 @@ public class DescargarDocumentoInstructorController {
     }
 
     @GetMapping("/{instructorId}/documentos/{documentoId}/archivo")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('instructores.validar')")
     public ResponseEntity<byte[]> descargar(
             @PathVariable UUID instructorId, @PathVariable UUID documentoId) {
         DocumentoDescarga documento = descargarDocumentoInstructorService.descargar(instructorId, documentoId);

@@ -38,7 +38,7 @@ class ListarAuditoriaServiceTest {
     void listar_conActor_resuelveNombreYRol() {
         UUID actorId = UUID.randomUUID();
         Rol rolAdmin = new Rol();
-        rolAdmin.setNombre(RolNombre.ADMIN);
+        rolAdmin.setNombre(RolNombre.ADMIN.name());
         Usuario actor = new Usuario();
         actor.setNombre("Ana");
         actor.setApellido("Lopez");

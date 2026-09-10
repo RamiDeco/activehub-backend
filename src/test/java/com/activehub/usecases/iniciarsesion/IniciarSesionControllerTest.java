@@ -31,7 +31,7 @@ class IniciarSesionControllerTest {
     private IniciarSesionService iniciarSesionService;
 
     private static final String BODY = """
-            { "email": "martina@email.com", "password": "Password1" }
+            { "identificador": "martina@email.com", "password": "Password1" }
             """;
 
     @Test

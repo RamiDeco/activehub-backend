@@ -10,14 +10,14 @@ import java.time.Duration;
  * al instructor.
  *
  * <p>La especificacion funcional nombra ese periodo pero NO define su duracion
- * (es la ambiguedad 2 de la seccion 12 de HISTORIAS-DE-USUARIO.md). Se adopta 48 h
- * como valor por defecto: da mas de un dia habil al alumno para reportar una
- * inasistencia y mantiene el dinero en movimiento. Si el negocio define otro plazo,
- * se cambia unicamente esta constante.
+ * (es la ambiguedad 2 de la seccion 12 de HISTORIAS-DE-USUARIO.md). El usuario la
+ * resolvio en <b>24 h</b> (el default provisorio nuestro habia sido 48 h): un dia para
+ * que el alumno reporte una inasistencia, y el instructor cobra al dia siguiente. Si el
+ * negocio lo cambia otra vez, se toca unicamente esta constante.
  */
 public final class VentanaPagos {
 
-    public static final Duration PERIODO_DENUNCIAS = Duration.ofHours(48);
+    public static final Duration PERIODO_DENUNCIAS = Duration.ofHours(24);
 
     private VentanaPagos() {
     }

@@ -34,7 +34,7 @@ public class ListarActividadesService {
 
     @Transactional(readOnly = true)
     public List<ListarActividadesResponse> listar(
-            String texto, UUID categoriaId, UUID tipoActividadId, String nivelIntensidad,
+            String texto, UUID categoriaId, UUID tipoActividadId, UUID nivelIntensidadId,
             BigDecimal precioMax, boolean soloConCupos, UUID instructorId, String sort) {
 
         List<Specification<Actividad>> partes = new ArrayList<>();
@@ -43,7 +43,7 @@ public class ListarActividadesService {
         partes.add(ActividadSpecifications.conTexto(texto));
         partes.add(ActividadSpecifications.conCategoria(categoriaId));
         partes.add(ActividadSpecifications.conTipo(tipoActividadId));
-        partes.add(ActividadSpecifications.conNivel(parseNivelIntensidad(nivelIntensidad)));
+        partes.add(ActividadSpecifications.conNivel(nivelIntensidadId));
         partes.add(ActividadSpecifications.precioMenorIgual(precioMax));
         partes.add(ActividadSpecifications.conInstructor(instructorId));
 
@@ -68,17 +68,6 @@ public class ListarActividadesService {
                 .map(a -> mapear(a, proximaPorActividad.get(a.getId())))
                 .filter(dto -> !soloConCupos || tieneCupos(dto))
                 .toList();
-    }
-
-    private static NivelIntensidad parseNivelIntensidad(String nivelIntensidad) {
-        if (nivelIntensidad == null) {
-            return null;
-        }
-        try {
-            return NivelIntensidad.fromEtiqueta(nivelIntensidad);
-        } catch (IllegalArgumentException ex) {
-            throw new ValidacionException("Nivel de intensidad inválido: " + nivelIntensidad);
-        }
     }
 
     private static Sort sortDe(String sort) {
@@ -113,13 +102,14 @@ public class ListarActividadesService {
                 a.getNombre(),
                 new ListarActividadesResponse.TipoActividad(tipo.getId(), tipo.getNombre()),
                 new ListarActividadesResponse.Categoria(categoria.getId(), categoria.getNombre()),
-                a.getNivelIntensidad().getEtiqueta(),
+                new ListarActividadesResponse.NivelIntensidad(
+                        a.getNivelIntensidad().getId(), a.getNivelIntensidad().getNombre()),
                 new ListarActividadesResponse.Instructor(instructor.getId(), instructor.getNombre(), instructor.getApellido()),
                 a.getPrecio(),
                 a.getUbicacion(),
                 a.getPhotoTint(),
                 a.getRating(),
-                a.getCuposMax(),
+                a.getDuracionMin(),
                 proximaDto,
                 a.getLatitud(),
                 a.getLongitud()

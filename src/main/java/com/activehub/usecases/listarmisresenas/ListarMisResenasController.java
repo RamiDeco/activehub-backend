@@ -19,7 +19,7 @@ public class ListarMisResenasController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ALUMNO')")
+    @PreAuthorize("@permisos.puede('resenias.escribir')")
     public List<ListarMisResenasResponse> listar(Authentication authentication) {
         UUID alumnoId = (UUID) authentication.getPrincipal();
         return listarMisResenasService.listar(alumnoId);

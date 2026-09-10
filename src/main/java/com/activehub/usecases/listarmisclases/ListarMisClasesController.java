@@ -19,7 +19,7 @@ public class ListarMisClasesController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('INSTRUCTOR')")
+    @PreAuthorize("@permisos.puede('clases.gestionar')")
     public List<ListarMisClasesResponse> listar(Authentication authentication) {
         UUID instructorId = (UUID) authentication.getPrincipal();
         return listarMisClasesService.listar(instructorId);

@@ -52,8 +52,7 @@ public class ListarRosterClaseService {
                         i.getAlumno().getNombre(),
                         i.getAlumno().getApellido(),
                         i.getAlumno().getTelefono(),
-                        i.getEstado().getEtiqueta(),
-                        i.getPresente()))
+                        i.getEstado().getEtiqueta()))
                 .toList();
 
         int cantidadInscripto = (int) inscripciones.stream().filter(i -> i.getEstado() == EstadoInscripcion.INSCRIPTO).count();

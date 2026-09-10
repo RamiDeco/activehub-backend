@@ -19,7 +19,7 @@ public class TomarDenunciaController {
     }
 
     @PostMapping("/{id}/auditar")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('denuncias.resolver')")
     public TomarDenunciaResponse tomar(@PathVariable UUID id, Authentication authentication) {
         UUID actorId = (UUID) authentication.getPrincipal();
         return tomarDenunciaService.tomar(id, actorId);

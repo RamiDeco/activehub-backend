@@ -23,7 +23,7 @@ public class InscribirseController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ALUMNO')")
+    @PreAuthorize("@permisos.puede('inscripciones.gestionar')")
     public ResponseEntity<InscribirseResponse> inscribirse(
             @PathVariable UUID claseId,
             @Valid @RequestBody InscribirseRequest request,

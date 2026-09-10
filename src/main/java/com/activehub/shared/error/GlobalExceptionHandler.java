@@ -14,7 +14,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -93,6 +95,25 @@ public class GlobalExceptionHandler {
                 ApiErrorCode.VALIDACION.name(),
                 "El archivo supera el tamaño máximo permitido (5 MB).",
                 null,
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(ApiErrorCode.VALIDACION.getStatus()).body(body);
+    }
+
+    @ExceptionHandler({MissingServletRequestPartException.class, MissingServletRequestParameterException.class})
+    public ResponseEntity<ApiError> handleParteFaltante(Exception ex, HttpServletRequest request) {
+        // Cliente que manda un multipart incompleto (ej. el alta de instructor sin la parte
+        // "documentos") o sin un query param obligatorio. Sin este handler caia en el
+        // catch-all y devolvia 500, como si el problema fuera del servidor.
+        String nombre = ex instanceof MissingServletRequestPartException parte
+                ? parte.getRequestPartName()
+                : ((MissingServletRequestParameterException) ex).getParameterName();
+        ApiError body = new ApiError(
+                Instant.now(),
+                ApiErrorCode.VALIDACION.getStatus().value(),
+                ApiErrorCode.VALIDACION.name(),
+                "Falta el campo obligatorio '%s' en el pedido.".formatted(nombre),
+                Map.of(nombre, "Es obligatorio."),
                 request.getRequestURI()
         );
         return ResponseEntity.status(ApiErrorCode.VALIDACION.getStatus()).body(body);

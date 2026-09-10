@@ -17,7 +17,7 @@ public class ListarUsuariosAdminController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('usuarios.gestionar')")
     public List<ListarUsuariosAdminResponse> listar() {
         return listarUsuariosAdminService.listar();
     }

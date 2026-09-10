@@ -40,7 +40,11 @@ spring:
 app:
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-0123456789abcdef0123456789abcdef}
-    expiration-min: ${JWT_EXPIRATION_MIN:120}
+    # E1A-HU02 criterio 3: "la sesion expira automaticamente por inactividad". El TTL del
+    # token ES la ventana de inactividad: el frontend lo renueva contra /api/auth/refresh
+    # mientras el usuario usa la app, asi que solo vence si deja de usarla. Bajarlo de 120
+    # a 30 min es lo que hace que la expiracion sea por inactividad y no por antiguedad.
+    expiration-min: ${JWT_EXPIRATION_MIN:30}
   admin-seed:
     email: ${ADMIN_SEED_EMAIL:}
     password: ${ADMIN_SEED_PASSWORD:}

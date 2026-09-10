@@ -1,10 +1,10 @@
 package com.activehub.usecases.eliminaractividad;
 
+import com.activehub.shared.security.PermisosService;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,19 +15,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class EliminarActividadController {
 
     private final EliminarActividadService eliminarActividadService;
+    private final PermisosService permisosService;
 
-    public EliminarActividadController(EliminarActividadService eliminarActividadService) {
+    public EliminarActividadController(
+            EliminarActividadService eliminarActividadService, PermisosService permisosService) {
         this.eliminarActividadService = eliminarActividadService;
+        this.permisosService = permisosService;
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
+    @PreAuthorize("@permisos.puede('actividades.publicar')")
     public ResponseEntity<Void> eliminar(@PathVariable UUID id, Authentication authentication) {
         UUID actorId = (UUID) authentication.getPrincipal();
-        boolean esAdmin = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch("ROLE_ADMIN"::equals);
-        eliminarActividadService.eliminar(id, actorId, esAdmin);
+        boolean puedeModerar = permisosService.puede(actorId, "actividades.moderar");
+        eliminarActividadService.eliminar(id, actorId, puedeModerar);
         return ResponseEntity.noContent().build();
     }
 }

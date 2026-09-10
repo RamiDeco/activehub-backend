@@ -22,7 +22,7 @@ public class CrearActividadController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('INSTRUCTOR')")
+    @PreAuthorize("@permisos.puede('actividades.publicar')")
     public ResponseEntity<CrearActividadResponse> crear(
             @Valid @RequestBody CrearActividadRequest request, Authentication authentication) {
         UUID instructorId = (UUID) authentication.getPrincipal();

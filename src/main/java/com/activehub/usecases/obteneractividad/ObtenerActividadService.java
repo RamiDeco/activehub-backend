@@ -1,6 +1,8 @@
 package com.activehub.usecases.obteneractividad;
 
 import com.activehub.domain.actividad.Actividad;
+import com.activehub.domain.actividad.ActividadImagen;
+import com.activehub.domain.actividad.ActividadImagenRepository;
 import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.domain.actividad.ClaseRepository;
 import com.activehub.domain.actividad.EstadoClase;
@@ -20,13 +22,18 @@ public class ObtenerActividadService {
     private final ActividadRepository actividadRepository;
     private final ClaseRepository claseRepository;
     private final InscripcionRepository inscripcionRepository;
+    private final ActividadImagenRepository actividadImagenRepository;
 
     public ObtenerActividadService(
-            ActividadRepository actividadRepository, ClaseRepository claseRepository, InscripcionRepository inscripcionRepository
+            ActividadRepository actividadRepository,
+            ClaseRepository claseRepository,
+            InscripcionRepository inscripcionRepository,
+            ActividadImagenRepository actividadImagenRepository
     ) {
         this.actividadRepository = actividadRepository;
         this.claseRepository = claseRepository;
         this.inscripcionRepository = inscripcionRepository;
+        this.actividadImagenRepository = actividadImagenRepository;
     }
 
     @Transactional(readOnly = true)
@@ -40,8 +47,12 @@ public class ObtenerActividadService {
 
         var clases = claseRepository.findByActividadIdAndEstadoNotInOrderByFechaHoraAsc(id, ESTADOS_EXCLUIDOS).stream()
                 .map(c -> new ObtenerActividadResponse.Clase(
-                        c.getId(), c.getFechaHora(), c.getEstado().name(), c.getCuposMax(), c.getCuposOcupados(),
+                        c.getId(), c.getFechaHora(), c.getHoraFin(), c.getEstado().name(), c.getCuposMax(), c.getCuposOcupados(),
                         (int) inscripcionRepository.countByClaseIdAndEstado(c.getId(), EstadoInscripcion.PRE_INSCRIPCION)))
+                .toList();
+
+        var imagenes = actividadImagenRepository.findByActividadIdOrderByOrdenAsc(id).stream()
+                .map(ActividadImagen::getId)
                 .toList();
 
         return new ObtenerActividadResponse(
@@ -50,13 +61,15 @@ public class ObtenerActividadService {
                 actividad.getDescripcion(),
                 new ObtenerActividadResponse.TipoActividad(tipo.getId(), tipo.getNombre()),
                 new ObtenerActividadResponse.Categoria(categoria.getId(), categoria.getNombre()),
-                actividad.getNivelIntensidad().getEtiqueta(),
+                new ObtenerActividadResponse.NivelIntensidad(
+                        actividad.getNivelIntensidad().getId(), actividad.getNivelIntensidad().getNombre()),
                 new ObtenerActividadResponse.Instructor(instructor.getId(), instructor.getNombre(), instructor.getApellido()),
                 actividad.getPrecio(),
                 actividad.getUbicacion(),
                 actividad.getPhotoTint(),
                 actividad.getRating(),
-                actividad.getCuposMax(),
+                actividad.getDuracionMin(),
+                imagenes,
                 clases,
                 actividad.getLatitud(),
                 actividad.getLongitud()

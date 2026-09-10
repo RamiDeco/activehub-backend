@@ -32,7 +32,8 @@ public class Actividad extends BaseEntity {
     @JoinColumn(name = "tipo_actividad_id", nullable = false)
     private TipoActividad tipoActividad;
 
-    @Column(name = "nivel_intensidad", nullable = false, length = 20)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "nivel_intensidad_id", nullable = false)
     private NivelIntensidad nivelIntensidad;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -51,8 +52,9 @@ public class Actividad extends BaseEntity {
     @Column(nullable = false, precision = 3, scale = 2)
     private BigDecimal rating = BigDecimal.ZERO;
 
-    @Column(name = "cupos_max", nullable = false)
-    private int cuposMax;
+    // E2I-HU03 criterio 1: el formulario ya pedia la duracion y no se guardaba.
+    @Column(name = "duracion_min", nullable = false)
+    private int duracionMin = 60;
 
     @Column
     private Double latitud;
@@ -60,6 +62,7 @@ public class Actividad extends BaseEntity {
     @Column
     private Double longitud;
 
+    // Portada. La galeria completa (seccion 2: `imagenes[]`) vive en ActividadImagen.
     @Column(name = "foto_path")
     private String fotoPath;
 }

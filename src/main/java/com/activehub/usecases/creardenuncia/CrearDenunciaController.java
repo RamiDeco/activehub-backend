@@ -23,7 +23,7 @@ public class CrearDenunciaController {
     }
 
     @PostMapping("/{claseId}/denuncias")
-    @PreAuthorize("hasRole('ALUMNO')")
+    @PreAuthorize("@permisos.puede('denuncias.crear')")
     public ResponseEntity<CrearDenunciaResponse> crear(
             @PathVariable UUID claseId, @Valid @RequestBody CrearDenunciaRequest request, Authentication authentication
     ) {

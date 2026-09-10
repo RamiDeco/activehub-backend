@@ -34,7 +34,7 @@ class ListarResenasInstructorControllerTest {
                 new ListarResenasInstructorResponse(
                         UUID.randomUUID(), UUID.randomUUID(), Instant.now(), UUID.randomUUID(), "Yoga",
                         new ListarResenasInstructorResponse.Alumno(UUID.randomUUID(), "Ana", "Lopez"),
-                        3, "Estuvo bien", false, Instant.now())));
+                        3, "Estuvo bien", false, null, null, false, false, Instant.now())));
 
         var authentication = new UsernamePasswordAuthenticationToken(UUID.randomUUID(), null, List.of());
 

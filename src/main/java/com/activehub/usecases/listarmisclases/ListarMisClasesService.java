@@ -36,6 +36,7 @@ public class ListarMisClasesService {
                             actividad.getNombre(),
                             actividad.getUbicacion(),
                             c.getFechaHora(),
+                            c.getHoraFin(),
                             c.getEstado().name(),
                             c.getCuposMax(),
                             c.getCuposOcupados());

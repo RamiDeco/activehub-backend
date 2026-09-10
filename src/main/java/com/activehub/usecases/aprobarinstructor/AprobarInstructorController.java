@@ -19,7 +19,7 @@ public class AprobarInstructorController {
     }
 
     @PostMapping("/{id}/aprobar")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('instructores.validar')")
     public AprobarInstructorResponse aprobar(@PathVariable UUID id, Authentication authentication) {
         UUID actorId = (UUID) authentication.getPrincipal();
         return aprobarInstructorService.aprobar(id, actorId);

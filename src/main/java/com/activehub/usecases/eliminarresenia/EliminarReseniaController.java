@@ -20,7 +20,7 @@ public class EliminarReseniaController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ALUMNO')")
+    @PreAuthorize("@permisos.puede('resenias.escribir')")
     public ResponseEntity<Void> eliminar(@PathVariable UUID id, Authentication authentication) {
         UUID alumnoId = (UUID) authentication.getPrincipal();
         eliminarReseniaService.eliminar(id, alumnoId);

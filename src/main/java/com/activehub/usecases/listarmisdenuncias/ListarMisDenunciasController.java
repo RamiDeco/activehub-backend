@@ -18,10 +18,14 @@ public class ListarMisDenunciasController {
         this.listarMisDenunciasService = listarMisDenunciasService;
     }
 
+    // También INSTRUCTOR: desde que puede denunciar una reseña (E2I-HU11) necesita ver
+    // el seguimiento de la suya, igual que el alumno.
     @GetMapping
-    @PreAuthorize("hasRole('ALUMNO')")
+    // Devuelve SOLO las denuncias de quien llama, así que la guarda es "¿puede denunciar
+    // algo?": el alumno reporta inasistencias y el instructor reporta reseñas (RN-19).
+    @PreAuthorize("@permisos.puede('denuncias.crear') or @permisos.puede('resenias.responder')")
     public List<ListarMisDenunciasResponse> listar(Authentication authentication) {
-        UUID alumnoId = (UUID) authentication.getPrincipal();
-        return listarMisDenunciasService.listar(alumnoId);
+        UUID denuncianteId = (UUID) authentication.getPrincipal();
+        return listarMisDenunciasService.listar(denuncianteId);
     }
 }

@@ -64,7 +64,7 @@ public class CrearReseniaService {
         resenia.setClase(clase);
         resenia.setAlumno(usuarioRepository.getReferenceById(alumnoId));
         resenia.setPuntaje(request.puntaje());
-        resenia.setComentario(request.comentario());
+        resenia.setComentario(normalizar(request.comentario()));
         resenia.setEnModeracion(true);
         resenia = reseniaRepository.saveAndFlush(resenia);
 
@@ -80,5 +80,10 @@ public class CrearReseniaService {
         return new CrearReseniaResponse(
                 resenia.getId(), claseId, alumnoId, resenia.getPuntaje(), resenia.getComentario(),
                 resenia.isEnModeracion(), resenia.getCreatedAt());
+    }
+
+    /** Un comentario en blanco es "sin comentario", no una cadena vacía guardada. */
+    private String normalizar(String comentario) {
+        return comentario == null || comentario.isBlank() ? null : comentario.trim();
     }
 }

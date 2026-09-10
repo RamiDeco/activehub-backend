@@ -123,7 +123,7 @@ class CancelarClaseServiceTest {
     }
 
     @Test
-    void cancelar_pagoEfectivo_noLoToca() {
+    void cancelar_pagoEfectivo_tambienQuedaCancelado() {
         Pago pago = new Pago();
         pago.setEstado(EstadoPago.Efectivo);
         pago.setMetodo(MetodoPago.EFECTIVO);
@@ -136,9 +136,13 @@ class CancelarClaseServiceTest {
 
         service.cancelar(claseId, instructorId);
 
-        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Efectivo);
+        // E2I-HU08 criterio 5: el reintegro alcanza a los pagos Retenidos y a los cobrados en
+        // Efectivo. No hay gateway al que pedirle nada — la plata la tiene el instructor —
+        // pero el registro no puede quedar como un pago válido de una clase que no existe.
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         assertThat(pendiente.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         verify(paymentGateway, never()).cancelarPago(any());
+        verify(pagoRepository).save(pago);
     }
 
     @Test

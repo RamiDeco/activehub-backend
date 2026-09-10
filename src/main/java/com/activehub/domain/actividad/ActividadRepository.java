@@ -11,6 +11,10 @@ public interface ActividadRepository extends JpaRepository<Actividad, UUID>, Jpa
 
     boolean existsByTipoActividadIdAndDeletedFalse(UUID tipoActividadId);
 
+    boolean existsByNivelIntensidadIdAndDeletedFalse(UUID nivelIntensidadId);
+
+    long countByNivelIntensidadIdAndDeletedFalse(UUID nivelIntensidadId);
+
     /**
      * Recalcula el promedio de puntaje sobre las resenias visibles (aprobadas,
      * no eliminadas) de todas las clases de la actividad. Se dispara cada vez
@@ -20,7 +24,8 @@ public interface ActividadRepository extends JpaRepository<Actividad, UUID>, Jpa
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "UPDATE actividad SET rating = COALESCE((SELECT AVG(r.puntaje) FROM resenia r "
             + "JOIN clase c ON c.id = r.clase_id "
-            + "WHERE c.actividad_id = :actividadId AND r.en_moderacion = false AND r.deleted = false), 0) "
+            + "WHERE c.actividad_id = :actividadId AND r.en_moderacion = false AND r.deleted = false "
+            + "AND r.oculta = false), 0) "
             + "WHERE id = :actividadId", nativeQuery = true)
     void recalcularRating(@Param("actividadId") UUID actividadId);
 }

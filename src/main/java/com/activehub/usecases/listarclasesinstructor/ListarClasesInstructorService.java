@@ -25,6 +25,7 @@ public class ListarClasesInstructorService {
                             actividad.getId(),
                             actividad.getNombre(),
                             c.getFechaHora(),
+                            c.getHoraFin(),
                             c.getEstado().name(),
                             c.getCuposMax(),
                             c.getCuposOcupados());

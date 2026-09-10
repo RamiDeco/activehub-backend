@@ -21,7 +21,7 @@ public class AgregarFavoritoController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ALUMNO')")
+    @PreAuthorize("@permisos.puede('catalogo.explorar')")
     public ResponseEntity<Void> agregar(@PathVariable UUID actividadId, Authentication authentication) {
         UUID alumnoId = (UUID) authentication.getPrincipal();
         agregarFavoritoService.agregar(actividadId, alumnoId);

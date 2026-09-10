@@ -76,6 +76,9 @@ public class CrearDenunciaService {
         Denuncia denuncia = new Denuncia();
         denuncia.setClase(clase);
         denuncia.setAlumno(usuarioRepository.getReferenceById(alumnoId));
+        // En una denuncia de clase el denunciante es el propio alumno; el campo existe porque
+        // el instructor también denuncia (reseñas) y ahí `alumno` queda nulo.
+        denuncia.setDenunciante(usuarioRepository.getReferenceById(alumnoId));
         denuncia.setMotivo(request.motivo());
         denuncia = denunciaRepository.saveAndFlush(denuncia);
 

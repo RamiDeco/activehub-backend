@@ -9,6 +9,7 @@ public record ListarMisClasesResponse(
         String actividadNombre,
         String actividadUbicacion,
         Instant fechaHora,
+        Instant horaFin,
         String estado,
         int cuposMax,
         int cuposOcupados

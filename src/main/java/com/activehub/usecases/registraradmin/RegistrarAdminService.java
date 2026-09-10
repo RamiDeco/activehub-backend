@@ -7,6 +7,7 @@ import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.error.DniEnUsoException;
 import com.activehub.shared.error.EmailEnUsoException;
 import java.util.UUID;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -39,6 +40,11 @@ public class RegistrarAdminService {
             throw new EmailEnUsoException();
         }
 
+        String dni = request.dni() != null && !request.dni().isBlank() ? request.dni().trim() : null;
+        if (dni != null && usuarioRepository.existsByDniAndDeletedFalse(dni)) {
+            throw new DniEnUsoException();
+        }
+
         var rolAdmin = rolRepository.findByNombre(RolNombre.ADMIN)
                 .orElseThrow(() -> new IllegalStateException("Rol ADMIN no encontrado, revisar la migracion V2."));
 
@@ -46,6 +52,7 @@ public class RegistrarAdminService {
         usuario.setNombre(request.nombre());
         usuario.setApellido(request.apellido());
         usuario.setEmail(request.email().trim().toLowerCase());
+        usuario.setDni(dni);
         usuario.setPasswordHash(passwordEncoder.encode(request.password()));
         usuario.setTelefono(request.telefono());
         usuario.setRol(rolAdmin);
@@ -61,7 +68,7 @@ public class RegistrarAdminService {
                 usuario.getEmail(),
                 usuario.getTelefono(),
                 usuario.getFechaNacimiento(),
-                rolAdmin.getNombre().name(),
+                rolAdmin.getNombre(),
                 usuario.getEstado().name(),
                 usuario.getCantidadPenalizaciones(),
                 usuario.getCreatedAt()

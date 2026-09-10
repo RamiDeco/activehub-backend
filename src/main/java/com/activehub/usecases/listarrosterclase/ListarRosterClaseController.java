@@ -19,7 +19,7 @@ public class ListarRosterClaseController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('INSTRUCTOR')")
+    @PreAuthorize("@permisos.puede('clases.gestionar')")
     public ListarRosterClaseResponse listar(@PathVariable UUID claseId, Authentication authentication) {
         UUID instructorId = (UUID) authentication.getPrincipal();
         return listarRosterClaseService.listar(claseId, instructorId);

@@ -48,21 +48,27 @@ public class IniciarSesionService {
      * Sin transaccion ambiente, cada save commitea por su cuenta y el registro sobrevive.
      */
     public IniciarSesionResponse login(IniciarSesionRequest request) {
+        String identificador = request.identificador().trim();
+
         // El bloqueo se evalua antes que nada: no tiene sentido seguir verificando
-        // credenciales de un email que ya esta frenado por fuerza bruta.
-        if (intentosLoginService.estaBloqueado(request.email())) {
-            auditService.registrar(null, AuditAccion.LOGIN_BLOQUEADO, "Usuario", null, request.email());
+        // credenciales de un identificador que ya esta frenado por fuerza bruta.
+        if (intentosLoginService.estaBloqueado(identificador)) {
+            auditService.registrar(null, AuditAccion.LOGIN_BLOQUEADO, "Usuario", null, identificador);
             throw new DemasiadosIntentosException();
         }
 
         // Con el Rol ya cargado: este método no es transaccional (ver javadoc de arriba) y
         // fuera de la sesión el proxy lazy de Rol no se puede inicializar.
-        Usuario usuario = usuarioRepository.findByEmailConRol(request.email()).orElse(null);
+        // Un DNI (solo dígitos) nunca puede ser un email, así que el discriminador es seguro.
+        Usuario usuario = (esDni(identificador)
+                ? usuarioRepository.findByDniConRol(identificador)
+                : usuarioRepository.findByEmailConRol(identificador))
+                .orElse(null);
 
         if (usuario == null || !passwordEncoder.matches(request.password(), usuario.getPasswordHash())) {
             UUID actorId = usuario != null ? usuario.getId() : null;
-            auditService.registrar(actorId, AuditAccion.LOGIN_FALLIDO, "Usuario", actorId, request.email());
-            intentosLoginService.registrarFallo(request.email());
+            auditService.registrar(actorId, AuditAccion.LOGIN_FALLIDO, "Usuario", actorId, identificador);
+            intentosLoginService.registrarFallo(identificador);
             throw new CredencialesInvalidasException();
         }
 
@@ -71,7 +77,7 @@ public class IniciarSesionService {
             throw new UsuarioSuspendidoException();
         }
 
-        intentosLoginService.registrarExito(request.email());
+        intentosLoginService.registrarExito(identificador);
         auditService.registrar(usuario.getId(), AuditAccion.LOGIN_OK, "Usuario", usuario.getId(), null);
 
         String token = jwtService.emitir(usuario.getId(), usuario.getEmail(), usuario.getRol().getNombre());
@@ -83,10 +89,14 @@ public class IniciarSesionService {
                 usuario.getEmail(),
                 usuario.getTelefono(),
                 usuario.getFechaNacimiento(),
-                usuario.getRol().getNombre().name(),
+                usuario.getRol().getNombre(),
                 usuario.getEstado().name(),
                 usuario.getCantidadPenalizaciones(),
                 usuario.getCreatedAt()
         ));
+    }
+
+    private boolean esDni(String identificador) {
+        return identificador.matches("[0-9]{7,8}");
     }
 }

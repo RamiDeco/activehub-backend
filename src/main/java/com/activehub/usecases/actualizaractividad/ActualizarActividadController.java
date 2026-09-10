@@ -21,7 +21,7 @@ public class ActualizarActividadController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('INSTRUCTOR')")
+    @PreAuthorize("@permisos.puede('actividades.publicar')")
     public ActualizarActividadResponse actualizar(
             @PathVariable UUID id,
             @Valid @RequestBody ActualizarActividadRequest request,

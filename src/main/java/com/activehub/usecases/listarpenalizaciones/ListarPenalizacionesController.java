@@ -17,7 +17,7 @@ public class ListarPenalizacionesController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('penalizaciones.gestionar')")
     public List<ListarPenalizacionesResponse> listar() {
         return listarPenalizacionesService.listar();
     }

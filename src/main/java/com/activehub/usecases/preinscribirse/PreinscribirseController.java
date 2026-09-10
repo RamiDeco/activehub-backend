@@ -21,7 +21,7 @@ public class PreinscribirseController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ALUMNO')")
+    @PreAuthorize("@permisos.puede('inscripciones.gestionar')")
     public ResponseEntity<PreinscribirseResponse> preinscribirse(
             @PathVariable UUID claseId, Authentication authentication) {
         UUID alumnoId = (UUID) authentication.getPrincipal();

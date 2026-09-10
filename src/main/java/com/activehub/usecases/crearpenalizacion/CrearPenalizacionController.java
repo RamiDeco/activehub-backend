@@ -22,7 +22,7 @@ public class CrearPenalizacionController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('penalizaciones.gestionar')")
     public ResponseEntity<CrearPenalizacionResponse> crear(
             @Valid @RequestBody CrearPenalizacionRequest request, Authentication authentication
     ) {

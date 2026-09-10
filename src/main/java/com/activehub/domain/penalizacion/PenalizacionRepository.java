@@ -8,7 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface PenalizacionRepository extends JpaRepository<Penalizacion, UUID> {
 
-    @Query("SELECT p FROM Penalizacion p JOIN FETCH p.usuario u LEFT JOIN FETCH p.denuncia ORDER BY p.createdAt DESC")
+    /** Orden pedido por el usuario: de la más antigua a la más reciente. */
+    @Query("SELECT p FROM Penalizacion p JOIN FETCH p.usuario u LEFT JOIN FETCH p.denuncia ORDER BY p.createdAt ASC")
     List<Penalizacion> findAllConDetalle();
 
     /** Suspensiones cuya vigencia ya vencio: las levanta el scheduler. */

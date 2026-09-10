@@ -11,17 +11,22 @@ public record ObtenerActividadResponse(
         String descripcion,
         TipoActividad tipoActividad,
         Categoria categoria,
-        String nivelIntensidad,
+        NivelIntensidad nivelIntensidad,
         Instructor instructor,
         BigDecimal precio,
         String ubicacion,
         String photoTint,
         BigDecimal rating,
-        int cuposMax,
+        int duracionMin,
+        /** Galería completa (sección 2: `imagenes[]`). La portada sigue siendo `fotoPath`. */
+        List<UUID> imagenes,
         List<Clase> clases,
         Double latitud,
         Double longitud
 ) {
+    public record NivelIntensidad(UUID id, String nombre) {
+    }
+
     public record TipoActividad(UUID id, String nombre) {
     }
 
@@ -31,6 +36,8 @@ public record ObtenerActividadResponse(
     public record Instructor(UUID id, String nombre, String apellido) {
     }
 
-    public record Clase(UUID id, Instant fechaHora, String estado, int cuposMax, int cuposOcupados, int cantidadPreInscripcion) {
+    public record Clase(
+            UUID id, Instant fechaHora, Instant horaFin, String estado, int cuposMax, int cuposOcupados,
+            int cantidadPreInscripcion) {
     }
 }

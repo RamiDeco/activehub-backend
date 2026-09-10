@@ -3,7 +3,6 @@ package com.activehub.usecases.subirdocumento;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,7 +21,8 @@ public class SubirDocumentoController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('INSTRUCTOR')")
+    // RN-16: es "Mis datos", no un módulo con permiso. El servicio resuelve el
+    // PerfilInstructor del que llama; quien no tenga uno recibe 404, no importa su rol.
     public ResponseEntity<SubirDocumentoResponse> subir(
             @RequestParam("archivo") MultipartFile archivo, Authentication authentication) {
         UUID actorId = (UUID) authentication.getPrincipal();

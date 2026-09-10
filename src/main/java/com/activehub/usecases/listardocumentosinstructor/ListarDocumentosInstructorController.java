@@ -19,7 +19,7 @@ public class ListarDocumentosInstructorController {
     }
 
     @GetMapping("/{id}/documentos")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('instructores.validar')")
     public List<ListarDocumentosInstructorResponse> listar(@PathVariable UUID id) {
         return listarDocumentosInstructorService.listar(id);
     }

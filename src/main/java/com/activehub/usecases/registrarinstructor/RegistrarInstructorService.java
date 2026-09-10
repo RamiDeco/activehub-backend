@@ -11,6 +11,7 @@ import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.error.DniEnUsoException;
 import com.activehub.shared.error.EmailEnUsoException;
 import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.security.JwtService;
@@ -88,6 +89,12 @@ public class RegistrarInstructorService {
             throw new EmailEnUsoException();
         }
 
+        // Precondición de E1A-HU04: mismo correo *o DNI*.
+        String dni = request.dni() != null && !request.dni().isBlank() ? request.dni().trim() : null;
+        if (dni != null && usuarioRepository.existsByDniAndDeletedFalse(dni)) {
+            throw new DniEnUsoException();
+        }
+
         var rolInstructor = rolRepository.findByNombre(RolNombre.INSTRUCTOR)
                 .orElseThrow(() -> new IllegalStateException("Rol INSTRUCTOR no encontrado, revisar la migracion V2."));
 
@@ -95,6 +102,7 @@ public class RegistrarInstructorService {
         usuario.setNombre(request.nombre());
         usuario.setApellido(request.apellido());
         usuario.setEmail(request.email().trim().toLowerCase());
+        usuario.setDni(dni);
         usuario.setPasswordHash(passwordEncoder.encode(request.password()));
         usuario.setTelefono(request.telefono());
         usuario.setFechaNacimiento(request.fechaNacimiento());
@@ -110,7 +118,7 @@ public class RegistrarInstructorService {
 
         auditService.registrar(usuario.getId(), AuditAccion.REGISTRO_INSTRUCTOR, "Usuario", usuario.getId(), null);
 
-        String token = jwtService.emitir(usuario.getId(), usuario.getEmail(), RolNombre.INSTRUCTOR);
+        String token = jwtService.emitir(usuario.getId(), usuario.getEmail(), RolNombre.INSTRUCTOR.name());
 
         return new RegistrarInstructorResponse(token, new RegistrarInstructorResponse.Usuario(
                 usuario.getId(),
@@ -119,7 +127,7 @@ public class RegistrarInstructorService {
                 usuario.getEmail(),
                 usuario.getTelefono(),
                 usuario.getFechaNacimiento(),
-                rolInstructor.getNombre().name(),
+                rolInstructor.getNombre(),
                 usuario.getEstado().name(),
                 usuario.getCantidadPenalizaciones(),
                 usuario.getCreatedAt()

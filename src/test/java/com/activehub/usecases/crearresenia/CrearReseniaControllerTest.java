@@ -51,13 +51,17 @@ class CrearReseniaControllerTest {
     }
 
     @Test
-    void crear_sinComentario_devuelve400() {
+    void crear_sinComentario_devuelve201() {
+        // E3A-HU10 criterio 3: la calificación es obligatoria, el comentario es opcional.
+        when(crearReseniaService.crear(any(), any(), any())).thenReturn(
+                new CrearReseniaResponse(UUID.randomUUID(), CLASE_ID, UUID.randomUUID(), 5, null, true, Instant.now()));
+
         assertThat(mvc.post().uri("/api/alumno/clases/{claseId}/resenas", CLASE_ID)
                 .principal(principal())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"puntaje\": 5, \"comentario\": \"\"}")
+                .content("{\"puntaje\": 5}")
                 .exchange())
-                .hasStatus(400);
+                .hasStatus(201);
     }
 
     @Test

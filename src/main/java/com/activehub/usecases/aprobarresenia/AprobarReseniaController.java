@@ -19,7 +19,7 @@ public class AprobarReseniaController {
     }
 
     @PostMapping("/{id}/aprobar")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('denuncias.resolver')")
     public AprobarReseniaResponse aprobar(@PathVariable UUID id, Authentication authentication) {
         UUID actorId = (UUID) authentication.getPrincipal();
         return aprobarReseniaService.aprobar(id, actorId);

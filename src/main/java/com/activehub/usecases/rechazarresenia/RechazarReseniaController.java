@@ -19,7 +19,7 @@ public class RechazarReseniaController {
     }
 
     @PostMapping("/{id}/rechazar")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('denuncias.resolver')")
     public RechazarReseniaResponse rechazar(@PathVariable UUID id, Authentication authentication) {
         UUID actorId = (UUID) authentication.getPrincipal();
         return rechazarReseniaService.rechazar(id, actorId);

@@ -17,7 +17,7 @@ public class ListarInscripcionesAdminController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('reportes.ver')")
     public List<ListarInscripcionesAdminResponse> listar() {
         return listarInscripcionesAdminService.listar();
     }

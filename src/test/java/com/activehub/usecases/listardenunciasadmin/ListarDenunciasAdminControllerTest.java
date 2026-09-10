@@ -31,10 +31,11 @@ class ListarDenunciasAdminControllerTest {
     void listar_devuelve200() {
         when(listarDenunciasAdminService.listar()).thenReturn(List.of(
                 new ListarDenunciasAdminResponse(
-                        UUID.randomUUID(), UUID.randomUUID(), Instant.now(), UUID.randomUUID(), "Yoga",
-                        new ListarDenunciasAdminResponse.Alumno(UUID.randomUUID(), "Ana", "Lopez"),
-                        new ListarDenunciasAdminResponse.Instructor(UUID.randomUUID(), "Franco", "Gonzales"),
-                        "No se presentó", "Pendiente", null, Instant.now())));
+                        UUID.randomUUID(), "CLASE", UUID.randomUUID(), Instant.now(), UUID.randomUUID(), "Yoga",
+                        new ListarDenunciasAdminResponse.Persona(UUID.randomUUID(), "Ana", "Lopez"),
+                        new ListarDenunciasAdminResponse.Persona(UUID.randomUUID(), "Franco", "Gonzales"),
+                        new ListarDenunciasAdminResponse.Persona(UUID.randomUUID(), "Ana", "Lopez"),
+                        null, "No se presentó", "Pendiente", null, null, null, Instant.now())));
 
         var authentication = new UsernamePasswordAuthenticationToken(UUID.randomUUID(), null, List.of());
 

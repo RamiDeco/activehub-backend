@@ -37,7 +37,7 @@ public class SubirFotoActividadService {
     }
 
     @Transactional
-    public SubirFotoActividadResponse subir(UUID actividadId, MultipartFile archivo, UUID actorId, boolean esAdmin) {
+    public SubirFotoActividadResponse subir(UUID actividadId, MultipartFile archivo, UUID actorId, boolean puedeModerar) {
         if (archivo == null || archivo.isEmpty()) {
             throw new ValidacionException("Seleccioná una foto para subir.");
         }
@@ -49,7 +49,7 @@ public class SubirFotoActividadService {
         Actividad actividad = actividadRepository.findById(actividadId)
                 .orElseThrow(() -> new NoEncontradoException("Actividad no encontrada."));
 
-        if (!esAdmin && !actividad.getInstructor().getId().equals(actorId)) {
+        if (!puedeModerar && !actividad.getInstructor().getId().equals(actorId)) {
             throw new SinPermisoException("No podés subir una foto a una actividad que no te pertenece.");
         }
 

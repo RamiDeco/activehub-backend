@@ -22,6 +22,7 @@ public enum TipoNotificacion {
     RESENIA_RECHAZADA,
     DENUNCIA_RESUELTA,
     ACTIVIDAD_ELIMINADA,
+    RESENIA_RESPONDIDA,
 
     // Instructor
     INSTRUCTOR_APROBADO,

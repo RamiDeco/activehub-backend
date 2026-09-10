@@ -18,6 +18,7 @@ import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.notificacion.NotificacionService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,11 +71,12 @@ class CrearPenalizacionServiceTest {
         usuarioExiste();
         guardaDevolviendoLaMisma();
         var request = new CrearPenalizacionRequest(
-                usuarioId, "Económica", "No se presentó", new BigDecimal("5000"), null, null);
+                usuarioId, List.of("Económica"), "No se presentó", new BigDecimal("5000"), null, null);
 
         CrearPenalizacionResponse response = service.crear(request, adminId);
 
-        assertThat(response.monto()).isEqualByComparingTo("5000");
+        assertThat(response.penalizaciones()).hasSize(1);
+        assertThat(response.penalizaciones().get(0).monto()).isEqualByComparingTo("5000");
         assertThat(response.cantidadPenalizacionesUsuario()).isEqualTo(1);
         // Una económica no suspende al usuario.
         assertThat(usuario.getEstado()).isEqualTo(EstadoUsuario.ACTIVO);
@@ -83,7 +85,7 @@ class CrearPenalizacionServiceTest {
     @Test
     void crear_economicaSinMonto_lanzaValidacion() {
         usuarioExiste();
-        var request = new CrearPenalizacionRequest(usuarioId, "Económica", "No se presentó", null, null, null);
+        var request = new CrearPenalizacionRequest(usuarioId, List.of("Económica"), "No se presentó", null, null, null);
 
         assertThatThrownBy(() -> service.crear(request, adminId))
                 .isInstanceOf(ValidacionException.class)
@@ -97,20 +99,20 @@ class CrearPenalizacionServiceTest {
         usuarioExiste();
         guardaDevolviendoLaMisma();
         var request = new CrearPenalizacionRequest(
-                usuarioId, "Suspensión temporal", "Reiteradas cancelaciones", null,
-                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15));
+                usuarioId, List.of("Suspensión temporal"), "Reiteradas cancelaciones", null,
+                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 20));
 
         CrearPenalizacionResponse response = service.crear(request, adminId);
 
         assertThat(usuario.getEstado()).isEqualTo(EstadoUsuario.SUSPENDIDO);
-        assertThat(response.fechaFin()).isEqualTo(LocalDate.of(2026, 6, 15));
+        assertThat(response.penalizaciones().get(0).fechaFin()).isEqualTo(LocalDate.of(2026, 6, 20));
     }
 
     @Test
     void crear_suspensionSinFechas_lanzaValidacion() {
         usuarioExiste();
         var request = new CrearPenalizacionRequest(
-                usuarioId, "Suspensión temporal", "Reiteradas cancelaciones", null, null, null);
+                usuarioId, List.of("Suspensión temporal"), "Reiteradas cancelaciones", null, null, null);
 
         assertThatThrownBy(() -> service.crear(request, adminId))
                 .isInstanceOf(ValidacionException.class);
@@ -122,7 +124,7 @@ class CrearPenalizacionServiceTest {
     void crear_suspensionConFinAnteriorAInicio_lanzaValidacion() {
         usuarioExiste();
         var request = new CrearPenalizacionRequest(
-                usuarioId, "Suspensión temporal", "Motivo", null,
+                usuarioId, List.of("Suspensión temporal"), "Motivo", null,
                 LocalDate.of(2026, 6, 15), LocalDate.of(2026, 6, 1));
 
         assertThatThrownBy(() -> service.crear(request, adminId))
@@ -133,7 +135,7 @@ class CrearPenalizacionServiceTest {
     void crear_aSiMismo_lanzaValidacion() {
         when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
         var request = new CrearPenalizacionRequest(
-                usuarioId, "Económica", "Motivo", new BigDecimal("100"), null, null);
+                usuarioId, List.of("Económica"), "Motivo", new BigDecimal("100"), null, null);
 
         assertThatThrownBy(() -> service.crear(request, usuarioId))
                 .isInstanceOf(ValidacionException.class);
@@ -144,11 +146,59 @@ class CrearPenalizacionServiceTest {
         usuarioExiste();
         guardaDevolviendoLaMisma();
         var request = new CrearPenalizacionRequest(
-                usuarioId, "Económica", "Motivo", new BigDecimal("100"), null, null);
+                usuarioId, List.of("Económica"), "Motivo", new BigDecimal("100"), null, null);
 
         service.crear(request, adminId);
 
         verify(penalizacionRepository).saveAndFlush(
                 org.mockito.ArgumentMatchers.argThat(p -> p.getTipo() == TipoPenalizacion.ECONOMICA));
+    }
+
+    @Test
+    void crear_ambosTipos_guardaDosPenalizaciones() {
+        // Decisión del usuario: multa + suspensión se guardan como dos filas, no como una
+        // fila "mixta". El enum de la base sigue teniendo dos valores.
+        usuarioExiste();
+        guardaDevolviendoLaMisma();
+        var request = new CrearPenalizacionRequest(
+                usuarioId, List.of("Económica", "Suspensión temporal"), "Ausencias reiteradas",
+                new BigDecimal("8000"), LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 20));
+
+        CrearPenalizacionResponse response = service.crear(request, adminId);
+
+        assertThat(response.penalizaciones()).hasSize(2);
+        assertThat(response.penalizaciones()).extracting(CrearPenalizacionResponse.Aplicada::tipo)
+                .containsExactly("Económica", "Suspensión temporal");
+        // El contador del usuario suma las dos.
+        assertThat(response.cantidadPenalizacionesUsuario()).isEqualTo(2);
+        assertThat(usuario.getEstado()).isEqualTo(EstadoUsuario.SUSPENDIDO);
+        verify(penalizacionRepository, org.mockito.Mockito.times(2)).saveAndFlush(any(Penalizacion.class));
+    }
+
+    @Test
+    void crear_suspensionMasCortaQueElMinimo_lanzaValidacion() {
+        usuarioExiste();
+        var request = new CrearPenalizacionRequest(
+                usuarioId, List.of("Suspensión temporal"), "Motivo", null,
+                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 10));
+
+        assertThatThrownBy(() -> service.crear(request, adminId))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessageContaining("15 días");
+
+        verify(penalizacionRepository, never()).saveAndFlush(any());
+        assertThat(usuario.getEstado()).isEqualTo(EstadoUsuario.ACTIVO);
+    }
+
+    @Test
+    void crear_tipoRepetido_noDuplicaLaSancion() {
+        usuarioExiste();
+        guardaDevolviendoLaMisma();
+        var request = new CrearPenalizacionRequest(
+                usuarioId, List.of("Económica", "Económica"), "Motivo", new BigDecimal("100"), null, null);
+
+        CrearPenalizacionResponse response = service.crear(request, adminId);
+
+        assertThat(response.penalizaciones()).hasSize(1);
     }
 }

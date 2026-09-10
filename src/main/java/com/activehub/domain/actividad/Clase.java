@@ -30,6 +30,15 @@ public class Clase extends BaseEntity {
     @Column(name = "fecha_hora", nullable = false)
     private Instant fechaHora;
 
+    // E2I-HU06 criterios 1 y 4: el modal pide "Hora fin*" y valida fin > inicio.
+    @Column(name = "hora_fin", nullable = false)
+    private Instant horaFin;
+
+    // Null si la clase se creo suelta; apunta a la agenda que la genero si es recurrente.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "agenda_clases_id")
+    private AgendaClases agendaClases;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private EstadoClase estado = EstadoClase.Programada;

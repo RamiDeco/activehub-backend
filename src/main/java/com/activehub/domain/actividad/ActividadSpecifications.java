@@ -33,11 +33,11 @@ public final class ActividadSpecifications {
         return (root, query, cb) -> cb.equal(root.get("tipoActividad").get("id"), tipoActividadId);
     }
 
-    public static Specification<Actividad> conNivel(NivelIntensidad nivel) {
-        if (nivel == null) {
+    public static Specification<Actividad> conNivel(UUID nivelIntensidadId) {
+        if (nivelIntensidadId == null) {
             return null;
         }
-        return (root, query, cb) -> cb.equal(root.get("nivelIntensidad"), nivel);
+        return (root, query, cb) -> cb.equal(root.get("nivelIntensidad").get("id"), nivelIntensidadId);
     }
 
     public static Specification<Actividad> precioMenorIgual(BigDecimal precioMax) {
