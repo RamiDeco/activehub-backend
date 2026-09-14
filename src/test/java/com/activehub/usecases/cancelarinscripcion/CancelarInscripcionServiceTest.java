@@ -3,10 +3,12 @@ package com.activehub.usecases.cancelarinscripcion;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.actividad.ClaseRepository;
 import com.activehub.domain.inscripcion.EstadoInscripcion;
@@ -21,6 +23,8 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -51,26 +55,38 @@ class CancelarInscripcionServiceTest {
     private PaymentGateway paymentGateway;
     @Mock
     private AuditService auditService;
+    @Mock
+    private NotificacionService notificacionService;
 
     private CancelarInscripcionService service;
     private UUID inscripcionId;
     private UUID alumnoId;
     private UUID claseId;
+    private UUID instructorId;
     private Inscripcion inscripcion;
     private Clase clase;
 
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(AHORA, ZoneOffset.UTC);
-        service = new CancelarInscripcionService(inscripcionRepository, claseRepository, pagoRepository, paymentGateway, auditService, clock);
+        service = new CancelarInscripcionService(
+                inscripcionRepository, claseRepository, pagoRepository, paymentGateway, auditService, notificacionService, clock);
 
         alumnoId = UUID.randomUUID();
         Usuario alumno = new Usuario();
         ReflectionTestUtils.setField(alumno, "id", alumnoId);
 
+        instructorId = UUID.randomUUID();
+        Usuario instructor = new Usuario();
+        ReflectionTestUtils.setField(instructor, "id", instructorId);
+        Actividad actividad = new Actividad();
+        actividad.setNombre("Running");
+        actividad.setInstructor(instructor);
+
         claseId = UUID.randomUUID();
         clase = new Clase();
         clase.setFechaHora(AHORA.plus(Duration.ofDays(2)));
+        clase.setActividad(actividad);
         ReflectionTestUtils.setField(clase, "id", claseId);
 
         inscripcionId = UUID.randomUUID();
@@ -89,6 +105,8 @@ class CancelarInscripcionServiceTest {
 
         assertThat(inscripcion.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         verify(claseRepository).liberarCupo(claseId);
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CANCELADA), any(), eq(inscripcionId));
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.ALUMNO_CANCELO_INSCRIPCION), any(), eq(inscripcionId));
     }
 
     @Test

@@ -19,7 +19,7 @@ public class ListarResenasInstructorController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('INSTRUCTOR')")
+    @PreAuthorize("@permisos.puede('resenias.responder')")
     public List<ListarResenasInstructorResponse> listar(Authentication authentication) {
         UUID instructorId = (UUID) authentication.getPrincipal();
         return listarResenasInstructorService.listar(instructorId);

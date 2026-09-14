@@ -20,7 +20,7 @@ public class ListarMisInscripcionesController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ALUMNO')")
+    @PreAuthorize("@permisos.puede('inscripciones.gestionar')")
     public List<ListarMisInscripcionesResponse> listar(
             @RequestParam(required = false) String estado, Authentication authentication) {
         UUID alumnoId = (UUID) authentication.getPrincipal();

@@ -3,8 +3,11 @@ package com.activehub.usecases.crearresenia;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.actividad.ClaseRepository;
 import com.activehub.domain.actividad.EstadoClase;
@@ -17,6 +20,8 @@ import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,21 +45,35 @@ class CrearReseniaServiceTest {
     private UsuarioRepository usuarioRepository;
     @Mock
     private AuditService auditService;
+    @Mock
+    private NotificacionService notificacionService;
 
     private CrearReseniaService service;
     private UUID claseId;
     private UUID alumnoId;
+    private UUID instructorId;
     private Clase clase;
     private CrearReseniaRequest request;
 
     @BeforeEach
     void setUp() {
-        service = new CrearReseniaService(claseRepository, inscripcionRepository, reseniaRepository, usuarioRepository, auditService);
+        service = new CrearReseniaService(
+                claseRepository, inscripcionRepository, reseniaRepository, usuarioRepository, auditService, notificacionService);
 
         claseId = UUID.randomUUID();
         alumnoId = UUID.randomUUID();
+        instructorId = UUID.randomUUID();
+
+        Usuario instructor = new Usuario();
+        ReflectionTestUtils.setField(instructor, "id", instructorId);
+        Actividad actividad = new Actividad();
+        actividad.setNombre("Running");
+        actividad.setInstructor(instructor);
+
         clase = new Clase();
         clase.setEstado(EstadoClase.Finalizada);
+        clase.setActividad(actividad);
+        clase.setFechaHora(Instant.parse("2026-08-01T00:00:00Z"));
         ReflectionTestUtils.setField(clase, "id", claseId);
 
         request = new CrearReseniaRequest(5, "Excelente clase.");
@@ -82,6 +101,7 @@ class CrearReseniaServiceTest {
 
         assertThat(response.puntaje()).isEqualTo(5);
         assertThat(response.enModeracion()).isTrue();
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.NUEVA_RESENIA), any(), any());
     }
 
     @Test

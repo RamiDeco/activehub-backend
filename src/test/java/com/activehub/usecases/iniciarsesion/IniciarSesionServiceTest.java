@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,6 +15,7 @@ import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.security.IntentosLoginService;
 import com.activehub.shared.error.CredencialesInvalidasException;
 import com.activehub.shared.error.UsuarioSuspendidoException;
 import com.activehub.shared.security.JwtService;
@@ -40,16 +42,19 @@ class IniciarSesionServiceTest {
     @Mock
     private AuditService auditService;
 
+    @org.mockito.Mock private IntentosLoginService intentosLoginService;
+
+
     private IniciarSesionService service;
 
     @BeforeEach
     void setUp() {
-        service = new IniciarSesionService(usuarioRepository, passwordEncoder, jwtService, auditService);
+        service = new IniciarSesionService(usuarioRepository, passwordEncoder, jwtService, auditService, intentosLoginService);
     }
 
     private Usuario usuarioActivo() {
         Rol rolAlumno = new Rol();
-        rolAlumno.setNombre(RolNombre.ALUMNO);
+        rolAlumno.setNombre(RolNombre.ALUMNO.name());
 
         Usuario usuario = new Usuario();
         usuario.setNombre("Martina");
@@ -66,9 +71,9 @@ class IniciarSesionServiceTest {
     @Test
     void login_credencialesValidas_devuelveTokenYUsuario_yAuditaLoginOk() {
         Usuario usuario = usuarioActivo();
-        when(usuarioRepository.findByEmailIgnoreCaseAndDeletedFalse("martina@email.com")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmailConRol("martina@email.com")).thenReturn(Optional.of(usuario));
         when(passwordEncoder.matches("Password1", "hash-bcrypt")).thenReturn(true);
-        when(jwtService.emitir(usuario.getId(), usuario.getEmail(), RolNombre.ALUMNO)).thenReturn("token-jwt");
+        when(jwtService.emitir(usuario.getId(), usuario.getEmail(), RolNombre.ALUMNO.name())).thenReturn("token-jwt");
 
         IniciarSesionResponse response = service.login(new IniciarSesionRequest("martina@email.com", "Password1"));
 
@@ -80,7 +85,7 @@ class IniciarSesionServiceTest {
     @Test
     void login_passwordIncorrecta_lanzaCredencialesInvalidasException_yAuditaLoginFallido() {
         Usuario usuario = usuarioActivo();
-        when(usuarioRepository.findByEmailIgnoreCaseAndDeletedFalse("martina@email.com")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmailConRol("martina@email.com")).thenReturn(Optional.of(usuario));
         when(passwordEncoder.matches("incorrecta", "hash-bcrypt")).thenReturn(false);
 
         assertThatThrownBy(() -> service.login(new IniciarSesionRequest("martina@email.com", "incorrecta")))
@@ -91,7 +96,7 @@ class IniciarSesionServiceTest {
 
     @Test
     void login_emailInexistente_lanzaCredencialesInvalidasException_conMismoMensajeQuePasswordIncorrecta() {
-        when(usuarioRepository.findByEmailIgnoreCaseAndDeletedFalse("no-existe@email.com")).thenReturn(Optional.empty());
+        when(usuarioRepository.findByEmailConRol("no-existe@email.com")).thenReturn(Optional.empty());
 
         CredencialesInvalidasException exSinPassword = new CredencialesInvalidasException();
 
@@ -104,10 +109,45 @@ class IniciarSesionServiceTest {
     void login_usuarioSuspendido_lanzaUsuarioSuspendidoException_noCredencialesInvalidas() {
         Usuario usuario = usuarioActivo();
         usuario.setEstado(EstadoUsuario.SUSPENDIDO);
-        when(usuarioRepository.findByEmailIgnoreCaseAndDeletedFalse("martina@email.com")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmailConRol("martina@email.com")).thenReturn(Optional.of(usuario));
         when(passwordEncoder.matches("Password1", "hash-bcrypt")).thenReturn(true);
 
         assertThatThrownBy(() -> service.login(new IniciarSesionRequest("martina@email.com", "Password1")))
                 .isInstanceOf(UsuarioSuspendidoException.class);
+    }
+
+    // --- ingreso por DNI (nota de credenciales de la épica E1A) ----------------------
+
+    @Test
+    void login_conDni_buscaPorDniYNoPorEmail() {
+        Usuario usuario = usuarioActivo();
+        usuario.setDni("30123456");
+        when(usuarioRepository.findByDniConRol("30123456")).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("Password1", "hash-bcrypt")).thenReturn(true);
+        when(jwtService.emitir(usuario.getId(), usuario.getEmail(), RolNombre.ALUMNO.name())).thenReturn("token-jwt");
+
+        IniciarSesionResponse response = service.login(new IniciarSesionRequest("30123456", "Password1"));
+
+        assertThat(response.token()).isEqualTo("token-jwt");
+        verify(usuarioRepository, never()).findByEmailConRol(any());
+    }
+
+    @Test
+    void login_dniInexistente_lanzaCredencialesInvalidas() {
+        when(usuarioRepository.findByDniConRol("99999999")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.login(new IniciarSesionRequest("99999999", "cualquiera")))
+                .isInstanceOf(CredencialesInvalidasException.class);
+    }
+
+    @Test
+    void login_recortaEspaciosDelIdentificador() {
+        Usuario usuario = usuarioActivo();
+        when(usuarioRepository.findByEmailConRol("martina@email.com")).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("Password1", "hash-bcrypt")).thenReturn(true);
+        when(jwtService.emitir(any(), any(), any())).thenReturn("token-jwt");
+
+        assertThat(service.login(new IniciarSesionRequest("  martina@email.com  ", "Password1")).token())
+                .isEqualTo("token-jwt");
     }
 }

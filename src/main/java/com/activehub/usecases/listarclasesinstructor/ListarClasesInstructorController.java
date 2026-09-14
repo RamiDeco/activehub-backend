@@ -19,7 +19,7 @@ public class ListarClasesInstructorController {
     }
 
     @GetMapping("/{id}/clases")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('reportes.ver')")
     public List<ListarClasesInstructorResponse> listar(@PathVariable UUID id) {
         return listarClasesInstructorService.listar(id);
     }

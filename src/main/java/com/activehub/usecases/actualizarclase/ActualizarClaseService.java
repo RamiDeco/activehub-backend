@@ -8,6 +8,7 @@ import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
 import java.util.Map;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,13 +19,21 @@ public class ActualizarClaseService {
     private final ClaseRepository claseRepository;
     private final AuditService auditService;
 
-    public ActualizarClaseService(ClaseRepository claseRepository, AuditService auditService) {
+    private final InstructorVerificadoGuard instructorVerificadoGuard;
+
+    public ActualizarClaseService(
+            ClaseRepository claseRepository,
+            AuditService auditService,
+            InstructorVerificadoGuard instructorVerificadoGuard
+    ) {
         this.claseRepository = claseRepository;
         this.auditService = auditService;
+        this.instructorVerificadoGuard = instructorVerificadoGuard;
     }
 
     @Transactional
     public ActualizarClaseResponse actualizar(UUID id, ActualizarClaseRequest request, UUID instructorId) {
+        instructorVerificadoGuard.exigirVerificado(instructorId, "editar clases");
         Clase clase = claseRepository.findById(id)
                 .orElseThrow(() -> new NoEncontradoException("Clase no encontrada."));
 
@@ -38,14 +47,28 @@ public class ActualizarClaseService {
                     Map.of("cuposMax", "No puede ser menor a los cupos ya ocupados (" + clase.getCuposOcupados() + ")."));
         }
 
+        // Mismas dos reglas de horario que al crear (E2I-HU06 criterios 4 y 8): editar una
+        // clase no puede ser una puerta de atrás para dejarla con fin <= inicio o pisando otra.
+        if (!request.horaFin().isAfter(request.fechaHora())) {
+            throw new ValidacionException(
+                    "La hora de fin debe ser posterior a la hora de inicio.",
+                    Map.of("horaFin", "La hora de fin debe ser posterior a la hora de inicio."));
+        }
+        if (claseRepository.existeSolapamiento(
+                clase.getActividad().getId(), request.fechaHora(), request.horaFin(), clase.getId())) {
+            throw new ValidacionException(
+                    "Ya existe una clase en ese horario. Modificá la fecha o el horario antes de continuar.");
+        }
+
         clase.setFechaHora(request.fechaHora());
+        clase.setHoraFin(request.horaFin());
         clase.setCuposMax(request.cuposMax());
         claseRepository.save(clase);
 
         auditService.registrar(instructorId, AuditAccion.CLASE_ACTUALIZADA, "Clase", clase.getId(), null);
 
         return new ActualizarClaseResponse(
-                clase.getId(), clase.getActividad().getId(), clase.getFechaHora(), clase.getEstado().name(),
-                clase.getCuposMax(), clase.getCuposOcupados());
+                clase.getId(), clase.getActividad().getId(), clase.getFechaHora(), clase.getHoraFin(),
+                clase.getEstado().name(), clase.getCuposMax(), clase.getCuposOcupados());
     }
 }

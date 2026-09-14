@@ -21,6 +21,7 @@ import com.activehub.domain.inscripcion.Pago;
 import com.activehub.domain.inscripcion.PagoRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
@@ -55,6 +56,9 @@ class CancelarClaseServiceTest {
     @Mock
     private AuditService auditService;
 
+    @org.mockito.Mock private InstructorVerificadoGuard instructorVerificadoGuard;
+
+
     private CancelarClaseService service;
     private UUID instructorId;
     private UUID claseId;
@@ -63,7 +67,7 @@ class CancelarClaseServiceTest {
     @BeforeEach
     void setUp() {
         service = new CancelarClaseService(
-                claseRepository, inscripcionRepository, pagoRepository, paymentGateway, notificacionService, auditService);
+                claseRepository, inscripcionRepository, pagoRepository, paymentGateway, notificacionService, auditService, instructorVerificadoGuard);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();
@@ -119,7 +123,7 @@ class CancelarClaseServiceTest {
     }
 
     @Test
-    void cancelar_pagoEfectivo_noLoToca() {
+    void cancelar_pagoEfectivo_tambienQuedaCancelado() {
         Pago pago = new Pago();
         pago.setEstado(EstadoPago.Efectivo);
         pago.setMetodo(MetodoPago.EFECTIVO);
@@ -132,9 +136,13 @@ class CancelarClaseServiceTest {
 
         service.cancelar(claseId, instructorId);
 
-        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Efectivo);
+        // E2I-HU08 criterio 5: el reintegro alcanza a los pagos Retenidos y a los cobrados en
+        // Efectivo. No hay gateway al que pedirle nada — la plata la tiene el instructor —
+        // pero el registro no puede quedar como un pago válido de una clase que no existe.
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         assertThat(pendiente.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         verify(paymentGateway, never()).cancelarPago(any());
+        verify(pagoRepository).save(pago);
     }
 
     @Test

@@ -11,15 +11,20 @@ public record CrearActividadResponse(
         String descripcion,
         TipoActividad tipoActividad,
         Categoria categoria,
-        String nivelIntensidad,
+        NivelIntensidad nivelIntensidad,
         Instructor instructor,
         BigDecimal precio,
         String ubicacion,
         String photoTint,
         BigDecimal rating,
-        int cuposMax,
-        List<Clase> clases
+        int duracionMin,
+        List<Clase> clases,
+        Double latitud,
+        Double longitud
 ) {
+    public record NivelIntensidad(UUID id, String nombre) {
+    }
+
     public record TipoActividad(UUID id, String nombre) {
     }
 

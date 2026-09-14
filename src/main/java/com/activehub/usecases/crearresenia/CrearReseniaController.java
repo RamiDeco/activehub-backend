@@ -23,7 +23,7 @@ public class CrearReseniaController {
     }
 
     @PostMapping("/{claseId}/resenas")
-    @PreAuthorize("hasRole('ALUMNO')")
+    @PreAuthorize("@permisos.puede('resenias.escribir')")
     public ResponseEntity<CrearReseniaResponse> crear(
             @PathVariable UUID claseId, @Valid @RequestBody CrearReseniaRequest request, Authentication authentication
     ) {

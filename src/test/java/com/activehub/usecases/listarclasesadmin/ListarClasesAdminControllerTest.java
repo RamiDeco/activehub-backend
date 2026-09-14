@@ -31,7 +31,7 @@ class ListarClasesAdminControllerTest {
     void listar_devuelve200() {
         when(listarClasesAdminService.listar()).thenReturn(List.of(
                 new ListarClasesAdminResponse(
-                        UUID.randomUUID(), UUID.randomUUID(), "Yoga", Instant.now(), "Programada", 10, 3)));
+                        UUID.randomUUID(), UUID.randomUUID(), "Yoga", Instant.now(), Instant.now().plusSeconds(3600), "Programada", 10, 3)));
 
         var authentication = new UsernamePasswordAuthenticationToken(UUID.randomUUID(), null, List.of());
 

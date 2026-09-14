@@ -36,7 +36,7 @@ class RegistrarAlumnoControllerTest {
               "telefono": "2611234567",
               "password": "Password1",
               "fechaNacimiento": "2000-05-10",
-              "intereses": ["Running", "Yoga"],
+              "intereses": ["11111111-1111-1111-1111-111111111111"],
               "aceptaTerminos": true
             }
             """;

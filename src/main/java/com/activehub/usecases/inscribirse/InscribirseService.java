@@ -18,7 +18,11 @@ import com.activehub.shared.error.InscripcionYaExisteException;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinCuposDisponiblesException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.NotificacionMensajes;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.time.Clock;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -33,6 +37,8 @@ public class InscribirseService {
     private final UsuarioRepository usuarioRepository;
     private final PaymentGateway paymentGateway;
     private final AuditService auditService;
+    private final NotificacionService notificacionService;
+    private final InstructorVerificadoGuard instructorVerificadoGuard;
     private final Clock clock;
 
     public InscribirseService(
@@ -42,6 +48,8 @@ public class InscribirseService {
             UsuarioRepository usuarioRepository,
             PaymentGateway paymentGateway,
             AuditService auditService,
+            NotificacionService notificacionService,
+            InstructorVerificadoGuard instructorVerificadoGuard,
             Clock clock
     ) {
         this.claseRepository = claseRepository;
@@ -50,6 +58,8 @@ public class InscribirseService {
         this.usuarioRepository = usuarioRepository;
         this.paymentGateway = paymentGateway;
         this.auditService = auditService;
+        this.notificacionService = notificacionService;
+        this.instructorVerificadoGuard = instructorVerificadoGuard;
         this.clock = clock;
     }
 
@@ -61,6 +71,8 @@ public class InscribirseService {
         if (clase.getEstado() == EstadoClase.Cancelada || clase.getEstado() == EstadoClase.Finalizada) {
             throw new ValidacionException("Esta clase ya no admite inscripciones.");
         }
+        // RN-16: si al instructor le revocaron la verificación, su oferta deja de ser reservable.
+        instructorVerificadoGuard.exigirOfertaVigente(clase.getActividad().getInstructor().getId());
 
         var ahora = clock.instant();
         if (!VentanaInscripcion.esVentanaInscripcion(ahora, clase.getFechaHora())) {
@@ -80,10 +92,13 @@ public class InscribirseService {
             throw new InscripcionYaExisteException("Ya tenés una inscripción activa para esta clase.");
         }
 
-        // Leer el precio ANTES del UPDATE atomico: ocuparCupo usa clearAutomatically=true,
-        // que limpia todo el persistence context (no solo Clase) y dejaria el proxy lazy
-        // de Actividad huerfano si se accede despues.
+        // Leer el precio y los datos de la actividad ANTES del UPDATE atomico: ocuparCupo usa
+        // clearAutomatically=true, que limpia todo el persistence context (no solo Clase) y
+        // dejaria el proxy lazy de Actividad huerfano si se accede despues.
         var precio = clase.getActividad().getPrecio();
+        var actividadNombre = clase.getActividad().getNombre();
+        var instructorId = clase.getActividad().getInstructor().getId();
+        var fechaHoraClase = clase.getFechaHora();
 
         if (claseRepository.ocuparCupo(claseId) == 0) {
             throw new SinCuposDisponiblesException();
@@ -114,6 +129,14 @@ public class InscribirseService {
             pago.setEstado(EstadoPago.Efectivo);
         }
         pago = pagoRepository.save(pago);
+
+        String contexto = "la clase de \"" + actividadNombre + "\" del " + NotificacionMensajes.formatFechaHora(fechaHoraClase);
+        String mensajeAlumno = inscripcion.getEstado() == EstadoInscripcion.INSCRIPTO
+                ? "Se confirmó tu inscripción a " + contexto + "."
+                : "Tu inscripción a " + contexto + " quedó pendiente hasta que el instructor confirme el pago en efectivo.";
+        notificacionService.notificar(alumnoId, TipoNotificacion.INSCRIPCION_CONFIRMADA, mensajeAlumno, inscripcion.getId());
+        notificacionService.notificar(
+                instructorId, TipoNotificacion.NUEVA_INSCRIPCION, "Nueva inscripción en " + contexto + ".", inscripcion.getId());
 
         auditService.registrar(
                 alumnoId,

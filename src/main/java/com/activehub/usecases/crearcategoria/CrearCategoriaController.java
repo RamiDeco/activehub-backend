@@ -22,7 +22,7 @@ public class CrearCategoriaController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('taxonomia.gestionar')")
     public ResponseEntity<CrearCategoriaResponse> crear(
             @Valid @RequestBody CrearCategoriaRequest request, Authentication authentication) {
         UUID actorId = (UUID) authentication.getPrincipal();

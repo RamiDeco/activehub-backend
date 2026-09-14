@@ -12,6 +12,9 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.NotificacionMensajes;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
 import java.time.Clock;
 import java.util.UUID;
@@ -26,6 +29,7 @@ public class CancelarInscripcionService {
     private final PagoRepository pagoRepository;
     private final PaymentGateway paymentGateway;
     private final AuditService auditService;
+    private final NotificacionService notificacionService;
     private final Clock clock;
 
     public CancelarInscripcionService(
@@ -34,6 +38,7 @@ public class CancelarInscripcionService {
             PagoRepository pagoRepository,
             PaymentGateway paymentGateway,
             AuditService auditService,
+            NotificacionService notificacionService,
             Clock clock
     ) {
         this.inscripcionRepository = inscripcionRepository;
@@ -41,6 +46,7 @@ public class CancelarInscripcionService {
         this.pagoRepository = pagoRepository;
         this.paymentGateway = paymentGateway;
         this.auditService = auditService;
+        this.notificacionService = notificacionService;
         this.clock = clock;
     }
 
@@ -61,10 +67,13 @@ public class CancelarInscripcionService {
             throw new ValidacionException("No podés cancelar una inscripción de una clase que ya pasó.");
         }
 
-        // Leer Pago ANTES del UPDATE atomico: liberarCupo usa clearAutomatically=true,
-        // que limpia todo el persistence context y dejaria este proxy lazy huerfano
-        // si se accede despues.
+        // Leer Pago y los datos de la actividad ANTES del UPDATE atomico: liberarCupo usa
+        // clearAutomatically=true, que limpia todo el persistence context y dejaria estos
+        // proxies lazy huerfanos si se acceden despues.
         Pago pago = inscripcion.getPago();
+        var actividadNombre = inscripcion.getClase().getActividad().getNombre();
+        var instructorId = inscripcion.getClase().getActividad().getInstructor().getId();
+        var fechaHoraClase = inscripcion.getClase().getFechaHora();
 
         if (inscripcion.getEstado() == EstadoInscripcion.INSCRIPTO || inscripcion.getEstado() == EstadoInscripcion.PAGO_PENDIENTE) {
             claseRepository.liberarCupo(inscripcion.getClase().getId());
@@ -78,6 +87,13 @@ public class CancelarInscripcionService {
 
         inscripcion.setEstado(EstadoInscripcion.CANCELADA);
         inscripcionRepository.save(inscripcion);
+
+        String contexto = "la clase de \"" + actividadNombre + "\" del " + NotificacionMensajes.formatFechaHora(fechaHoraClase);
+        notificacionService.notificar(
+                alumnoId, TipoNotificacion.INSCRIPCION_CANCELADA, "Cancelaste tu inscripción a " + contexto + ".", inscripcion.getId());
+        notificacionService.notificar(
+                instructorId, TipoNotificacion.ALUMNO_CANCELO_INSCRIPCION,
+                "Un alumno canceló su inscripción a " + contexto + ".", inscripcion.getId());
 
         auditService.registrar(alumnoId, AuditAccion.INSCRIPCION_CANCELADA, "Inscripcion", inscripcion.getId(), null);
     }

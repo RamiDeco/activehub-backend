@@ -1,26 +1,33 @@
 package com.activehub.domain.actividad;
 
-public enum NivelIntensidad {
-    FISICA_BAJA("Física baja"),
-    FISICA_MEDIA("Física media"),
-    FISICA_ALTA("Física alta");
+import com.activehub.shared.persistence.BaseEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.SQLRestriction;
 
-    private final String etiqueta;
+/**
+ * E4Ad-HU05. Era un `enum` de tres valores fijos; la HU pide crear, editar y eliminar
+ * niveles desde la pantalla, así que pasa a ser entidad (V21).
+ *
+ * <p>Es una cosa distinta de {@link Categoria} y de {@link TipoActividad}: la categoría
+ * agrupa tipos, el tipo dice QUÉ es la actividad y el nivel dice CUÁNTO esfuerzo pide.
+ * La sección 2 del backlog las separa explícitamente.
+ */
+@Entity
+@Table(name = "nivel_intensidad")
+@SQLRestriction("deleted = false")
+@Getter
+@Setter
+@NoArgsConstructor
+public class NivelIntensidad extends BaseEntity {
 
-    NivelIntensidad(String etiqueta) {
-        this.etiqueta = etiqueta;
-    }
+    @Column(nullable = false, length = 60)
+    private String nombre;
 
-    public String getEtiqueta() {
-        return etiqueta;
-    }
-
-    public static NivelIntensidad fromEtiqueta(String etiqueta) {
-        for (NivelIntensidad nivel : values()) {
-            if (nivel.etiqueta.equals(etiqueta)) {
-                return nivel;
-            }
-        }
-        throw new IllegalArgumentException("Nivel de intensidad inválido: " + etiqueta);
-    }
+    @Column(nullable = false, length = 300)
+    private String descripcion;
 }

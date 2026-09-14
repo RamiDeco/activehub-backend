@@ -2,6 +2,7 @@ package com.activehub.usecases.creardenuncia;
 
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.actividad.ClaseRepository;
+import com.activehub.domain.actividad.EstadoClase;
 import com.activehub.domain.denuncia.Denuncia;
 import com.activehub.domain.denuncia.DenunciaRepository;
 import com.activehub.domain.inscripcion.EstadoInscripcion;
@@ -11,6 +12,9 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.NotificacionMensajes;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.UUID;
@@ -27,6 +31,7 @@ public class CrearDenunciaService {
     private final DenunciaRepository denunciaRepository;
     private final UsuarioRepository usuarioRepository;
     private final AuditService auditService;
+    private final NotificacionService notificacionService;
     private final Clock clock;
 
     public CrearDenunciaService(
@@ -35,6 +40,7 @@ public class CrearDenunciaService {
             DenunciaRepository denunciaRepository,
             UsuarioRepository usuarioRepository,
             AuditService auditService,
+            NotificacionService notificacionService,
             Clock clock
     ) {
         this.claseRepository = claseRepository;
@@ -42,6 +48,7 @@ public class CrearDenunciaService {
         this.denunciaRepository = denunciaRepository;
         this.usuarioRepository = usuarioRepository;
         this.auditService = auditService;
+        this.notificacionService = notificacionService;
         this.clock = clock;
     }
 
@@ -53,6 +60,12 @@ public class CrearDenunciaService {
         if (!inscripcionRepository.existsByClaseIdAndAlumnoIdAndEstado(claseId, alumnoId, EstadoInscripcion.INSCRIPTO)) {
             throw new ValidacionException("Solo podés denunciar clases en las que estuviste inscripto.");
         }
+        // RN-18: la clase tiene que estar Finalizada, igual que en crearresenia. No alcanza
+        // con que haya pasado la hora de inicio: una clase que sigue en Programada/Habilitada
+        // todavia no se dicto a los ojos del sistema.
+        if (clase.getEstado() != EstadoClase.Finalizada) {
+            throw new ValidacionException("Solo podés denunciar clases que ya finalizaron.");
+        }
         if (Duration.between(clase.getFechaHora(), clock.instant()).compareTo(UMBRAL_DENUNCIA) < 0) {
             throw new ValidacionException("Todavía no pasó 1 hora desde el inicio de la clase.");
         }
@@ -63,8 +76,18 @@ public class CrearDenunciaService {
         Denuncia denuncia = new Denuncia();
         denuncia.setClase(clase);
         denuncia.setAlumno(usuarioRepository.getReferenceById(alumnoId));
+        // En una denuncia de clase el denunciante es el propio alumno; el campo existe porque
+        // el instructor también denuncia (reseñas) y ahí `alumno` queda nulo.
+        denuncia.setDenunciante(usuarioRepository.getReferenceById(alumnoId));
         denuncia.setMotivo(request.motivo());
         denuncia = denunciaRepository.saveAndFlush(denuncia);
+
+        notificacionService.notificar(
+                clase.getActividad().getInstructor().getId(),
+                TipoNotificacion.DENUNCIA_RECIBIDA,
+                "Recibiste una denuncia por inasistencia a la clase de \"" + clase.getActividad().getNombre()
+                        + "\" del " + NotificacionMensajes.formatFechaHora(clase.getFechaHora()) + ".",
+                denuncia.getId());
 
         auditService.registrar(alumnoId, AuditAccion.DENUNCIA_CREADA, "Denuncia", denuncia.getId(), null);
 

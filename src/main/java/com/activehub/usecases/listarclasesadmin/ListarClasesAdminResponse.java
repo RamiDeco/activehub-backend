@@ -8,6 +8,7 @@ public record ListarClasesAdminResponse(
         UUID actividadId,
         String actividadNombre,
         Instant fechaHora,
+        Instant horaFin,
         String estado,
         int cuposMax,
         int cuposOcupados

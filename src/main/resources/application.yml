@@ -2,10 +2,19 @@ server:
   port: ${PORT:8080}
 
 spring:
-  application:
-    name: activehub-api
+  config:
+    import: optional:file:./.env[.properties]
+    application:
+      name: activehub-api
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/activehub?user=activehub&password=activehub}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/activehub}
+    username: ${DATABASE_USERNAME:activehub}
+    password: ${DATABASE_PASSWORD:XXX}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+      minimum-idle: 1
+      connection-timeout: 30000
+      max-lifetime: 1500000
   jpa:
     hibernate:
       ddl-auto: validate
@@ -13,14 +22,29 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        jdbc:
+          time_zone: UTC
   flyway:
     enabled: true
     locations: classpath:db/migration
+    schemas: public
+    default-schema: public
+  servlet:
+    multipart:
+      # El limite por archivo tiene que coincidir con el que promete la UI de registro
+      # ("PDF, JPG o PNG · hasta 5 MB"). Con el default de Spring (1 MB) un adjunto valido
+      # segun la pantalla era rechazado por el servidor.
+      max-file-size: 5MB
+      max-request-size: 30MB
 
 app:
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-0123456789abcdef0123456789abcdef}
-    expiration-min: ${JWT_EXPIRATION_MIN:120}
+    # E1A-HU02 criterio 3: "la sesion expira automaticamente por inactividad". El TTL del
+    # token ES la ventana de inactividad: el frontend lo renueva contra /api/auth/refresh
+    # mientras el usuario usa la app, asi que solo vence si deja de usarla. Bajarlo de 120
+    # a 30 min es lo que hace que la expiracion sea por inactividad y no por antiguedad.
+    expiration-min: ${JWT_EXPIRATION_MIN:30}
   admin-seed:
     email: ${ADMIN_SEED_EMAIL:}
     password: ${ADMIN_SEED_PASSWORD:}
@@ -28,3 +52,7 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   mercadopago:
     access-token: ${MP_ACCESS_TOKEN}
+  storage:
+    documentos-instructor-dir: ${DOCUMENTOS_INSTRUCTOR_DIR:./uploads/documentos-instructor}
+    fotos-perfil-dir: ${FOTOS_PERFIL_DIR:./uploads/fotos-perfil}
+    fotos-actividad-dir: ${FOTOS_ACTIVIDAD_DIR:./uploads/fotos-actividad}

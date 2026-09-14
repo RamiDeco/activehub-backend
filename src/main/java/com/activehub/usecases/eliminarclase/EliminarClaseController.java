@@ -20,7 +20,7 @@ public class EliminarClaseController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('INSTRUCTOR')")
+    @PreAuthorize("@permisos.puede('clases.gestionar')")
     public ResponseEntity<Void> eliminar(@PathVariable UUID id, Authentication authentication) {
         UUID instructorId = (UUID) authentication.getPrincipal();
         eliminarClaseService.eliminar(id, instructorId);

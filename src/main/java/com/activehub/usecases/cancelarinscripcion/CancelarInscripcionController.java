@@ -20,7 +20,7 @@ public class CancelarInscripcionController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ALUMNO')")
+    @PreAuthorize("@permisos.puede('inscripciones.gestionar')")
     public ResponseEntity<Void> cancelar(@PathVariable UUID id, Authentication authentication) {
         UUID alumnoId = (UUID) authentication.getPrincipal();
         cancelarInscripcionService.cancelar(id, alumnoId);

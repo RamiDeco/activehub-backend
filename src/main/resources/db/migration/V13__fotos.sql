@@ -1,0 +1,2 @@
+ALTER TABLE usuario ADD COLUMN foto_path VARCHAR(255);
+ALTER TABLE actividad ADD COLUMN foto_path VARCHAR(255);

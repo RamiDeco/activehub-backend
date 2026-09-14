@@ -34,6 +34,11 @@ public class Usuario extends BaseEntity {
     @Column(nullable = false, length = 255)
     private String email;
 
+    // Credencial alternativa de login y clave de unicidad junto al email
+    // (precondicion de E1A-HU03 y E1A-HU04). Nullable: las cuentas viejas no lo tienen.
+    @Column(length = 20)
+    private String dni;
+
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
@@ -53,4 +58,7 @@ public class Usuario extends BaseEntity {
 
     @Column(name = "cantidad_penalizaciones", nullable = false)
     private int cantidadPenalizaciones = 0;
+
+    @Column(name = "foto_path")
+    private String fotoPath;
 }

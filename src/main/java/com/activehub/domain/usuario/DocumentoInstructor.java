@@ -13,8 +13,9 @@ import lombok.Setter;
 import org.hibernate.annotations.SQLRestriction;
 
 /**
- * Tabla preparada para un slice futuro (verificacion de documentacion del instructor).
- * No se usa desde ningun caso de uso de Auth todavia.
+ * Documento/certificación subido por un instructor (PDF/JPG/PNG), para que
+ * el admin lo revise al validar su solicitud. El archivo en si se guarda en
+ * disco (ver "subirdocumento"); esta fila solo referencia dónde quedó.
  */
 @Entity
 @Table(name = "documento_instructor")
@@ -31,8 +32,14 @@ public class DocumentoInstructor extends BaseEntity {
     @Column(name = "tipo_documento", nullable = false, length = 50)
     private String tipoDocumento;
 
-    @Column(name = "url_archivo", nullable = false, length = 500)
-    private String urlArchivo;
+    @Column(name = "ruta_archivo", nullable = false, length = 500)
+    private String rutaArchivo;
+
+    @Column(name = "nombre_archivo", nullable = false, length = 255)
+    private String nombreArchivo;
+
+    @Column(name = "tamanio_bytes", nullable = false)
+    private long tamanioBytes;
 
     @Column(nullable = false, length = 20)
     private String estado = "PENDIENTE";

@@ -40,7 +40,7 @@ public class ListarAuditoriaService {
                     UUID actorId = log.getActorId();
                     Usuario actor = actorId != null ? actoresPorId.get(actorId) : null;
                     String actorNombre = actorId == null ? "Sistema" : (actor != null ? actor.getNombre() + " " + actor.getApellido() : "Usuario eliminado");
-                    String actorRol = actor != null ? actor.getRol().getNombre().name() : null;
+                    String actorRol = actor != null ? actor.getRol().getNombre() : null;
 
                     return new ListarAuditoriaResponse(
                             log.getId(),

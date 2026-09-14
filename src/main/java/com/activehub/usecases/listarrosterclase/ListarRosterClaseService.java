@@ -7,6 +7,7 @@ import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import java.util.List;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,13 +21,21 @@ public class ListarRosterClaseService {
     private final ClaseRepository claseRepository;
     private final InscripcionRepository inscripcionRepository;
 
-    public ListarRosterClaseService(ClaseRepository claseRepository, InscripcionRepository inscripcionRepository) {
+    private final InstructorVerificadoGuard instructorVerificadoGuard;
+
+    public ListarRosterClaseService(
+            ClaseRepository claseRepository,
+            InscripcionRepository inscripcionRepository,
+            InstructorVerificadoGuard instructorVerificadoGuard
+    ) {
         this.claseRepository = claseRepository;
         this.inscripcionRepository = inscripcionRepository;
+        this.instructorVerificadoGuard = instructorVerificadoGuard;
     }
 
     @Transactional(readOnly = true)
     public ListarRosterClaseResponse listar(UUID claseId, UUID instructorId) {
+        instructorVerificadoGuard.exigirVerificado(instructorId, "ver el listado de alumnos");
         Clase clase = claseRepository.findById(claseId)
                 .orElseThrow(() -> new NoEncontradoException("Clase no encontrada."));
 
@@ -43,8 +52,7 @@ public class ListarRosterClaseService {
                         i.getAlumno().getNombre(),
                         i.getAlumno().getApellido(),
                         i.getAlumno().getTelefono(),
-                        i.getEstado().getEtiqueta(),
-                        i.getPresente()))
+                        i.getEstado().getEtiqueta()))
                 .toList();
 
         int cantidadInscripto = (int) inscripciones.stream().filter(i -> i.getEstado() == EstadoInscripcion.INSCRIPTO).count();

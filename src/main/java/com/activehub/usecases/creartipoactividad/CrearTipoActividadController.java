@@ -22,7 +22,7 @@ public class CrearTipoActividadController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('taxonomia.gestionar')")
     public ResponseEntity<CrearTipoActividadResponse> crear(
             @Valid @RequestBody CrearTipoActividadRequest request, Authentication authentication) {
         UUID actorId = (UUID) authentication.getPrincipal();

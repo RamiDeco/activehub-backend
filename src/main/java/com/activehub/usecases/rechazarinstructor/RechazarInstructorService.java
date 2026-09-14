@@ -5,6 +5,8 @@ import com.activehub.domain.usuario.PerfilInstructorRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,10 +16,14 @@ public class RechazarInstructorService {
 
     private final PerfilInstructorRepository perfilInstructorRepository;
     private final AuditService auditService;
+    private final NotificacionService notificacionService;
 
-    public RechazarInstructorService(PerfilInstructorRepository perfilInstructorRepository, AuditService auditService) {
+    public RechazarInstructorService(
+            PerfilInstructorRepository perfilInstructorRepository, AuditService auditService, NotificacionService notificacionService
+    ) {
         this.perfilInstructorRepository = perfilInstructorRepository;
         this.auditService = auditService;
+        this.notificacionService = notificacionService;
     }
 
     @Transactional
@@ -29,6 +35,9 @@ public class RechazarInstructorService {
         perfil.setEstadoVerificacion(EstadoVerificacion.RECHAZADO);
         perfil.setMotivoRechazo(motivo);
         perfilInstructorRepository.save(perfil);
+
+        String mensaje = "Tu perfil de instructor fue rechazado." + (motivo != null ? " Motivo: " + motivo : "");
+        notificacionService.notificar(usuarioId, TipoNotificacion.INSTRUCTOR_RECHAZADO, mensaje, usuarioId);
 
         auditService.registrar(actorId, AuditAccion.INSTRUCTOR_RECHAZADO, "PerfilInstructor", usuarioId, motivo);
 

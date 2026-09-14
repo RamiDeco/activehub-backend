@@ -33,7 +33,7 @@ class ListarUsuariosAdminServiceTest {
     @Test
     void listar_devuelveUsuariosMapeados() {
         Rol rolAlumno = new Rol();
-        rolAlumno.setNombre(RolNombre.ALUMNO);
+        rolAlumno.setNombre(RolNombre.ALUMNO.name());
 
         Usuario usuario = new Usuario();
         usuario.setNombre("Ana");
