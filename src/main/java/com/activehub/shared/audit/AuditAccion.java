@@ -6,6 +6,14 @@ public enum AuditAccion {
     LOGIN_OK,
     LOGIN_FALLIDO,
     LOGIN_BLOQUEADO,
+    /**
+     * Alguien pidio algo para lo que no tiene permiso y el backend lo rechazo con 403.
+     * Es una operacion que NO ocurrio, y justamente por eso interesa: un alumno probando
+     * /api/admin/roles es la señal que una auditoria quiere ver. Lo registra
+     * {@code GlobalExceptionHandler}, que es por donde pasan las denegaciones de
+     * {@code @PreAuthorize}.
+     */
+    ACCESO_DENEGADO,
     ADMIN_CREADO,
     ACTIVIDAD_CREADA,
     ACTIVIDAD_ACTUALIZADA,
@@ -44,6 +52,8 @@ public enum AuditAccion {
     RESENIA_ACTUALIZADA,
     RESENIA_RESPONDIDA,
     RESENIA_DENUNCIADA,
+    /** Un admin bajo del listado publico una resenia ya publicada, sin denuncia de por medio. */
+    RESENIA_OCULTADA,
     IMAGEN_ACTIVIDAD_AGREGADA,
     IMAGEN_ACTIVIDAD_ELIMINADA,
     SOLICITUD_INSTRUCTOR_REABIERTA,

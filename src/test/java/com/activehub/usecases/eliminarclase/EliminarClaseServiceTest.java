@@ -16,6 +16,7 @@ import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.security.InstructorVerificadoGuard;
+import com.activehub.shared.security.PenalizacionVigenteGuard;
 import com.activehub.shared.error.ClaseConInscriptosException;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
@@ -37,6 +38,7 @@ class EliminarClaseServiceTest {
     @Mock private AuditService auditService;
 
     @org.mockito.Mock private InstructorVerificadoGuard instructorVerificadoGuard;
+    @org.mockito.Mock private PenalizacionVigenteGuard penalizacionVigenteGuard;
 
 
     private EliminarClaseService service;
@@ -46,7 +48,9 @@ class EliminarClaseServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new EliminarClaseService(claseRepository, inscripcionRepository, auditService, instructorVerificadoGuard);
+        service = new EliminarClaseService(
+                claseRepository, inscripcionRepository, auditService, penalizacionVigenteGuard,
+                instructorVerificadoGuard);
 
         claseId = UUID.randomUUID();
         instructorId = UUID.randomUUID();

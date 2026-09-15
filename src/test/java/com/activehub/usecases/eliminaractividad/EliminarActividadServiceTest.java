@@ -24,6 +24,7 @@ import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.security.InstructorVerificadoGuard;
+import com.activehub.shared.security.PenalizacionVigenteGuard;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -50,6 +51,8 @@ class EliminarActividadServiceTest {
     private NotificacionService notificacionService;
     @Mock
     private InstructorVerificadoGuard instructorVerificadoGuard;
+    @Mock
+    private PenalizacionVigenteGuard penalizacionVigenteGuard;
 
     private EliminarActividadService service;
     private UUID actividadId;
@@ -60,7 +63,7 @@ class EliminarActividadServiceTest {
     void setUp() {
         service = new EliminarActividadService(
                 actividadRepository, claseRepository, inscripcionRepository, auditService,
-                notificacionService, instructorVerificadoGuard);
+                penalizacionVigenteGuard, notificacionService, instructorVerificadoGuard);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();

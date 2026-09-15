@@ -7,6 +7,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.activehub.domain.actividad.ClaseRepository;
+import com.activehub.domain.inscripcion.InscripcionRepository;
+import com.activehub.domain.inscripcion.PagoRepository;
 import com.activehub.domain.penalizacion.Penalizacion;
 import com.activehub.domain.penalizacion.PenalizacionRepository;
 import com.activehub.domain.penalizacion.TipoPenalizacion;
@@ -16,6 +19,8 @@ import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.security.PermisosService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -36,6 +41,11 @@ class CrearPenalizacionServiceTest {
     @Mock private PenalizacionRepository penalizacionRepository;
     @Mock private AuditService auditService;
     @Mock private NotificacionService notificacionService;
+    @Mock private PermisosService permisosService;
+    @Mock private ClaseRepository claseRepository;
+    @Mock private InscripcionRepository inscripcionRepository;
+    @Mock private PagoRepository pagoRepository;
+    @Mock private PaymentGateway paymentGateway;
 
     @InjectMocks private CrearPenalizacionService service;
 
@@ -54,8 +64,13 @@ class CrearPenalizacionServiceTest {
         ReflectionTestUtils.setField(usuario, "id", usuarioId);
     }
 
+    /**
+     * Solo se penaliza a quien dicta clases (E4Ad-HU06 / RN-13) y eso se decide por el
+     * permiso, no por el nombre del rol (RN-19). Por defecto el penalizado es instructor.
+     */
     private void usuarioExiste() {
         when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(permisosService.puede(usuarioId, "clases.gestionar")).thenReturn(true);
     }
 
     private void guardaDevolviendoLaMisma() {
@@ -64,6 +79,22 @@ class CrearPenalizacionServiceTest {
             ReflectionTestUtils.setField(p, "id", UUID.randomUUID());
             return p;
         });
+    }
+
+    @Test
+    void crear_usuarioQueNoDaClases_lanzaValidacion() {
+        // Un alumno o un administrador no se penalizan: la sancion existe por la inasistencia
+        // del profesor. Hasta esta guarda el formulario los ofrecia igual.
+        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(permisosService.puede(usuarioId, "clases.gestionar")).thenReturn(false);
+
+        assertThatThrownBy(() -> service.crear(
+                new CrearPenalizacionRequest(
+                        usuarioId, List.of("Económica"), "Motivo", BigDecimal.TEN, null, null),
+                adminId))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessageContaining("Solo se puede penalizar a un instructor");
+        verify(penalizacionRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -94,8 +125,15 @@ class CrearPenalizacionServiceTest {
         verify(penalizacionRepository, never()).saveAndFlush(any());
     }
 
+    /**
+     * Decision del usuario: <b>el penalizado sigue pudiendo iniciar sesion</b>. Tiene que poder
+     * ver su sancion, sus clases canceladas y sus datos. Antes esto ponia la cuenta en
+     * SUSPENDIDO, que es justo la condicion con la que el login rechaza, asi que la suspension
+     * lo dejaba afuera de la plataforma. Lo que no puede es operar, y de eso se encarga
+     * {@code PenalizacionVigenteGuard} mirando la vigencia.
+     */
     @Test
-    void crear_suspensionConVigencia_dejaAlUsuarioSuspendido() {
+    void crear_suspensionConVigencia_noTocaElEstadoDeLaCuenta() {
         usuarioExiste();
         guardaDevolviendoLaMisma();
         var request = new CrearPenalizacionRequest(
@@ -104,8 +142,57 @@ class CrearPenalizacionServiceTest {
 
         CrearPenalizacionResponse response = service.crear(request, adminId);
 
-        assertThat(usuario.getEstado()).isEqualTo(EstadoUsuario.SUSPENDIDO);
+        assertThat(usuario.getEstado()).isEqualTo(EstadoUsuario.ACTIVO);
         assertThat(response.penalizaciones().get(0).fechaFin()).isEqualTo(LocalDate.of(2026, 6, 20));
+    }
+
+    /**
+     * Un instructor suspendido no puede dictar, asi que sus clases del periodo se cancelan con
+     * la cascada completa: inscripcion cancelada, pago reintegrado y aviso al alumno. Sin esto
+     * la gente quedaba anotada y pagando por una clase que no iba a existir.
+     */
+    @Test
+    void crear_suspension_cancelaLasClasesDelPeriodoYReintegra() {
+        usuarioExiste();
+        guardaDevolviendoLaMisma();
+
+        var actividad = new com.activehub.domain.actividad.Actividad();
+        actividad.setNombre("Yoga");
+        var clase = new com.activehub.domain.actividad.Clase();
+        clase.setActividad(actividad);
+        clase.setFechaHora(java.time.Instant.parse("2026-06-10T15:00:00Z"));
+        ReflectionTestUtils.setField(clase, "id", UUID.randomUUID());
+
+        var alumno = new Usuario();
+        ReflectionTestUtils.setField(alumno, "id", UUID.randomUUID());
+        var pago = new com.activehub.domain.inscripcion.Pago();
+        pago.setEstado(com.activehub.domain.inscripcion.EstadoPago.Retenido);
+        pago.setReferenciaExterna("ref-1");
+        var inscripcion = new com.activehub.domain.inscripcion.Inscripcion();
+        inscripcion.setAlumno(alumno);
+        inscripcion.setPago(pago);
+        inscripcion.setEstado(com.activehub.domain.inscripcion.EstadoInscripcion.INSCRIPTO);
+
+        when(claseRepository.findVivasDeInstructorEntre(
+                org.mockito.ArgumentMatchers.eq(usuarioId), any(), any(), any()))
+                .thenReturn(List.of(clase));
+        when(inscripcionRepository.findByClaseIdAndEstadoNot(
+                clase.getId(), com.activehub.domain.inscripcion.EstadoInscripcion.CANCELADA))
+                .thenReturn(List.of(inscripcion));
+
+        service.crear(new CrearPenalizacionRequest(
+                usuarioId, List.of("Suspensión temporal"), "Reiteradas cancelaciones", null,
+                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 20)), adminId);
+
+        assertThat(clase.getEstado()).isEqualTo(com.activehub.domain.actividad.EstadoClase.Cancelada);
+        assertThat(inscripcion.getEstado())
+                .isEqualTo(com.activehub.domain.inscripcion.EstadoInscripcion.CANCELADA);
+        assertThat(pago.getEstado()).isEqualTo(com.activehub.domain.inscripcion.EstadoPago.Cancelado);
+        verify(paymentGateway).cancelarPago("ref-1");
+        verify(notificacionService).notificar(
+                org.mockito.ArgumentMatchers.eq(alumno.getId()),
+                org.mockito.ArgumentMatchers.eq(com.activehub.shared.notificacion.TipoNotificacion.CLASE_CANCELADA),
+                any(), org.mockito.ArgumentMatchers.eq(clase.getId()));
     }
 
     @Test
@@ -171,7 +258,8 @@ class CrearPenalizacionServiceTest {
                 .containsExactly("Económica", "Suspensión temporal");
         // El contador del usuario suma las dos.
         assertThat(response.cantidadPenalizacionesUsuario()).isEqualTo(2);
-        assertThat(usuario.getEstado()).isEqualTo(EstadoUsuario.SUSPENDIDO);
+        // La cuenta sigue ACTIVA: la suspension corta la operacion, no la sesion.
+        assertThat(usuario.getEstado()).isEqualTo(EstadoUsuario.ACTIVO);
         verify(penalizacionRepository, org.mockito.Mockito.times(2)).saveAndFlush(any(Penalizacion.class));
     }
 

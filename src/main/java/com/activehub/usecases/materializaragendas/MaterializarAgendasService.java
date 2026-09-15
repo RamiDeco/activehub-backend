@@ -108,6 +108,10 @@ public class MaterializarAgendasService {
         clase.setCuposMax(agenda.getCuposMax());
         clase.setEstado(EstadoClase.Programada);
         clase.setCuposOcupados(0);
+        // El precio se fija cuando la clase se materializa, no cuando se creo la agenda: es el
+        // precio vigente de la actividad en el momento en que la clase empieza a existir y a
+        // poder venderse (V23).
+        clase.setPrecio(agenda.getActividad().getPrecio());
         clase = claseRepository.save(clase);
 
         auditService.registrar(null, AuditAccion.CLASE_CREADA, "Clase", clase.getId(), "AGENDA");

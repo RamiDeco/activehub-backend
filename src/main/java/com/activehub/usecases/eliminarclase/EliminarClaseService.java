@@ -5,6 +5,7 @@ import com.activehub.domain.actividad.ClaseRepository;
 import com.activehub.domain.inscripcion.EstadoInscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.shared.audit.AuditAccion;
+import com.activehub.shared.security.PenalizacionVigenteGuard;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.ClaseConInscriptosException;
 import com.activehub.shared.error.NoEncontradoException;
@@ -20,23 +21,29 @@ public class EliminarClaseService {
     private final ClaseRepository claseRepository;
     private final InscripcionRepository inscripcionRepository;
     private final AuditService auditService;
+    private final PenalizacionVigenteGuard penalizacionVigenteGuard;
     private final InstructorVerificadoGuard instructorVerificadoGuard;
 
     public EliminarClaseService(
             ClaseRepository claseRepository,
             InscripcionRepository inscripcionRepository,
             AuditService auditService,
+            PenalizacionVigenteGuard penalizacionVigenteGuard,
             InstructorVerificadoGuard instructorVerificadoGuard
     ) {
         this.claseRepository = claseRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.auditService = auditService;
+        this.penalizacionVigenteGuard = penalizacionVigenteGuard;
         this.instructorVerificadoGuard = instructorVerificadoGuard;
     }
 
     @Transactional
     public void eliminar(UUID id, UUID instructorId) {
         instructorVerificadoGuard.exigirVerificado(instructorId, "eliminar clases");
+        // Una suspension vigente corta la operacion, no la sesion: el penalizado entra y ve
+        // lo suyo, pero no publica ni modifica oferta mientras dure la sancion.
+        penalizacionVigenteGuard.exigirSinSuspensionVigente(instructorId, "eliminar clases");
 
         Clase clase = claseRepository.findById(id)
                 .orElseThrow(() -> new NoEncontradoException("Clase no encontrada."));

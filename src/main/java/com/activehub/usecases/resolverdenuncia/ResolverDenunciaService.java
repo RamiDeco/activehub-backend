@@ -2,12 +2,15 @@ package com.activehub.usecases.resolverdenuncia;
 
 import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.Clase;
+import com.activehub.domain.actividad.ClaseRepository;
+import com.activehub.domain.actividad.EstadoClase;
 import com.activehub.domain.denuncia.Denuncia;
 import com.activehub.domain.denuncia.DenunciaRepository;
 import com.activehub.domain.denuncia.EstadoDenuncia;
 import com.activehub.domain.denuncia.ResolucionDenuncia;
 import com.activehub.domain.inscripcion.EstadoInscripcion;
 import com.activehub.domain.inscripcion.EstadoPago;
+import com.activehub.domain.inscripcion.Inscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.domain.inscripcion.Pago;
 import com.activehub.domain.inscripcion.PagoRepository;
@@ -17,7 +20,6 @@ import com.activehub.domain.penalizacion.TipoPenalizacion;
 import com.activehub.domain.penalizacion.VentanaPenalizacion;
 import com.activehub.domain.resenia.Resenia;
 import com.activehub.domain.resenia.ReseniaRepository;
-import com.activehub.domain.usuario.EstadoUsuario;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditAccion;
@@ -31,7 +33,10 @@ import com.activehub.shared.payments.PaymentGateway;
 import com.activehub.shared.time.Zonas;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +45,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ResolverDenunciaService {
 
     private final DenunciaRepository denunciaRepository;
+    private final ClaseRepository claseRepository;
     private final InscripcionRepository inscripcionRepository;
     private final PagoRepository pagoRepository;
     private final UsuarioRepository usuarioRepository;
@@ -52,6 +58,7 @@ public class ResolverDenunciaService {
 
     public ResolverDenunciaService(
             DenunciaRepository denunciaRepository,
+            ClaseRepository claseRepository,
             InscripcionRepository inscripcionRepository,
             PagoRepository pagoRepository,
             UsuarioRepository usuarioRepository,
@@ -63,6 +70,7 @@ public class ResolverDenunciaService {
             Clock clock
     ) {
         this.denunciaRepository = denunciaRepository;
+        this.claseRepository = claseRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.pagoRepository = pagoRepository;
         this.usuarioRepository = usuarioRepository;
@@ -191,20 +199,52 @@ public class ResolverDenunciaService {
         auditService.registrar(actorId, AuditAccion.RESENIA_RECHAZADA, "Resenia", resenia.getId(), "OCULTA_POR_DENUNCIA");
     }
 
+    /**
+     * Reintegra a <b>TODA la clase</b>, no sólo a quien denunció.
+     *
+     * <p>Decision del usuario, y corrige el comportamiento anterior: antes esto buscaba una
+     * sola inscripcion —la del denunciante— y devolvia ese unico pago. Pero lo que se denuncia
+     * es un hecho de la clase (el instructor falto, hubo una situacion de acoso, la clase no se
+     * dicto como se prometio): eso afecta a todos los que pagaron, no al que ademas se tomo el
+     * trabajo de reportarlo. Con el comportamiento viejo, los demas inscriptos no solo no
+     * cobraban nada sino que su pago se liberaba igual al instructor apenas vencia el periodo
+     * de denuncias.
+     *
+     * <p>Alcanza a los pagos {@code Retenido} <b>y</b> {@code Efectivo}, con el mismo criterio
+     * que {@code cancelarclase} (decision 6): el efectivo no pasa por el gateway, asi que el
+     * registro queda {@code Cancelado} y al alumno se le dice que coordine la devolucion.
+     *
+     * <p>A cada alumno se le notifica. Al denunciante le llega ademas la notificacion propia de
+     * la resolucion de su denuncia, que manda {@code notificarResolucion}.
+     */
     private void reintegrar(Denuncia denuncia) {
-        inscripcionRepository
-                .findByClaseIdAndAlumnoIdAndEstadoNot(
-                        denuncia.getClase().getId(), denuncia.getAlumno().getId(), EstadoInscripcion.CANCELADA)
-                .ifPresent(inscripcion -> {
-                    Pago pago = inscripcion.getPago();
-                    if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
-                        paymentGateway.cancelarPago(pago.getReferenciaExterna());
-                        pago.setEstado(EstadoPago.Cancelado);
-                        pagoRepository.save(pago);
-                    }
-                    inscripcion.setEstado(EstadoInscripcion.CANCELADA);
-                    inscripcionRepository.save(inscripcion);
-                });
+        Clase clase = denuncia.getClase();
+        String contexto = "la clase de \"" + clase.getActividad().getNombre() + "\" del "
+                + NotificacionMensajes.formatFechaHora(clase.getFechaHora());
+
+        for (Inscripcion inscripcion
+                : inscripcionRepository.findByClaseIdAndEstadoNot(clase.getId(), EstadoInscripcion.CANCELADA)) {
+            Pago pago = inscripcion.getPago();
+            String detallePago = "";
+            if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
+                paymentGateway.cancelarPago(pago.getReferenciaExterna());
+                pago.setEstado(EstadoPago.Cancelado);
+                pagoRepository.save(pago);
+                detallePago = " Se reintegra el pago retenido.";
+            } else if (pago != null && pago.getEstado() == EstadoPago.Efectivo) {
+                pago.setEstado(EstadoPago.Cancelado);
+                pagoRepository.save(pago);
+                detallePago = " Coordiná con la plataforma la devolución de lo que pagaste en efectivo.";
+            }
+            inscripcion.setEstado(EstadoInscripcion.CANCELADA);
+            inscripcionRepository.save(inscripcion);
+
+            notificacionService.notificar(
+                    inscripcion.getAlumno().getId(),
+                    TipoNotificacion.INSCRIPCION_CANCELADA,
+                    "Se resolvió un reclamo sobre " + contexto + " y se canceló tu inscripción." + detallePago,
+                    clase.getId());
+        }
     }
 
     /**
@@ -217,6 +257,15 @@ public class ResolverDenunciaService {
      * <p>Antes esto ponía SUSPENDIDO y nada más: no quedaba constancia de por cuánto tiempo,
      * y el scheduler que levanta suspensiones vencidas no tenía qué vencer, así que la
      * suspensión era de hecho permanente.
+     *
+     * <p><b>Ya no toca {@code EstadoUsuario}</b>, por la misma decisión que {@code crearpenalizacion}:
+     * el suspendido inicia sesión —tiene que poder ver su sanción y sus clases canceladas— pero
+     * no puede operar, y eso lo hace valer {@code PenalizacionVigenteGuard} contra la vigencia.
+     * Poner SUSPENDIDO acá le cerraba directamente el login.
+     *
+     * <p>Y <b>cancela las clases del instructor que caen dentro de la suspensión</b>, con
+     * reintegro y aviso a cada alumno: un instructor que no puede dictar no puede dejar a sus
+     * inscriptos esperando. La cascada va inline, como en el resto del repo.
      */
     private void suspenderInstructor(Denuncia denuncia, ResolverDenunciaRequest request, UUID actorId) {
         Integer dias = request.diasSuspension();
@@ -229,7 +278,6 @@ public class ResolverDenunciaService {
         }
 
         Usuario instructor = denuncia.getClase().getActividad().getInstructor();
-        instructor.setEstado(EstadoUsuario.SUSPENDIDO);
 
         LocalDate desde = LocalDate.ofInstant(clock.instant(), Zonas.AR);
         Penalizacion suspension = new Penalizacion();
@@ -264,10 +312,59 @@ public class ResolverDenunciaService {
         instructor.setCantidadPenalizaciones(instructor.getCantidadPenalizaciones() + aplicadas);
         usuarioRepository.save(instructor);
 
+        int clasesCanceladas = cancelarClasesDelPeriodo(instructor, desde, desde.plusDays(dias), actorId);
+
         // RN-14: la suspensión es una operación crítica y necesita su propio registro. Antes
         // solo quedaba la fila DENUNCIA_RESUELTA, sin rastro sobre el usuario sancionado.
         auditService.registrar(
-                actorId, AuditAccion.USUARIO_ESTADO_ACTUALIZADO, "Usuario", instructor.getId(), "SUSPENDIDO");
+                actorId, AuditAccion.USUARIO_ESTADO_ACTUALIZADO, "Usuario", instructor.getId(),
+                "SUSPENSION_TEMPORAL · " + dias + " días · " + clasesCanceladas + " clases canceladas");
+    }
+
+    /**
+     * Cancela las clases del instructor dentro de la vigencia de la suspensión y reintegra a
+     * los inscriptos. Gemela de la de {@code crearpenalizacion}: las dos van inline porque la
+     * convención del repo es no inyectar el Service de un usecase dentro de otro.
+     */
+    private int cancelarClasesDelPeriodo(Usuario instructor, LocalDate desde, LocalDate hasta, UUID actorId) {
+        Instant inicio = desde.atStartOfDay(Zonas.AR).toInstant();
+        Instant fin = hasta.plusDays(1).atStartOfDay(Zonas.AR).toInstant();
+
+        List<Clase> clases = claseRepository.findVivasDeInstructorEntre(
+                instructor.getId(), inicio, fin, EnumSet.of(EstadoClase.Cancelada, EstadoClase.Finalizada));
+
+        for (Clase clase : clases) {
+            String mensaje = "Se canceló la clase de \"" + clase.getActividad().getNombre() + "\" del "
+                    + NotificacionMensajes.formatFechaHora(clase.getFechaHora())
+                    + " porque el instructor fue suspendido. Tu inscripción fue cancelada.";
+
+            for (Inscripcion inscripcion
+                    : inscripcionRepository.findByClaseIdAndEstadoNot(clase.getId(), EstadoInscripcion.CANCELADA)) {
+                Pago pago = inscripcion.getPago();
+                String detallePago = "";
+                if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
+                    paymentGateway.cancelarPago(pago.getReferenciaExterna());
+                    pago.setEstado(EstadoPago.Cancelado);
+                    pagoRepository.save(pago);
+                    detallePago = " Se reintegra el pago retenido.";
+                } else if (pago != null && pago.getEstado() == EstadoPago.Efectivo) {
+                    pago.setEstado(EstadoPago.Cancelado);
+                    pagoRepository.save(pago);
+                    detallePago = " Coordiná con la plataforma la devolución de lo que pagaste en efectivo.";
+                }
+                inscripcion.setEstado(EstadoInscripcion.CANCELADA);
+                inscripcionRepository.save(inscripcion);
+
+                notificacionService.notificar(
+                        inscripcion.getAlumno().getId(), TipoNotificacion.CLASE_CANCELADA,
+                        mensaje + detallePago, clase.getId());
+            }
+
+            clase.setEstado(EstadoClase.Cancelada);
+            claseRepository.save(clase);
+            auditService.registrar(actorId, AuditAccion.CLASE_CANCELADA, "Clase", clase.getId(), "PENALIZACION");
+        }
+        return clases.size();
     }
 
     private void penalizarInstructor(Denuncia denuncia, UUID actorId) {

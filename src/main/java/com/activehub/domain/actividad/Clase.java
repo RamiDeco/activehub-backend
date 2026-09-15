@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.Instant;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -48,4 +49,17 @@ public class Clase extends BaseEntity {
 
     @Column(name = "cupos_ocupados", nullable = false)
     private int cuposOcupados = 0;
+
+    /**
+     * Precio de ESTA clase, copiado de la actividad al crearla (V23).
+     *
+     * <p>No es una desnormalizacion por performance: es el precio que se le prometio a quien
+     * ya se anoto. Antes el cobro leia {@code clase.getActividad().getPrecio()} en el momento
+     * de inscribirse, asi que editar la actividad cambiaba retroactivamente el precio de las
+     * clases en curso y dos alumnos de la misma clase podian pagar distinto. Editar la
+     * actividad ahora solo propaga a las clases NO congeladas
+     * ({@code VentanaInscripcion.estaCongelada}).
+     */
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal precio;
 }

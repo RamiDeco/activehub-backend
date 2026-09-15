@@ -32,7 +32,8 @@ class ListarAuditoriaControllerTest {
         when(listarAuditoriaService.listar()).thenReturn(List.of(
                 new ListarAuditoriaResponse(
                         UUID.randomUUID(), UUID.randomUUID(), "Ana Lopez", "ADMIN",
-                        "LOGIN_OK", "Usuario", UUID.randomUUID(), null, Instant.now())));
+                        "LOGIN_OK", "Usuario", UUID.randomUUID(), null, "Ana Lopez inició sesión.",
+                        Instant.now())));
 
         var authentication = new UsernamePasswordAuthenticationToken(UUID.randomUUID(), null, List.of());
 

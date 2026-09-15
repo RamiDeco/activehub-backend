@@ -95,6 +95,9 @@ class InscribirseServiceTest {
         clase.setEstado(EstadoClase.Programada);
         clase.setFechaHora(AHORA.plus(Duration.ofDays(2)));
         clase.setActividad(actividad);
+        // El cobro sale del precio de la CLASE, no del de la actividad (V23): cada clase nace
+        // con el precio vigente al crearse y no cambia si despues se edita la actividad.
+        clase.setPrecio(new BigDecimal("4500"));
         ReflectionTestUtils.setField(clase, "id", claseId);
     }
 

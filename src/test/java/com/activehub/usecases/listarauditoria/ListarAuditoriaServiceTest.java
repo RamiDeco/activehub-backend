@@ -17,6 +17,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import com.activehub.domain.permiso.Permiso;
+import com.activehub.domain.permiso.PermisoRepository;
+import com.activehub.domain.usuario.RolRepository;
+import java.util.List;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,12 +30,21 @@ class ListarAuditoriaServiceTest {
     private AuditLogRepository auditLogRepository;
     @Mock
     private UsuarioRepository usuarioRepository;
+    @Mock
+    private PermisoRepository permisoRepository;
+    @Mock
+    private RolRepository rolRepository;
 
     private ListarAuditoriaService service;
 
     @BeforeEach
     void setUp() {
-        service = new ListarAuditoriaService(auditLogRepository, usuarioRepository);
+        service = new ListarAuditoriaService(
+                auditLogRepository, usuarioRepository, permisoRepository, rolRepository);
+        // Los dos catalogos que usa la descripcion legible. Vacios alcanzan para los casos de
+        // este test; el que los ejercita es DescripcionAuditoriaTest.
+        org.mockito.Mockito.lenient().when(permisoRepository.findAllByOrderByOrdenAsc()).thenReturn(List.of());
+        org.mockito.Mockito.lenient().when(rolRepository.findAll()).thenReturn(List.of());
     }
 
     @Test

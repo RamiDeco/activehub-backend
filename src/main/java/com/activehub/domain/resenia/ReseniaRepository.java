@@ -24,6 +24,15 @@ public interface ReseniaRepository extends JpaRepository<Resenia, UUID> {
             + "WHERE r.alumno.id = :alumnoId ORDER BY r.createdAt DESC")
     List<Resenia> findByAlumnoIdConDetalle(@Param("alumnoId") UUID alumnoId);
 
+    /**
+     * Resenias ya publicadas (aprobadas), para la moderacion posterior del admin. Incluye las
+     * ocultas a proposito: el admin tiene que poder ver que oculto y con que motivo, no solo lo
+     * que sigue visible.
+     */
+    @Query("SELECT r FROM Resenia r JOIN FETCH r.clase c JOIN FETCH c.actividad JOIN FETCH r.alumno "
+            + "WHERE r.enModeracion = false ORDER BY r.createdAt DESC")
+    List<Resenia> findPublicadasConDetalle();
+
     @Query("SELECT r FROM Resenia r JOIN FETCH r.clase c JOIN FETCH c.actividad a JOIN FETCH r.alumno "
             + "WHERE a.instructor.id = :instructorId ORDER BY r.createdAt DESC")
     List<Resenia> findByInstructorIdConDetalle(@Param("instructorId") UUID instructorId);

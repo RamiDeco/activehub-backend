@@ -9,6 +9,7 @@ import com.activehub.domain.actividad.ClaseRepository;
 import com.activehub.domain.actividad.EstadoClase;
 import com.activehub.domain.favorito.FavoritoRepository;
 import com.activehub.shared.audit.AuditAccion;
+import com.activehub.shared.security.PenalizacionVigenteGuard;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
@@ -19,6 +20,8 @@ import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.security.InstructorVerificadoGuard;
 import com.activehub.shared.time.Zonas;
 import java.time.LocalDate;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -35,6 +38,7 @@ public class CrearClaseService {
     private final NotificacionService notificacionService;
     private final InstructorVerificadoGuard instructorVerificadoGuard;
     private final AuditService auditService;
+    private final PenalizacionVigenteGuard penalizacionVigenteGuard;
 
     public CrearClaseService(
             ActividadRepository actividadRepository,
@@ -43,7 +47,8 @@ public class CrearClaseService {
             FavoritoRepository favoritoRepository,
             NotificacionService notificacionService,
             InstructorVerificadoGuard instructorVerificadoGuard,
-            AuditService auditService
+            AuditService auditService,
+            PenalizacionVigenteGuard penalizacionVigenteGuard
     ) {
         this.actividadRepository = actividadRepository;
         this.claseRepository = claseRepository;
@@ -52,6 +57,7 @@ public class CrearClaseService {
         this.notificacionService = notificacionService;
         this.instructorVerificadoGuard = instructorVerificadoGuard;
         this.auditService = auditService;
+        this.penalizacionVigenteGuard = penalizacionVigenteGuard;
     }
 
     @Transactional
@@ -65,22 +71,25 @@ public class CrearClaseService {
 
         // RN-16 vía la guarda compartida; antes este slice tenía el chequeo copiado.
         instructorVerificadoGuard.exigirVerificado(instructorId, "crear clases");
+        // Una suspension vigente corta la operacion, no la sesion: el penalizado entra y ve
+        // lo suyo, pero no publica ni modifica oferta mientras dure la sancion.
+        penalizacionVigenteGuard.exigirSinSuspensionVigente(instructorId, "crear clases");
 
-        // Criterio 4: la hora de fin tiene que ser posterior a la de inicio.
-        if (!request.horaFin().isAfter(request.fechaHora())) {
-            throw new ValidacionException(
-                    "La hora de fin debe ser posterior a la hora de inicio.",
-                    Map.of("horaFin", "La hora de fin debe ser posterior a la hora de inicio."));
-        }
+        // La hora de fin se DERIVA de la duracion de la actividad (E2I-HU03 criterio 1: la
+        // duracion es un dato de la actividad). El formulario pedia inicio y fin por separado,
+        // que es el mismo dato dos veces y permitia crear una clase de 90 minutos para una
+        // actividad que promete 60. El criterio 4 ("fin posterior al inicio") pasa a estar
+        // garantizado por construccion: duracionMin tiene un CHECK > 0 en la base.
+        Instant horaFin = request.fechaHora().plus(Duration.ofMinutes(actividad.getDuracionMin()));
 
         // Criterio 8: solapamiento con otra clase de la misma actividad.
-        if (claseRepository.existeSolapamiento(actividadId, request.fechaHora(), request.horaFin(), null)) {
+        if (claseRepository.existeSolapamiento(actividadId, request.fechaHora(), horaFin, null)) {
             throw new ValidacionException(
                     "Ya existe una clase en ese horario. Modificá la fecha o el horario antes de continuar.");
         }
 
         ZonedDateTime inicioLocal = request.fechaHora().atZone(Zonas.AR);
-        ZonedDateTime finLocal = request.horaFin().atZone(Zonas.AR);
+        ZonedDateTime finLocal = horaFin.atZone(Zonas.AR);
 
         AgendaClases agenda = null;
         if (request.repetirSemanalmente()) {
@@ -90,10 +99,13 @@ public class CrearClaseService {
         Clase clase = new Clase();
         clase.setActividad(actividad);
         clase.setFechaHora(request.fechaHora());
-        clase.setHoraFin(request.horaFin());
+        clase.setHoraFin(horaFin);
         clase.setCuposMax(request.cuposMax());
         clase.setEstado(EstadoClase.Programada);
         clase.setCuposOcupados(0);
+        // Precio propio desde el minuto cero (V23): lo que se le cobre a quien se anote no
+        // puede cambiar porque despues se edite la actividad.
+        clase.setPrecio(actividad.getPrecio());
         clase.setAgendaClases(agenda);
         clase = claseRepository.save(clase);
 

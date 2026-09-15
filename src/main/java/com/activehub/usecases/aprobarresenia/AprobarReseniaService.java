@@ -33,25 +33,38 @@ public class AprobarReseniaService {
         this.notificacionService = notificacionService;
     }
 
+    /**
+     * <b>Todo lo que haga falta de la reseña se lee ANTES de {@code recalcularRating}.</b> Ese
+     * {@code @Modifying} va con {@code clearAutomatically = true}, asi que limpia el contexto de
+     * persistencia: despues de llamarlo la entidad queda detached y cualquier relacion LAZY que
+     * todavia no se haya tocado explota con {@code LazyInitializationException}.
+     *
+     * <p>Era exactamente eso — {@code resenia.getAlumno()} leido despues del recalculo — lo que
+     * hacia que aprobar una reseña devolviera 500, mientras rechazarla, que ya leia todo antes,
+     * funcionaba bien. Si agregas un dato de la reseña a la notificacion, leelo arriba.
+     */
     @Transactional
     public AprobarReseniaResponse aprobar(UUID id, UUID actorId) {
         Resenia resenia = reseniaRepository.findById(id)
                 .orElseThrow(() -> new NoEncontradoException("Reseña no encontrada."));
 
+        UUID actividadId = resenia.getClase().getActividad().getId();
+        UUID alumnoId = resenia.getAlumno().getId();
+        String contexto = "la clase de \"" + resenia.getClase().getActividad().getNombre()
+                + "\" del " + NotificacionMensajes.formatFechaHora(resenia.getClase().getFechaHora());
+
         resenia.setEnModeracion(false);
         reseniaRepository.save(resenia);
-        actividadRepository.recalcularRating(resenia.getClase().getActividad().getId());
+        actividadRepository.recalcularRating(actividadId);
 
         notificacionService.notificar(
-                resenia.getAlumno().getId(),
+                alumnoId,
                 TipoNotificacion.RESENIA_APROBADA,
-                "Tu reseña sobre la clase de \"" + resenia.getClase().getActividad().getNombre()
-                        + "\" del " + NotificacionMensajes.formatFechaHora(resenia.getClase().getFechaHora())
-                        + " fue publicada.",
-                resenia.getId());
+                "Tu reseña sobre " + contexto + " fue publicada.",
+                id);
 
         auditService.registrar(actorId, AuditAccion.RESENIA_APROBADA, "Resenia", id, null);
 
-        return new AprobarReseniaResponse(resenia.getId(), resenia.isEnModeracion());
+        return new AprobarReseniaResponse(id, false);
     }
 }

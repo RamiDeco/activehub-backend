@@ -19,6 +19,11 @@ import com.activehub.domain.usuario.PerfilInstructor;
 import com.activehub.domain.usuario.PerfilInstructorRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.security.PenalizacionVigenteGuard;
+import com.activehub.domain.actividad.ClaseRepository;
+import java.time.Clock;
+import java.time.ZoneOffset;
+import java.util.List;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
@@ -45,6 +50,10 @@ class ActualizarActividadServiceTest {
     private PerfilInstructorRepository perfilInstructorRepository;
     @Mock
     private AuditService auditService;
+    @Mock
+    private ClaseRepository claseRepository;
+    @Mock
+    private PenalizacionVigenteGuard penalizacionVigenteGuard;
 
     private ActualizarActividadService service;
     private UUID actividadId;
@@ -57,7 +66,14 @@ class ActualizarActividadServiceTest {
     void setUp() {
         service = new ActualizarActividadService(
                 actividadRepository, tipoActividadRepository, nivelIntensidadRepository,
-                perfilInstructorRepository, auditService);
+                perfilInstructorRepository, claseRepository, auditService, penalizacionVigenteGuard,
+                Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC));
+        // Sin clases, la propagacion del precio nuevo no tiene a quien alcanzar; los casos que
+        // la ejercitan la stubean aparte.
+        org.mockito.Mockito.lenient()
+                .when(claseRepository.findByActividadIdAndEstadoNotInOrderByFechaHoraAsc(
+                        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of());
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();

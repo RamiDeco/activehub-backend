@@ -8,6 +8,7 @@ import com.activehub.domain.actividad.EstadoClase;
 import com.activehub.domain.inscripcion.EstadoInscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.shared.audit.AuditAccion;
+import com.activehub.shared.security.PenalizacionVigenteGuard;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.ActividadConInscriptosException;
 import com.activehub.shared.error.NoEncontradoException;
@@ -28,6 +29,7 @@ public class EliminarActividadService {
     private final ClaseRepository claseRepository;
     private final InscripcionRepository inscripcionRepository;
     private final AuditService auditService;
+    private final PenalizacionVigenteGuard penalizacionVigenteGuard;
     private final NotificacionService notificacionService;
 
     private final InstructorVerificadoGuard instructorVerificadoGuard;
@@ -37,6 +39,7 @@ public class EliminarActividadService {
             ClaseRepository claseRepository,
             InscripcionRepository inscripcionRepository,
             AuditService auditService,
+            PenalizacionVigenteGuard penalizacionVigenteGuard,
             NotificacionService notificacionService,
             InstructorVerificadoGuard instructorVerificadoGuard
     ) {
@@ -44,6 +47,7 @@ public class EliminarActividadService {
         this.claseRepository = claseRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.auditService = auditService;
+        this.penalizacionVigenteGuard = penalizacionVigenteGuard;
         this.notificacionService = notificacionService;
         this.instructorVerificadoGuard = instructorVerificadoGuard;
     }
@@ -60,6 +64,9 @@ public class EliminarActividadService {
         // cuando el que borra es el propio instructor.
         if (!puedeModerar) {
             instructorVerificadoGuard.exigirVerificado(actorId, "eliminar actividades");
+            // Solo para el dueño: un moderador no esta operando SU oferta, y si un admin queda
+            // penalizado eso no deberia bloquear la moderacion de la plataforma.
+            penalizacionVigenteGuard.exigirSinSuspensionVigente(actorId, "eliminar actividades");
         }
 
         List<Clase> clasesVigentes = claseRepository.findByActividadIdAndEstadoNotInOrderByFechaHoraAsc(

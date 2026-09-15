@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.denuncia.Denuncia;
+import com.activehub.domain.actividad.ClaseRepository;
 import com.activehub.domain.denuncia.DenunciaRepository;
 import com.activehub.domain.denuncia.EstadoDenuncia;
 import com.activehub.domain.inscripcion.EstadoInscripcion;
@@ -40,6 +41,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Clock;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,6 +59,8 @@ class ResolverDenunciaServiceTest {
 
     @Mock
     private DenunciaRepository denunciaRepository;
+    @Mock
+    private ClaseRepository claseRepository;
     @Mock
     private InscripcionRepository inscripcionRepository;
     @Mock
@@ -85,8 +89,8 @@ class ResolverDenunciaServiceTest {
     @BeforeEach
     void setUp() {
         service = new ResolverDenunciaService(
-                denunciaRepository, inscripcionRepository, pagoRepository, usuarioRepository, penalizacionRepository,
-                reseniaRepository, paymentGateway, auditService, notificacionService,
+                denunciaRepository, claseRepository, inscripcionRepository, pagoRepository, usuarioRepository,
+                penalizacionRepository, reseniaRepository, paymentGateway, auditService, notificacionService,
                 Clock.fixed(AHORA, ZoneOffset.UTC));
 
         instructorId = UUID.randomUUID();
@@ -131,12 +135,10 @@ class ResolverDenunciaServiceTest {
         pago.setMetodo(MetodoPago.MERCADO_PAGO);
         pago.setMonto(new BigDecimal("4500"));
         pago.setReferenciaExterna("ref-1");
-        Inscripcion inscripcion = new Inscripcion();
-        inscripcion.setEstado(EstadoInscripcion.INSCRIPTO);
-        inscripcion.setPago(pago);
+        Inscripcion inscripcion = inscripcionDe(alumnoId, pago);
 
-        when(inscripcionRepository.findByClaseIdAndAlumnoIdAndEstadoNot(claseId, alumnoId, EstadoInscripcion.CANCELADA))
-                .thenReturn(Optional.of(inscripcion));
+        when(inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA))
+                .thenReturn(List.of(inscripcion));
 
         ResolverDenunciaResponse response = service.resolver(denunciaId, req(ResolucionDenuncia.REINTEGRAR), UUID.randomUUID());
 
@@ -148,24 +150,80 @@ class ResolverDenunciaServiceTest {
         verify(notificacionService, never()).notificar(eq(instructorId), any(), any(), any());
     }
 
+    /**
+     * Decision del usuario: el reintegro alcanza a <b>toda la clase</b>, no solo a quien
+     * denuncio. Lo que se denuncia es un hecho de la clase (el instructor falto, hubo una
+     * situacion grave), y eso afecta a todos los que pagaron. Antes esto buscaba una unica
+     * inscripcion —la del denunciante— y al resto se le liberaba el pago al instructor apenas
+     * vencia el periodo de denuncias.
+     */
     @Test
-    void resolver_reintegrarPagoEfectivo_noLlamaGateway() {
+    void resolver_reintegrar_alcanzaATodosLosInscriptosDeLaClase() {
+        UUID otroAlumnoId = UUID.randomUUID();
+
+        Pago pagoDenunciante = new Pago();
+        pagoDenunciante.setEstado(EstadoPago.Retenido);
+        pagoDenunciante.setMetodo(MetodoPago.MERCADO_PAGO);
+        pagoDenunciante.setMonto(new BigDecimal("4500"));
+        pagoDenunciante.setReferenciaExterna("ref-1");
+
+        Pago pagoOtro = new Pago();
+        pagoOtro.setEstado(EstadoPago.Retenido);
+        pagoOtro.setMetodo(MetodoPago.MERCADO_PAGO);
+        pagoOtro.setMonto(new BigDecimal("4500"));
+        pagoOtro.setReferenciaExterna("ref-2");
+
+        Inscripcion delDenunciante = inscripcionDe(alumnoId, pagoDenunciante);
+        Inscripcion deOtro = inscripcionDe(otroAlumnoId, pagoOtro);
+
+        when(inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA))
+                .thenReturn(List.of(delDenunciante, deOtro));
+
+        service.resolver(denunciaId, req(ResolucionDenuncia.REINTEGRAR), UUID.randomUUID());
+
+        assertThat(deOtro.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
+        assertThat(pagoOtro.getEstado()).isEqualTo(EstadoPago.Cancelado);
+        verify(paymentGateway).cancelarPago("ref-1");
+        verify(paymentGateway).cancelarPago("ref-2");
+        // Al que no denuncio tambien se le avisa: se le canceló una inscripción que él no pidió
+        // cancelar.
+        verify(notificacionService).notificar(
+                eq(otroAlumnoId), eq(TipoNotificacion.INSCRIPCION_CANCELADA), any(), eq(claseId));
+    }
+
+    /**
+     * El efectivo tambien se reintegra, con el mismo criterio que {@code cancelarclase}
+     * (decision 6): el registro queda {@code Cancelado} y al alumno se le dice que coordine la
+     * devolucion. Antes el efectivo no se tocaba y el alumno seguia viendo un pago valido por
+     * una clase cuyo reclamo la plataforma le dio la razon. La decision 6 deja el efectivo
+     * intacto <b>cuando cancela el propio alumno</b>; acá el reintegro lo ordena la plataforma.
+     */
+    @Test
+    void resolver_reintegrarPagoEfectivo_loCancelaSinLlamarAlGateway() {
         Pago pago = new Pago();
         pago.setEstado(EstadoPago.Efectivo);
         pago.setMetodo(MetodoPago.EFECTIVO);
         pago.setMonto(new BigDecimal("4500"));
-        Inscripcion inscripcion = new Inscripcion();
-        inscripcion.setEstado(EstadoInscripcion.INSCRIPTO);
-        inscripcion.setPago(pago);
+        Inscripcion inscripcion = inscripcionDe(alumnoId, pago);
 
-        when(inscripcionRepository.findByClaseIdAndAlumnoIdAndEstadoNot(claseId, alumnoId, EstadoInscripcion.CANCELADA))
-                .thenReturn(Optional.of(inscripcion));
+        when(inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA))
+                .thenReturn(List.of(inscripcion));
 
         service.resolver(denunciaId, req(ResolucionDenuncia.REINTEGRAR), UUID.randomUUID());
 
-        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Efectivo);
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         assertThat(inscripcion.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         verify(paymentGateway, never()).cancelarPago(any());
+    }
+
+    private Inscripcion inscripcionDe(UUID alumno, Pago pago) {
+        Usuario usuario = new Usuario();
+        ReflectionTestUtils.setField(usuario, "id", alumno);
+        Inscripcion inscripcion = new Inscripcion();
+        inscripcion.setAlumno(usuario);
+        inscripcion.setEstado(EstadoInscripcion.INSCRIPTO);
+        inscripcion.setPago(pago);
+        return inscripcion;
     }
 
     /** La suspensión ahora crea una Penalizacion, que necesita id propio para auditarse. */
@@ -177,6 +235,11 @@ class ResolverDenunciaServiceTest {
         });
     }
 
+    /**
+     * Suspender ya no toca {@code EstadoUsuario}: el penalizado sigue entrando a la plataforma
+     * (misma decision que en {@code crearpenalizacion}). Lo que lo frena es la vigencia de la
+     * Penalizacion, via {@code PenalizacionVigenteGuard}.
+     */
     @Test
     void resolver_suspender_afectaAlInstructorNoAlAlumno() {
         penalizacionConId();
@@ -184,7 +247,7 @@ class ResolverDenunciaServiceTest {
         ResolverDenunciaResponse response = service.resolver(denunciaId, req(ResolucionDenuncia.SUSPENDER), UUID.randomUUID());
 
         assertThat(response.estado()).isEqualTo("Resuelta");
-        assertThat(instructor.getEstado()).isEqualTo(EstadoUsuario.SUSPENDIDO);
+        assertThat(instructor.getEstado()).isEqualTo(EstadoUsuario.ACTIVO);
         verify(usuarioRepository).save(instructor);
         verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId));
         verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.INSTRUCTOR_SUSPENDIDO), any(), eq(denunciaId));

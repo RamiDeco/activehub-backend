@@ -25,6 +25,7 @@ import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.security.InstructorVerificadoGuard;
+import com.activehub.shared.security.PenalizacionVigenteGuard;
 import com.activehub.shared.time.Zonas;
 import java.time.DayOfWeek;
 import java.time.Instant;
@@ -59,6 +60,8 @@ class CrearClaseServiceTest {
     private InstructorVerificadoGuard instructorVerificadoGuard;
     @Mock
     private AuditService auditService;
+    @Mock
+    private PenalizacionVigenteGuard penalizacionVigenteGuard;
 
     private CrearClaseService service;
     private UUID actividadId;
@@ -71,7 +74,7 @@ class CrearClaseServiceTest {
     void setUp() {
         service = new CrearClaseService(
                 actividadRepository, claseRepository, agendaClasesRepository, favoritoRepository,
-                notificacionService, instructorVerificadoGuard, auditService);
+                notificacionService, instructorVerificadoGuard, auditService, penalizacionVigenteGuard);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();
@@ -81,6 +84,9 @@ class CrearClaseServiceTest {
         actividad = new Actividad();
         actividad.setInstructor(instructor);
         actividad.setNombre("Yoga");
+        // La duracion de la actividad es lo que define la hora de fin de sus clases: el
+        // request ya no la manda (ver CrearClaseRequest).
+        actividad.setDuracionMin(60);
         ReflectionTestUtils.setField(actividad, "id", actividadId);
 
         // Un martes al mediodía, para que el día de la semana de la agenda sea predecible.
@@ -103,7 +109,7 @@ class CrearClaseServiceTest {
         claseSeGuardaConId();
 
         CrearClaseResponse response = service.crear(
-                actividadId, new CrearClaseRequest(inicio, fin, 12, false, null), instructorId);
+                actividadId, new CrearClaseRequest(inicio, 12, false, null), instructorId);
 
         assertThat(response.cuposMax()).isEqualTo(12);
         assertThat(response.horaFin()).isEqualTo(fin);
@@ -113,25 +119,37 @@ class CrearClaseServiceTest {
         verify(agendaClasesRepository, never()).save(any());
     }
 
+    /**
+     * Los dos tests viejos comprobaban que el request no pudiera traer una hora de fin anterior
+     * o igual al inicio. Ya no aplica: la hora de fin no viene del cliente, la calcula el
+     * Service sumando {@code actividad.duracionMin} — que tiene un CHECK &gt; 0 en la base, asi
+     * que el criterio 4 queda garantizado por construccion. Lo que SI hay que fijar es que la
+     * duracion de la clase sea la que promete la actividad.
+     */
     @Test
-    void crear_horaFinAnteriorAlInicio_lanzaValidacion() {
+    void crear_derivaLaHoraDeFinDeLaDuracionDeLaActividad() {
+        actividad.setDuracionMin(90);
         when(actividadRepository.findById(actividadId)).thenReturn(Optional.of(actividad));
+        claseSeGuardaConId();
 
-        assertThatThrownBy(() -> service.crear(
-                actividadId, new CrearClaseRequest(inicio, inicio.minusSeconds(1), 10, false, null), instructorId))
-                .isInstanceOf(ValidacionException.class)
-                .hasMessageContaining("posterior a la hora de inicio");
+        CrearClaseResponse response = service.crear(
+                actividadId, new CrearClaseRequest(inicio, 10, false, null), instructorId);
 
-        verify(claseRepository, never()).save(any());
+        assertThat(response.horaFin()).isEqualTo(inicio.plusSeconds(90 * 60));
     }
 
     @Test
-    void crear_horaFinIgualAlInicio_lanzaValidacion() {
+    void crear_cadaClaseHeredaElPrecioDeLaActividad() {
+        actividad.setPrecio(new java.math.BigDecimal("2500.00"));
         when(actividadRepository.findById(actividadId)).thenReturn(Optional.of(actividad));
+        claseSeGuardaConId();
 
-        assertThatThrownBy(() -> service.crear(
-                actividadId, new CrearClaseRequest(inicio, inicio, 10, false, null), instructorId))
-                .isInstanceOf(ValidacionException.class);
+        service.crear(actividadId, new CrearClaseRequest(inicio, 10, false, null), instructorId);
+
+        org.mockito.ArgumentCaptor<Clase> captor = org.mockito.ArgumentCaptor.forClass(Clase.class);
+        verify(claseRepository).save(captor.capture());
+        // V23: el precio se congela en la clase; editar la actividad despues no lo toca.
+        assertThat(captor.getValue().getPrecio()).isEqualByComparingTo("2500.00");
     }
 
     @Test
@@ -140,7 +158,7 @@ class CrearClaseServiceTest {
         when(claseRepository.existeSolapamiento(eq(actividadId), eq(inicio), eq(fin), isNull())).thenReturn(true);
 
         assertThatThrownBy(() -> service.crear(
-                actividadId, new CrearClaseRequest(inicio, fin, 10, false, null), instructorId))
+                actividadId, new CrearClaseRequest(inicio, 10, false, null), instructorId))
                 .isInstanceOf(ValidacionException.class)
                 .hasMessageContaining("Ya existe una clase en ese horario");
 
@@ -160,7 +178,7 @@ class CrearClaseServiceTest {
 
         CrearClaseResponse response = service.crear(
                 actividadId,
-                new CrearClaseRequest(inicio, fin, 12, true, LocalDate.of(2026, 12, 31)),
+                new CrearClaseRequest(inicio, 12, true, LocalDate.of(2026, 12, 31)),
                 instructorId);
 
         assertThat(response.agendaClasesId()).isEqualTo(agendaId);
@@ -182,7 +200,7 @@ class CrearClaseServiceTest {
 
         assertThatThrownBy(() -> service.crear(
                 actividadId,
-                new CrearClaseRequest(inicio, fin, 12, true, LocalDate.of(2026, 1, 1)),
+                new CrearClaseRequest(inicio, 12, true, LocalDate.of(2026, 1, 1)),
                 instructorId))
                 .isInstanceOf(ValidacionException.class);
 
@@ -194,9 +212,10 @@ class CrearClaseServiceTest {
         when(actividadRepository.findById(actividadId)).thenReturn(Optional.of(actividad));
 
         ZonedDateTime nocturna = ZonedDateTime.of(LocalDate.of(2026, 10, 6), LocalTime.of(23, 0), Zonas.AR);
+        actividad.setDuracionMin(120);
         assertThatThrownBy(() -> service.crear(
                 actividadId,
-                new CrearClaseRequest(nocturna.toInstant(), nocturna.plusHours(2).toInstant(), 10, true, null),
+                new CrearClaseRequest(nocturna.toInstant(), 10, true, null),
                 instructorId))
                 .isInstanceOf(ValidacionException.class)
                 .hasMessageContaining("día siguiente");
@@ -206,7 +225,7 @@ class CrearClaseServiceTest {
     void crear_noDueño_lanzaSinPermiso() {
         when(actividadRepository.findById(actividadId)).thenReturn(Optional.of(actividad));
 
-        CrearClaseRequest request = new CrearClaseRequest(inicio, fin, 10, false, null);
+        CrearClaseRequest request = new CrearClaseRequest(inicio, 10, false, null);
         assertThatThrownBy(() -> service.crear(actividadId, request, UUID.randomUUID()))
                 .isInstanceOf(SinPermisoException.class);
     }
@@ -217,7 +236,7 @@ class CrearClaseServiceTest {
         doThrow(new SinPermisoException("no verificado"))
                 .when(instructorVerificadoGuard).exigirVerificado(eq(instructorId), any());
 
-        CrearClaseRequest request = new CrearClaseRequest(inicio, fin, 10, false, null);
+        CrearClaseRequest request = new CrearClaseRequest(inicio, 10, false, null);
         assertThatThrownBy(() -> service.crear(actividadId, request, instructorId))
                 .isInstanceOf(SinPermisoException.class);
 
@@ -236,8 +255,7 @@ class CrearClaseServiceTest {
         claseSeGuardaConId();
 
         CrearClaseRequest request = new CrearClaseRequest(
-                Instant.now().plus(3, ChronoUnit.DAYS), Instant.now().plus(3, ChronoUnit.DAYS).plusSeconds(3600),
-                10, false, null);
+                Instant.now().plus(3, ChronoUnit.DAYS), 10, false, null);
         CrearClaseResponse response = service.crear(actividadId, request, instructorId);
 
         verify(notificacionService).notificar(

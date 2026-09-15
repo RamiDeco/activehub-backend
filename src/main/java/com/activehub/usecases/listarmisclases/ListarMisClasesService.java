@@ -39,7 +39,8 @@ public class ListarMisClasesService {
                             c.getHoraFin(),
                             c.getEstado().name(),
                             c.getCuposMax(),
-                            c.getCuposOcupados());
+                            c.getCuposOcupados(),
+                            c.getPrecio());
                 })
                 .toList();
     }

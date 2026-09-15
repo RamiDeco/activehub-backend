@@ -31,7 +31,7 @@ class ListarRolesPermisosControllerTest {
         var rol = new ListarRolesPermisosResponse.Rol(
                 UUID.randomUUID(), "ADMIN", "Gobierna la plataforma", true, 3, List.of("roles.configurar"));
         var permiso = new ListarRolesPermisosResponse.Permiso(
-                UUID.randomUUID(), "roles.configurar", "Roles", "Configurar roles y permisos", true);
+                UUID.randomUUID(), "roles.configurar", "Roles", "Configurar roles y permisos", true, true);
         when(listarRolesPermisosService.listar())
                 .thenReturn(new ListarRolesPermisosResponse(List.of(rol), List.of(permiso)));
 
@@ -46,7 +46,7 @@ class ListarRolesPermisosControllerTest {
     @Test
     void listar_incluyeLaCriticidadDeCadaPermiso() {
         var permiso = new ListarRolesPermisosResponse.Permiso(
-                UUID.randomUUID(), "usuarios.gestionar", "Usuarios", "Ver, editar y suspender cuentas", true);
+                UUID.randomUUID(), "usuarios.gestionar", "Usuarios", "Ver, editar y suspender cuentas", true, true);
         when(listarRolesPermisosService.listar())
                 .thenReturn(new ListarRolesPermisosResponse(List.of(), List.of(permiso)));
 
@@ -56,5 +56,23 @@ class ListarRolesPermisosControllerTest {
                 .hasStatus(200)
                 .bodyJson()
                 .extractingPath("$.permisos[0].critico").isEqualTo(true);
+    }
+
+    @Test
+    void listar_marcaLosPermisosImplicitosComoNoConfigurables() {
+        // `catalogo.explorar` sigue en el catalogo y sigue gateando los favoritos, pero la
+        // pantalla no lo puede apagar: viaja con configurable = false para que el frontend lo
+        // saque de la lista de seleccion (ver Permiso.IMPLICITOS y V22).
+        var permiso = new ListarRolesPermisosResponse.Permiso(
+                UUID.randomUUID(), "catalogo.explorar", "Catálogo", "Explorar actividades y ver detalle", false, false);
+        when(listarRolesPermisosService.listar())
+                .thenReturn(new ListarRolesPermisosResponse(List.of(), List.of(permiso)));
+
+        assertThat(mvc.get().uri("/api/admin/roles")
+                .principal(new UsernamePasswordAuthenticationToken(UUID.randomUUID(), null, List.of()))
+                .exchange())
+                .hasStatus(200)
+                .bodyJson()
+                .extractingPath("$.permisos[0].configurable").isEqualTo(false);
     }
 }

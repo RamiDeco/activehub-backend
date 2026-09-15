@@ -95,7 +95,9 @@ public class InscribirseService {
         // Leer el precio y los datos de la actividad ANTES del UPDATE atomico: ocuparCupo usa
         // clearAutomatically=true, que limpia todo el persistence context (no solo Clase) y
         // dejaria el proxy lazy de Actividad huerfano si se accede despues.
-        var precio = clase.getActividad().getPrecio();
+        // El precio sale de la CLASE, no de la actividad (V23): la actividad puede haber
+        // cambiado de precio despues de que esta clase se publicara.
+        var precio = clase.getPrecio();
         var actividadNombre = clase.getActividad().getNombre();
         var instructorId = clase.getActividad().getInstructor().getId();
         var fechaHoraClase = clase.getFechaHora();

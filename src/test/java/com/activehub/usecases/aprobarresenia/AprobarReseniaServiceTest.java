@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -79,6 +81,47 @@ class AprobarReseniaServiceTest {
         assertThat(response.enModeracion()).isFalse();
         assertThat(resenia.isEnModeracion()).isFalse();
         verify(actividadRepository).recalcularRating(actividadId);
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.RESENIA_APROBADA), any(), eq(reseniaId));
+    }
+
+    /**
+     * Regresion: aprobar una reseña devolvia 500.
+     *
+     * <p>{@code ActividadRepository.recalcularRating} es un {@code @Modifying} con
+     * {@code clearAutomatically = true}: limpia el contexto de persistencia, la entidad queda
+     * detached y toda relacion LAZY sin inicializar explota despues. El Service leia
+     * {@code resenia.getAlumno()} DESPUES del recalculo, asi que en runtime saltaba
+     * {@code LazyInitializationException} — y ningun test lo veia, porque con mocks la entidad
+     * nunca se detacha.
+     *
+     * <p>Se simula el detach: apenas se llama a {@code recalcularRating}, los getters LAZY de la
+     * reseña empiezan a fallar. Si alguien vuelve a mover una lectura despues del recalculo,
+     * este test falla.
+     */
+    @Test
+    void aprobar_noLeeRelacionesLazyDespuesDeRecalcularElRating() {
+        Resenia espia = spy(resenia);
+        boolean[] contextoLimpio = {false};
+        doAnswer(inv -> {
+            contextoLimpio[0] = true;
+            return null;
+        }).when(actividadRepository).recalcularRating(actividadId);
+        doAnswer(inv -> {
+            if (contextoLimpio[0]) {
+                throw new org.hibernate.LazyInitializationException("contexto de persistencia limpiado");
+            }
+            return inv.callRealMethod();
+        }).when(espia).getAlumno();
+        doAnswer(inv -> {
+            if (contextoLimpio[0]) {
+                throw new org.hibernate.LazyInitializationException("contexto de persistencia limpiado");
+            }
+            return inv.callRealMethod();
+        }).when(espia).getClase();
+        when(reseniaRepository.findById(reseniaId)).thenReturn(Optional.of(espia));
+
+        service.aprobar(reseniaId, UUID.randomUUID());
+
         verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.RESENIA_APROBADA), any(), eq(reseniaId));
     }
 
