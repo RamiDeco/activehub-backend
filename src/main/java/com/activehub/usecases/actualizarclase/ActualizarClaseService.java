@@ -94,6 +94,6 @@ public class ActualizarClaseService {
 
         return new ActualizarClaseResponse(
                 clase.getId(), clase.getActividad().getId(), clase.getFechaHora(), clase.getHoraFin(),
-                clase.getEstado().name(), clase.getCuposMax(), clase.getCuposOcupados());
+                clase.getEstado().name(), clase.getCuposMax(), clase.getCuposOcupados(), clase.getPrecio());
     }
 }

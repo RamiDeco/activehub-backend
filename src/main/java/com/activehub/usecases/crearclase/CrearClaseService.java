@@ -120,7 +120,8 @@ public class CrearClaseService {
 
         return new CrearClaseResponse(
                 clase.getId(), actividad.getId(), clase.getFechaHora(), clase.getHoraFin(), clase.getEstado().name(),
-                clase.getCuposMax(), clase.getCuposOcupados(), agenda != null ? agenda.getId() : null);
+                clase.getCuposMax(), clase.getCuposOcupados(), clase.getPrecio(),
+                agenda != null ? agenda.getId() : null);
     }
 
     /**

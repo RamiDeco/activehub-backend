@@ -33,7 +33,9 @@ public class ListarResenasActividadService {
                                 r.getAlumno().getId(), r.getAlumno().getNombre(), r.getAlumno().getApellido()),
                         r.getPuntaje(),
                         r.getComentario(),
-                        r.getCreatedAt()))
+                        r.getCreatedAt(),
+                        r.getRespuestaInstructor(),
+                        r.getRespuestaInstructorAt()))
                 .toList();
     }
 }

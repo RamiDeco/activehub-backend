@@ -46,7 +46,7 @@ Roadmap numerado por el usuario; los ítems 1 (auth/catálogo/actividades/inscri
 - **4. Auditoría consultable** — `listarauditoria` (GET, resuelve nombre/rol del actor o "Sistema"/"Usuario eliminado").
 - **5. Dashboard y Reportes reales** — `listarinscripcionesadmin` (incluye `actividadId` directo en la respuesta — importante, ver nota de bug abajo), `listarclasesadmin`. El admin Dashboard/Reportes del frontend consume estos + `listarusuariosadmin`/`listarinstructores`/`listarDenunciasAdmin` reales. Instructor y alumno dashboards **siguen en mock** (fuera de alcance de este ítem).
 - **6. Notificar ausencia de profesor** — sistema de notificaciones genérico (`shared/notificacion/`) + `notificarausenciaprofesor` (cascada igual a `cancelarClase` + notifica a cada alumno afectado), `listarmisnotificaciones`, `marcartodasnotificacionesleidas`. De yapa: `cancelarClase` y `crearClase` (nuevo horario en actividad favorita) también notifican ahora, reusando el mismo servicio.
-- **7. ABM de Categoría** — `crearcategoria`, `actualizarcategoria`, `eliminarcategoria` (bloquea si hay `TipoActividad` activo referenciándola). Antes de esto, Categoria solo tenía lectura.
+- **7. ABM de Categoría** — `crearcategoria`, `actualizarcategoria`, `eliminarcategoria` (baja en cascada sobre sus Tipos; bloquea sólo si alguno tiene Actividades — ver la sección propia más abajo). Antes de esto, Categoria solo tenía lectura.
 
 **Pendientes (8 a 12), sin empezar:**
 
@@ -186,6 +186,22 @@ Decisión del usuario: **una vez que la clase entró en período de inscripción
 - **`actualizarclase` la rechaza** con 400 y el mensaje que dice qué hacer en su lugar. El camino para una clase congelada que no se va a dictar es **cancelarla**, que reintegra y avisa.
 - **`Clase.precio`** (V23): cada clase nace con el precio vigente de su actividad y `inscribirse` cobra **ese**. Antes el cobro leía `clase.getActividad().getPrecio()` en el momento de inscribirse, así que editar el precio de la actividad lo reescribía retroactivamente para todas sus clases — dos alumnos de la misma clase podían terminar pagando distinto según cuándo se anotaron. `actualizaractividad` propaga el precio nuevo **sólo a las clases no congeladas**.
 - Si agregás otro camino que cree una `Clase` (hoy son `crearclase` y `materializaragendas`), tenés que setearle el precio: la columna es `NOT NULL`.
+- **`Clase.precio` viaja en los seis DTO de clase.** El campo existía desde V23 pero **ningún endpoint lo devolvía**, así que el frontend seguía mostrando `actividad.precio` en todas partes: el panel de inscripción del alumno prometía un importe y `inscribirse` cobraba otro apenas la actividad cambiaba de precio. Hoy lo llevan `obteneractividad` (dentro de `Clase`), `listarclasesadmin`, `listarclasesinstructor`, `listarrosterclase`, `crearclase` y `actualizarclase`. `listarmisclases` ya lo tenía. **Al agregar un DTO nuevo que describa una clase, incluilo**: sin el precio de la clase, la pantalla no tiene forma de saber cuánto vale y cae al de la actividad, que es el precio de lista y no lo que se cobra.
+
+## Eliminar una Categoría: cascada sobre sus Tipos, bloqueo por Actividades
+
+`eliminarcategoria` bloqueaba con **cualquier** `TipoActividad` activo colgando. Eso obligaba al administrador a borrar los Tipos uno por uno para poder borrar la Categoría que los agrupa, aunque ninguno se estuviera usando — y un Tipo sin actividades no es un dato que haya que preservar, es parte de la taxonomía que se está dando de baja.
+
+Hoy la regla es la de `eliminartipoactividad`, elevada un nivel: **decide la Actividad, no el Tipo**.
+
+- Si **alguno** de los Tipos de la categoría tiene una `Actividad` activa → `CategoriaEnUsoException` (409, `CATEGORIA_EN_USO`) y **no se borra nada**. El mensaje **nombra los tipos culpables**: con varios colgando, "está en uso" no le dice al admin cuál tiene que vaciar primero. Para eso `CategoriaEnUsoException` ganó un constructor con mensaje; el sin argumentos se conserva.
+- Si ninguno tiene actividades → se da de baja lógica **la categoría y todos sus Tipos**, en la misma transacción, y cada Tipo deja su propio `AuditAccion.TIPO_ACTIVIDAD_ELIMINADO` con el motivo de la cascada.
+- **Se revisan todos los Tipos ANTES de borrar el primero.** Con la comprobación intercalada en el loop, un segundo Tipo en uso dejaba al primero ya marcado dentro de la transacción; el rollback lo salvaba, pero la lógica quedaba dependiendo de él. Hay un test que fija justamente eso (`eliminar_conUnTipoConActividades_lanzaCategoriaEnUsoYNoBorraNada`).
+- Del lado del frontend, la confirmación avisa cuántos Tipos se van a llevar puestos — ver `activehub-frontend/CLAUDE.md`.
+
+## `listarresenasactividad` devuelve la respuesta del instructor
+
+`responderresenia` guardaba `respuesta_instructor` desde V15, pero el **único listado que lee el alumno** (`GET /api/actividades/{id}/resenas`, el que alimenta el detalle de la actividad) no lo devolvía. Resultado: el instructor respondía, lo veía en su propia pantalla, y el destinatario de la respuesta no la veía nunca. Hoy el DTO lleva `respuestaInstructor` y `respuestaInstructorAt`.
 
 ## La hora de fin de una clase es derivada, no un campo
 
@@ -257,7 +273,7 @@ Decisión del usuario: **una vez que la clase entró en período de inscripción
 - **Zona horaria:** todo se guarda como `Instant` (UTC), pero cuando hay que pasar a calendario ("qué día de la semana es", "venció hoy") la respuesta depende de la zona **del negocio**, no del servidor: usar `shared/time/Zonas.AR`. La constante estaba duplicada en tres servicios; la última copia que quedaba (`LevantarSuspensionesVencidasService`) también se sacó.
 
 ## Tests
-Cada slice "andando" = test de Service (regla + caso de error, ej. duplicado/en-uso/no-encontrado/sin-permiso) y test de Controller (status + shape del DTO) en verde. `./mvnw test` no requiere Postgres levantado (mocks + `@WebMvcTest`). Antes de dar por terminado un cambio, correr la suite completa, no solo el paquete tocado. **Hoy: 646 tests en verde, y ningún caso de uso sin test.**
+Cada slice "andando" = test de Service (regla + caso de error, ej. duplicado/en-uso/no-encontrado/sin-permiso) y test de Controller (status + shape del DTO) en verde. `./mvnw test` no requiere Postgres levantado (mocks + `@WebMvcTest`). Antes de dar por terminado un cambio, correr la suite completa, no solo el paquete tocado. **Hoy: 648 tests en verde, y ningún caso de uso sin test.**
 
 **El `java` del PATH es 17 y el proyecto compila con 21** (`<java.version>21</java.version>`). Correr la suite así:
 

@@ -34,11 +34,26 @@ class ListarResenasActividadControllerTest {
                 new ListarResenasActividadResponse(
                         UUID.randomUUID(), UUID.randomUUID(),
                         new ListarResenasActividadResponse.Alumno(UUID.randomUUID(), "Ana", "Lopez"),
-                        5, "Genial", Instant.now())));
+                        5, "Genial", Instant.now(), "¡Gracias por venir!", Instant.now())));
 
         assertThat(mvc.get().uri("/api/actividades/{id}/resenas", actividadId).exchange())
                 .hasStatus(200)
                 .bodyJson()
                 .extractingPath("$[0].puntaje").isEqualTo(5);
+    }
+
+    /** La respuesta del instructor viaja en el listado: es el único lugar donde el alumno la lee. */
+    @Test
+    void listar_incluyeLaRespuestaDelInstructor() {
+        when(listarResenasActividadService.listar(any())).thenReturn(List.of(
+                new ListarResenasActividadResponse(
+                        UUID.randomUUID(), UUID.randomUUID(),
+                        new ListarResenasActividadResponse.Alumno(UUID.randomUUID(), "Ana", "Lopez"),
+                        5, "Genial", Instant.now(), "¡Gracias por venir!", Instant.now())));
+
+        assertThat(mvc.get().uri("/api/actividades/{id}/resenas", UUID.randomUUID()).exchange())
+                .hasStatus(200)
+                .bodyJson()
+                .extractingPath("$[0].respuestaInstructor").isEqualTo("¡Gracias por venir!");
     }
 }
