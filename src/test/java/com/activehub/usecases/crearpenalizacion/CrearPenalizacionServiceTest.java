@@ -18,6 +18,7 @@ import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.payments.PaymentGateway;
 import com.activehub.shared.security.PermisosService;
@@ -192,7 +193,7 @@ class CrearPenalizacionServiceTest {
         verify(notificacionService).notificar(
                 org.mockito.ArgumentMatchers.eq(alumno.getId()),
                 org.mockito.ArgumentMatchers.eq(com.activehub.shared.notificacion.TipoNotificacion.CLASE_CANCELADA),
-                any(), org.mockito.ArgumentMatchers.eq(clase.getId()));
+                any(), org.mockito.ArgumentMatchers.eq(clase.getId()), org.mockito.ArgumentMatchers.eq(Destino.clase(clase.getId())));
     }
 
     @Test

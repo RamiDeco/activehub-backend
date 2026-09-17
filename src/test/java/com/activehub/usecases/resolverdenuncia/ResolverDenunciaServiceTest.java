@@ -33,6 +33,7 @@ import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
@@ -146,8 +147,8 @@ class ResolverDenunciaServiceTest {
         assertThat(inscripcion.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         verify(paymentGateway).cancelarPago("ref-1");
-        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId));
-        verify(notificacionService, never()).notificar(eq(instructorId), any(), any(), any());
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId), eq(Destino.denuncia(denunciaId)));
+        verify(notificacionService, never()).notificar(eq(instructorId), any(), any(), any(), any());
     }
 
     /**
@@ -188,7 +189,7 @@ class ResolverDenunciaServiceTest {
         // Al que no denuncio tambien se le avisa: se le canceló una inscripción que él no pidió
         // cancelar.
         verify(notificacionService).notificar(
-                eq(otroAlumnoId), eq(TipoNotificacion.INSCRIPCION_CANCELADA), any(), eq(claseId));
+                eq(otroAlumnoId), eq(TipoNotificacion.INSCRIPCION_CANCELADA), any(), eq(claseId), any());
     }
 
     /**
@@ -249,8 +250,8 @@ class ResolverDenunciaServiceTest {
         assertThat(response.estado()).isEqualTo("Resuelta");
         assertThat(instructor.getEstado()).isEqualTo(EstadoUsuario.ACTIVO);
         verify(usuarioRepository).save(instructor);
-        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId));
-        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.INSTRUCTOR_SUSPENDIDO), any(), eq(denunciaId));
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId), eq(Destino.denuncia(denunciaId)));
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.INSTRUCTOR_SUSPENDIDO), any(), eq(denunciaId), eq(Destino.clase(claseId)));
     }
 
     @Test
@@ -267,8 +268,8 @@ class ResolverDenunciaServiceTest {
         assertThat(instructor.getCantidadPenalizaciones()).isEqualTo(1);
         verify(penalizacionRepository).saveAndFlush(any());
         verify(usuarioRepository).save(instructor);
-        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId));
-        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.PENALIZACION_APLICADA), any(), eq(denunciaId));
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId), eq(Destino.denuncia(denunciaId)));
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.PENALIZACION_APLICADA), any(), eq(denunciaId), eq(Destino.clase(claseId)));
     }
 
     @Test
@@ -278,8 +279,8 @@ class ResolverDenunciaServiceTest {
         assertThat(response.estado()).isEqualTo("Resuelta");
         assertThat(instructor.getEstado()).isEqualTo(EstadoUsuario.ACTIVO);
         assertThat(instructor.getCantidadPenalizaciones()).isEqualTo(0);
-        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId));
-        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.DENUNCIA_DESESTIMADA), any(), eq(denunciaId));
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId), eq(Destino.denuncia(denunciaId)));
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.DENUNCIA_DESESTIMADA), any(), eq(denunciaId), eq(Destino.clase(claseId)));
     }
 
     @Test
@@ -373,8 +374,8 @@ class ResolverDenunciaServiceTest {
         assertThat(response.resolucion()).isEqualTo("OCULTAR_RESENIA");
         assertThat(resenia.isOculta()).isTrue();
         verify(reseniaRepository).save(resenia);
-        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId));
-        verify(notificacionService).notificar(eq(autorId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId));
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId), eq(Destino.resenia(resenia.getId())));
+        verify(notificacionService).notificar(eq(autorId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId), eq(Destino.resenia(resenia.getId())));
     }
 
     @Test
@@ -387,7 +388,7 @@ class ResolverDenunciaServiceTest {
 
         assertThat(resenia.isOculta()).isFalse();
         // Al autor de la reseña no se le avisa nada: su reseña sigue publicada.
-        verify(notificacionService, never()).notificar(eq(autorId), any(), any(), any());
+        verify(notificacionService, never()).notificar(eq(autorId), any(), any(), any(), any());
     }
 
     @Test

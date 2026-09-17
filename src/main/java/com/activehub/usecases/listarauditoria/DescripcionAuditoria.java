@@ -129,6 +129,11 @@ final class DescripcionAuditoria {
             case IMAGEN_ACTIVIDAD_ELIMINADA -> actor + " eliminó una imagen de la galería de una actividad.";
             case FAVORITO_AGREGADO -> actor + " agregó una actividad a favoritos.";
             case FAVORITO_QUITADO -> actor + " quitó una actividad de favoritos.";
+
+            // El alta es publica: si la mando un visitante sin cuenta, el actor ya viene
+            // resuelto como "Sistema" y la frase tiene que seguir leyendose bien igual.
+            case REPORTE_SOPORTE_CREADO -> "Se recibió un reporte de soporte desde la pantalla de Ayuda.";
+            case REPORTE_SOPORTE_CERRADO -> actor + " cerró un reporte de soporte.";
         };
     }
 

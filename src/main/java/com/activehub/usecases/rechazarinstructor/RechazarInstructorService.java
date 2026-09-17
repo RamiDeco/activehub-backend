@@ -5,6 +5,7 @@ import com.activehub.domain.usuario.PerfilInstructorRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import java.util.UUID;
@@ -37,7 +38,8 @@ public class RechazarInstructorService {
         perfilInstructorRepository.save(perfil);
 
         String mensaje = "Tu perfil de instructor fue rechazado." + (motivo != null ? " Motivo: " + motivo : "");
-        notificacionService.notificar(usuarioId, TipoNotificacion.INSTRUCTOR_RECHAZADO, mensaje, usuarioId);
+        notificacionService.notificar(
+                usuarioId, TipoNotificacion.INSTRUCTOR_RECHAZADO, mensaje, usuarioId, Destino.perfilInstructor(usuarioId));
 
         auditService.registrar(actorId, AuditAccion.INSTRUCTOR_RECHAZADO, "PerfilInstructor", usuarioId, motivo);
 

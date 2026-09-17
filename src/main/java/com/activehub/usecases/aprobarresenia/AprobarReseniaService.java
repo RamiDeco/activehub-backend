@@ -6,6 +6,7 @@ import com.activehub.domain.resenia.ReseniaRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
@@ -61,7 +62,7 @@ public class AprobarReseniaService {
                 alumnoId,
                 TipoNotificacion.RESENIA_APROBADA,
                 "Tu reseña sobre " + contexto + " fue publicada.",
-                id);
+                id, Destino.resenia(id));
 
         auditService.registrar(actorId, AuditAccion.RESENIA_APROBADA, "Resenia", id, null);
 

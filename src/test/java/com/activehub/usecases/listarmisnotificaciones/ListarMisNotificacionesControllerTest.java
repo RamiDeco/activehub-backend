@@ -32,7 +32,7 @@ class ListarMisNotificacionesControllerTest {
         when(listarMisNotificacionesService.listar(org.mockito.ArgumentMatchers.any())).thenReturn(List.of(
                 new ListarMisNotificacionesResponse(
                         UUID.randomUUID(), "AUSENCIA_PROFESOR", "El instructor avisó que no podrá dar la clase.",
-                        UUID.randomUUID(), false, Instant.now())));
+                        UUID.randomUUID(), "CLASE", UUID.randomUUID(), false, Instant.now())));
 
         var authentication = new UsernamePasswordAuthenticationToken(UUID.randomUUID(), null, List.of());
 

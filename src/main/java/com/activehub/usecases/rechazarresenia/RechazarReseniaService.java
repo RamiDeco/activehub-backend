@@ -6,6 +6,7 @@ import com.activehub.domain.resenia.ReseniaRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
@@ -46,8 +47,11 @@ public class RechazarReseniaService {
         reseniaRepository.save(resenia);
         actividadRepository.recalcularRating(actividadId);
 
+        // La reseña queda borrada, asi que no esta en "Mis reseñas": el link lleva a la
+        // actividad, que es el unico lugar donde el alumno todavia puede ver de que se trataba.
         notificacionService.notificar(
-                alumnoId, TipoNotificacion.RESENIA_RECHAZADA, "Tu reseña sobre " + contexto + " no fue aprobada.", id);
+                alumnoId, TipoNotificacion.RESENIA_RECHAZADA, "Tu reseña sobre " + contexto + " no fue aprobada.", id,
+                Destino.actividad(actividadId));
 
         auditService.registrar(actorId, AuditAccion.RESENIA_RECHAZADA, "Resenia", id, null);
 

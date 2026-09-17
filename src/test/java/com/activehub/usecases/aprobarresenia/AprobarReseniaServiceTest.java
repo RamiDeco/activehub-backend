@@ -17,6 +17,7 @@ import com.activehub.domain.resenia.ReseniaRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import java.time.Instant;
@@ -81,7 +82,7 @@ class AprobarReseniaServiceTest {
         assertThat(response.enModeracion()).isFalse();
         assertThat(resenia.isEnModeracion()).isFalse();
         verify(actividadRepository).recalcularRating(actividadId);
-        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.RESENIA_APROBADA), any(), eq(reseniaId));
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.RESENIA_APROBADA), any(), eq(reseniaId), eq(Destino.resenia(reseniaId)));
     }
 
     /**
@@ -122,7 +123,7 @@ class AprobarReseniaServiceTest {
 
         service.aprobar(reseniaId, UUID.randomUUID());
 
-        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.RESENIA_APROBADA), any(), eq(reseniaId));
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.RESENIA_APROBADA), any(), eq(reseniaId), eq(Destino.resenia(reseniaId)));
     }
 
     @Test

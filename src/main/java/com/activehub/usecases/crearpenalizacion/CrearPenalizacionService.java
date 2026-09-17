@@ -19,6 +19,7 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
@@ -189,7 +190,9 @@ public class CrearPenalizacionService {
                     + " dentro del período de la suspensión y se reintegró a los inscriptos.";
         }
         notificacionService.notificar(
-                usuario.getId(), TipoNotificacion.PENALIZACION_APLICADA, aviso, aplicadas.get(0).getId());
+                // Sin destino: el usuario penalizado no tiene una pantalla donde ver sus
+                // penalizaciones (el ABM es del admin), asi que el aviso se muestra sin link.
+                usuario.getId(), TipoNotificacion.PENALIZACION_APLICADA, aviso, aplicadas.get(0).getId(), Destino.ninguno());
 
         return new CrearPenalizacionResponse(
                 usuario.getId(), usuario.getCantidadPenalizaciones(), respuesta);
@@ -236,7 +239,7 @@ public class CrearPenalizacionService {
 
                 notificacionService.notificar(
                         inscripcion.getAlumno().getId(), TipoNotificacion.CLASE_CANCELADA,
-                        mensaje + detallePago, clase.getId());
+                        mensaje + detallePago, clase.getId(), Destino.clase(clase.getId()));
             }
 
             clase.setEstado(EstadoClase.Cancelada);

@@ -18,6 +18,7 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import java.time.Instant;
@@ -111,7 +112,7 @@ class OcultarReseniaServiceTest {
                 eq(adminId), eq(AuditAccion.RESENIA_OCULTADA), eq("Resenia"), eq(reseniaId),
                 eq("Contenido ofensivo hacia otro alumno"));
         verify(notificacionService).notificar(
-                eq(alumnoId), eq(TipoNotificacion.RESENIA_RECHAZADA), any(), eq(reseniaId));
+                eq(alumnoId), eq(TipoNotificacion.RESENIA_RECHAZADA), any(), eq(reseniaId), eq(Destino.resenia(reseniaId)));
     }
 
     @Test

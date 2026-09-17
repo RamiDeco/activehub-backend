@@ -27,7 +27,7 @@ Estructura detallada y ejemplos: `design_handoff_activehub/01-ARQUITECTURA.md` (
 - **Baja lógica (soft-delete):** nunca `DELETE` físico en entidades de catálogo/negocio (`Actividad`, `Clase`, `TipoActividad`, `Categoria`, `Usuario`...). `BaseEntity.deleted` + `@SQLRestriction("deleted = false")` + `marcarBorrado()`. Antes de un soft-delete, si la entidad tiene hijos activos (ej. Categoria con TipoActividad, TipoActividad con Actividad), el Service lanza una excepción `XxxEnUsoException` (409) en vez de borrar.
   - `Denuncia`, `Inscripcion`, `Notificacion`, `Penalizacion`, `AuditLog`, `ActividadFavorita` **no** extienden BaseEntity a propósito: son registros con su propio estado terminal o de solo-append/alta-baja dura — no hace falta un segundo mecanismo de soft-delete encima.
 - **Auditoría:** toda operación mutante relevante llama a `AuditService.registrar(actorId, AuditAccion.X, "Entidad", entidadId, metadataOpcional)`. `actorId=null` = evento disparado por el sistema (ej. el scheduler de finalización de clases). Ver el enum `AuditAccion` para la lista completa de acciones ya cubiertas — al agregar un usecase nuevo que muta algo, sumar el valor correspondiente ahí.
-- **Notificaciones:** cuando un usecase debe avisarle algo a un usuario sobre una clase/actividad, usa el sistema genérico en `shared/notificacion/`: `NotificacionService.notificar(usuarioId, TipoNotificacion.X, mensaje, entidadId)`. Regla de negocio explícita (no solo de estilo): **toda notificación sobre una clase debe incluir el nombre de la actividad y la fecha/hora de la clase** — para eso existe `NotificacionMensajes.formatFechaHora(instant)` (formatea en horario de Argentina), no reinventar el formato en cada usecase. El enum `TipoNotificacion` es deliberadamente abierto a crecer (la tabla no tiene `CHECK` en `tipo`) porque el mensaje humano ya viaja armado en el campo `mensaje` — el tipo es solo para que el frontend elija ícono/estilo, no para generar texto.
+- **Notificaciones:** cuando un usecase debe avisarle algo a un usuario sobre una clase/actividad, usa el sistema genérico en `shared/notificacion/`: `NotificacionService.notificar(usuarioId, TipoNotificacion.X, mensaje, entidadId, Destino.y(id))`. **El quinto parámetro no es opcional ni decorativo: es a dónde lleva el click** — ver "Notificaciones clickeables" más abajo antes de agregar una. Regla de negocio explícita (no solo de estilo): **toda notificación sobre una clase debe incluir el nombre de la actividad y la fecha/hora de la clase** — para eso existe `NotificacionMensajes.formatFechaHora(instant)` (formatea en horario de Argentina), no reinventar el formato en cada usecase. El enum `TipoNotificacion` es deliberadamente abierto a crecer (la tabla no tiene `CHECK` en `tipo`) porque el mensaje humano ya viaja armado en el campo `mensaje` — el tipo es solo para que el frontend elija ícono/estilo, no para generar texto.
   - Quién compone el `mensaje`: si el usecase ya tiene toda la data cargada y no depende de formato de fecha ad-hoc del cliente, se compone en el Service (ej. `cancelarClase`, `crearClase`). Si el flujo ya dependía de que el frontend arme el texto (ej. motivo de una denuncia), seguí ese mismo criterio (ej. `notificarAusenciaProfesor` recibe el mensaje ya armado del frontend, que reusa sus propios helpers de formato de fecha).
 - **Errores:** formato único `ApiError` (timestamp, status, code, message, fieldErrors, path) desde `GlobalExceptionHandler`. Códigos en `ApiErrorCode`: VALIDACION(400), CREDENCIALES_INVALIDAS(401), SIN_PERMISO(403), NO_ENCONTRADO(404), EMAIL_EN_USO(409), USUARIO_SUSPENDIDO(403), TIPO_ACTIVIDAD_EN_USO(409), CATEGORIA_EN_USO(409), SIN_CUPOS_DISPONIBLES(409), CLASE_CON_INSCRIPTOS(409), ACTIVIDAD_CON_INSCRIPTOS(409), INSCRIPCION_YA_EXISTE(409), ERROR_INTERNO(500).
   - Un pedido **incompleto** del cliente es 400, no 500: `MissingServletRequestPartException` y `MissingServletRequestParameterException` tienen su handler (`handleParteFaltante`, devuelve VALIDACION con el campo faltante en `fieldErrors`). Sin él caían en el catch-all `Exception` y un multipart sin la parte `documentos` se reportaba como falla del servidor. Al agregar una excepción de framework que sea culpa del cliente, sumarle handler propio en vez de dejarla llegar al catch-all.
@@ -203,6 +203,18 @@ Hoy la regla es la de `eliminartipoactividad`, elevada un nivel: **decide la Act
 
 `responderresenia` guardaba `respuesta_instructor` desde V15, pero el **único listado que lee el alumno** (`GET /api/actividades/{id}/resenas`, el que alimenta el detalle de la actividad) no lo devolvía. Resultado: el instructor respondía, lo veía en su propia pantalla, y el destinatario de la respuesta no la veía nunca. Hoy el DTO lleva `respuestaInstructor` y `respuestaInstructorAt`.
 
+## Soporte: el formulario de Ayuda ahora tiene backend (V24)
+
+Reportado: *"toda la sección de Soporte no funciona"*. El formulario "Reportar un problema" de `/ayuda` existía desde el primer día, pero **no había nada detrás**: ni tabla, ni endpoint, ni caso de uso. La pantalla hacía `setReportSent(true)` y le decía "¡Gracias! Recibimos tu reporte" a alguien cuyo reporte se descartaba.
+
+- **Dominio:** `domain/soporte/` (`ReporteSoporte`, `EstadoReporteSoporte`: Abierto·Cerrado, con su `AttributeConverter` como el resto de los enums con etiqueta). **No extiende `BaseEntity`**, por el mismo criterio que `Denuncia` e `Inscripcion`: "Cerrado" ya es un estado terminal y cumple el rol del soft-delete.
+- **`usuario_id` es NULLABLE a propósito y el `email` es obligatorio.** `/ayuda` es pública y quien necesita soporte muchas veces es justamente alguien que **no pudo registrarse o entrar** — exigirle sesión lo dejaría sin forma de avisar. Por eso `crearreportesoporte` es el cuarto endpoint de la lista `permitAll` de `SecurityConfig` (el primero que no es auth ni catálogo), su Controller acepta `Authentication` en **null**, y el Service guarda el reporte como anónimo. Un `autorId` que ya no existe (token vivo de una cuenta dada de baja) tampoco lo invalida: se guarda sin autor.
+- **Slices:** `crearreportesoporte` (POST `/api/soporte/reportes`, **público**), `listarreportessoporte` (GET `/api/admin/soporte/reportes`) y `cerrarreportesoporte` (POST `/api/admin/soporte/reportes/{id}/cerrar`, respuesta opcional). Los tres auditan (`REPORTE_SOPORTE_CREADO` / `REPORTE_SOPORTE_CERRADO`).
+- **Clave de permiso nueva: `soporte.gestionar`** (V24), sólo para ADMIN. Es un módulo con pantalla propia, así que le corresponde su casilla, igual que `taxonomia.gestionar` o `penalizaciones.gestionar`. Recordá que `GuardasDePermisoTest` compara las claves de los `@PreAuthorize` contra los `INSERT INTO permiso` **en las dos direcciones**: la fila de la migración y las dos guardas van juntas o el test falla.
+- **El cierre no se deshace:** volver a cerrar pisaría la respuesta y la fecha del cierre original, así que `cerrarreportesoporte` rechaza un reporte ya `Cerrado` con un 400. Mismo criterio de "el estado sólo avanza" que `tomardenuncia`.
+- **`findAllConDetalle` usa LEFT JOIN FETCH** en `usuario` y `cerradoPor`: las dos relaciones son opcionales (un reporte anónimo no tiene autor, uno abierto no tiene quién lo cerró) y con INNER desaparecerían del listado — la misma trampa que ya había costado las denuncias de reseña.
+- **El listado devuelve `autorNombre` en null, no "Anónimo".** La etiqueta que ve el administrador la elige la pantalla; el backend manda el dato.
+
 ## La hora de fin de una clase es derivada, no un campo
 
 `CrearClaseRequest` y `ActualizarClaseRequest` **ya no llevan `horaFin`**: el Service la calcula como `fechaHora + actividad.duracionMin`. La duración es un dato de la actividad (E2I-HU03 criterio 1), así que pedirla otra vez por clase era el mismo dato dos veces — y dejaba crear una clase de 90 minutos para una actividad que promete 60. El criterio 4 ("fin posterior al inicio") pasa a estar garantizado por construcción: `duracion_min` tiene un `CHECK > 0`.
@@ -225,6 +237,40 @@ Hoy la regla es la de `eliminartipoactividad`, elevada un nivel: **decide la Act
 - **`REINTEGRAR` alcanza a TODA la clase**, no sólo a quien denunció (decisión del usuario). Lo que se denuncia es un hecho de la clase —el instructor faltó, hubo una situación grave— y eso afecta a todos los que pagaron, no al que además se tomó el trabajo de reportarlo. Antes `reintegrar()` buscaba una sola inscripción, la del denunciante: a los demás se les liberaba el pago al instructor apenas vencía el período de denuncias. Se reintegran los pagos `Retenido` **y** `Efectivo` (mismo criterio que `cancelarclase`) y se le notifica a cada alumno. Ojo con la decisión 6: ahí el efectivo queda intacto **cuando cancela el propio alumno**; acá el reintegro lo ordena la plataforma.
 - **Monto cero = sin multa**, no una multa de $0: si `montoMulta` viene en 0 o null, la sanción es solo la suspensión.
 - **Orden del listado:** `findAllConDetalle` devuelve de la **más antigua a la más reciente** (pedido del usuario). Era DESC.
+
+## Notificaciones clickeables: el destino lo resuelve el usecase (V25)
+
+La campana mostraba texto muerto. *"Nueva inscripción en la clase de Yoga del 12/03"* no llevaba a ningún lado: había que ir a buscar la clase a mano. Ahora cada `Notificacion` guarda **a dónde lleva el click** en `destino_tipo` + `destino_id`, y el frontend lo mapea a una ruta (`lib/notificaciones.ts`).
+
+**`entidadId` no alcanzaba, y no hay que intentar reusarlo para esto.** Dos razones:
+
+1. Su significado cambia según el `tipo` — a veces es una inscripción, a veces una clase, una reseña, una denuncia o un usuario —, así que el cliente no puede interpretarlo sin una tabla de casos especiales que ya se había desincronizado sola (`INSCRIPCION_CANCELADA` guardaba la inscripción en `cancelarinscripcion` y la clase en `resolverdenuncia`).
+2. **El destino útil muchas veces NO es esa entidad.** Al instructor una inscripción nueva le sirve abierta en el roster de la **clase**, no en la fila de la inscripción; y un horario nuevo de un favorito le sirve al alumno abierto en la **actividad**, que es donde puede anotarse. Esa navegación (inscripción → clase → actividad) el usecase ya la tiene cargada y el cliente tendría que salir a pedirla.
+
+`entidadId` se conservó tal cual estaba: es trazabilidad, apunta al registro que originó el aviso. El destino es otra cosa y viaja aparte.
+
+Cómo se agrega una notificación nueva:
+
+- Se pasa un `Destino` (`shared/notificacion/Destino.java`) armado con sus fábricas: `Destino.clase(id)`, `Destino.actividad(id)`, `Destino.inscripcion(id)`, `Destino.resenia(id)`, `Destino.denuncia(id)`, `Destino.perfilInstructor(id)`, `Destino.ninguno()`. El record existe para que no se pueda guardar un tipo de destino con el id de otra cosa.
+- **El id tiene que ser el parámetro de ruta de la pantalla**, ya resuelto acá. Si el destino es la actividad, va el `actividadId`, no el de la clase.
+- **El destino se elige por DESTINATARIO, no por notificación.** El mismo hecho manda dos avisos distintos: en `inscribirse` el alumno recibe `Destino.inscripcion(...)` y el instructor `Destino.clase(...)`.
+- **`Destino.ninguno()` es una respuesta válida y hay que usarla cuando corresponde**: `PENALIZACION_APLICADA` (el sancionado no tiene pantalla donde ver sus penalizaciones; el ABM es del admin) y `ACTIVIDAD_ELIMINADA` (la actividad ya no existe). El frontend la muestra sin link — un click que rebota al home es peor que ninguno.
+- El instructor no tiene bandeja de denuncias, así que todo lo que le llega por una denuncia de clase (`DENUNCIA_RECIBIDA`, `DENUNCIA_DESESTIMADA`, `INSTRUCTOR_SUSPENDIDO`) va a `Destino.clase(...)`, que es el contexto del reclamo. `DENUNCIA` sólo se usa para el alumno, que sí tiene "Mis denuncias".
+
+Los tests de cada usecase verifican el destino, no lo dan por `any()`: es la parte que se rompe en silencio si alguien copia un `notificar` de otro slice sin revisar a dónde apunta.
+
+**`listarmisresenas` ganó `oculta`, `respuestaInstructor` y `respuestaInstructorAt`** como parte de esto. `RESENIA_RESPONDIDA` no tenía a dónde llevar: "Mis reseñas" del alumno no mostraba la respuesta del instructor en ningún lado (sólo se veía en la página pública de la actividad), así que el click aterrizaba en una fila idéntica a las demás.
+
+## Buscar ignora tildes: `translate()`, no `unaccent`
+
+Reportado: *"en TODAS las búsquedas del sistema, que no distinga entre tildes y no tildes"*. Buscar `natacion` no encontraba **Natación**: para SQL `ó` y `o` son caracteres distintos y `lower()` no cambia eso. En castellano no es un detalle — casi toda palabra larga lleva tilde, y escribir sin acento es lo normal al tipear rápido.
+
+`ActividadSpecifications.conTexto` aplana las dos puntas antes de comparar: el nombre en la base con `translate(lower(nombre), ACENTOS, SIN_ACENTOS)` y el término buscado con el mismo mapeo en Java. **La ñ también se aplana a `n`**, que es lo que la gente espera al buscar.
+
+- **No se usa la extensión `unaccent`** aunque sea lo canónico: habría que instalarla con una migración, la base es de Supabase y tocarle las extensiones desde Flyway es un riesgo que no paga por una sola consulta. `translate()` es una función built-in y no necesita nada.
+- **Las dos cadenas tienen que quedar del mismo largo.** `translate()` mapea posición a posición y lo que sobra en la primera lo **elimina** del texto: un carácter de más y la búsqueda empieza a comer letras.
+- **`BusquedaSinTildesTest` ejecuta la consulta contra la base real.** Los tests de usecase son unitarios con mocks, así que la Specification se arma pero nunca se traduce a SQL — una función mal escrita pasaría todos esos tests y explotaría recién en el buscador del navegador. Ese test no afirma nada sobre las filas (el contenido de la base cambia): lo que prueba es que la consulta **corre**.
+- El espejo del lado del cliente es `lib/texto.ts` (`normalizar` / `incluye`), que hace lo mismo con NFD. Si tocás uno, mirá el otro.
 
 ## Migraciones: la base es Supabase, no un Postgres local
 
@@ -273,7 +319,7 @@ Hoy la regla es la de `eliminartipoactividad`, elevada un nivel: **decide la Act
 - **Zona horaria:** todo se guarda como `Instant` (UTC), pero cuando hay que pasar a calendario ("qué día de la semana es", "venció hoy") la respuesta depende de la zona **del negocio**, no del servidor: usar `shared/time/Zonas.AR`. La constante estaba duplicada en tres servicios; la última copia que quedaba (`LevantarSuspensionesVencidasService`) también se sacó.
 
 ## Tests
-Cada slice "andando" = test de Service (regla + caso de error, ej. duplicado/en-uso/no-encontrado/sin-permiso) y test de Controller (status + shape del DTO) en verde. `./mvnw test` no requiere Postgres levantado (mocks + `@WebMvcTest`). Antes de dar por terminado un cambio, correr la suite completa, no solo el paquete tocado. **Hoy: 648 tests en verde, y ningún caso de uso sin test.**
+Cada slice "andando" = test de Service (regla + caso de error, ej. duplicado/en-uso/no-encontrado/sin-permiso) y test de Controller (status + shape del DTO) en verde. `./mvnw test` no requiere Postgres levantado (mocks + `@WebMvcTest`). Antes de dar por terminado un cambio, correr la suite completa, no solo el paquete tocado. **Hoy: 668 tests en verde, y ningún caso de uso sin test.**
 
 **El `java` del PATH es 17 y el proyecto compila con 21** (`<java.version>21</java.version>`). Correr la suite así:
 

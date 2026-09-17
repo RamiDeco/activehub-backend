@@ -26,6 +26,7 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
@@ -154,7 +155,9 @@ public class ResolverDenunciaService {
             case DESESTIMAR -> "Se desestimó tu denuncia sobre " + contexto + ".";
             case OCULTAR_RESENIA -> throw new IllegalStateException("OCULTAR_RESENIA no aplica a una denuncia de clase.");
         };
-        notificacionService.notificar(denuncia.getAlumno().getId(), TipoNotificacion.DENUNCIA_RESUELTA, mensajeAlumno, denuncia.getId());
+        notificacionService.notificar(
+                denuncia.getAlumno().getId(), TipoNotificacion.DENUNCIA_RESUELTA, mensajeAlumno, denuncia.getId(),
+                Destino.denuncia(denuncia.getId()));
 
         if (accion == ResolucionDenuncia.SUSPENDER || accion == ResolucionDenuncia.PENALIZAR
                 || accion == ResolucionDenuncia.DESESTIMAR) {
@@ -167,7 +170,9 @@ public class ResolverDenunciaService {
             TipoNotificacion tipo = accion == ResolucionDenuncia.SUSPENDER ? TipoNotificacion.INSTRUCTOR_SUSPENDIDO
                     : accion == ResolucionDenuncia.PENALIZAR ? TipoNotificacion.PENALIZACION_APLICADA
                     : TipoNotificacion.DENUNCIA_DESESTIMADA;
-            notificacionService.notificar(instructor.getId(), tipo, mensajeInstructor, denuncia.getId());
+            // El instructor no ve la denuncia en ninguna pantalla: se lo manda a la clase reclamada.
+            notificacionService.notificar(
+                    instructor.getId(), tipo, mensajeInstructor, denuncia.getId(), Destino.clase(clase.getId()));
         }
     }
 
@@ -180,7 +185,9 @@ public class ResolverDenunciaService {
                 ? "Se resolvió tu denuncia sobre una reseña de \"" + actividadNombre + "\": la reseña fue ocultada."
                 : "Se desestimó tu denuncia sobre una reseña de \"" + actividadNombre + "\".";
         notificacionService.notificar(
-                denuncia.getDenunciante().getId(), TipoNotificacion.DENUNCIA_RESUELTA, mensajeDenunciante, denuncia.getId());
+                denuncia.getDenunciante().getId(), TipoNotificacion.DENUNCIA_RESUELTA, mensajeDenunciante, denuncia.getId(),
+                // Lo resuelto es la reseña: los dos la ven en su pantalla de reseñas, la denuncia no.
+                Destino.resenia(resenia.getId()));
 
         // Al alumno autor de la reseña, solo si le ocultaron el contenido.
         if (accion == ResolucionDenuncia.OCULTAR_RESENIA) {
@@ -188,7 +195,7 @@ public class ResolverDenunciaService {
                     resenia.getAlumno().getId(),
                     TipoNotificacion.DENUNCIA_RESUELTA,
                     "Tu reseña sobre \"" + actividadNombre + "\" fue ocultada tras una denuncia.",
-                    denuncia.getId());
+                    denuncia.getId(), Destino.resenia(resenia.getId()));
         }
     }
 
@@ -243,7 +250,7 @@ public class ResolverDenunciaService {
                     inscripcion.getAlumno().getId(),
                     TipoNotificacion.INSCRIPCION_CANCELADA,
                     "Se resolvió un reclamo sobre " + contexto + " y se canceló tu inscripción." + detallePago,
-                    clase.getId());
+                    clase.getId(), Destino.inscripcion(inscripcion.getId()));
         }
     }
 
@@ -357,7 +364,7 @@ public class ResolverDenunciaService {
 
                 notificacionService.notificar(
                         inscripcion.getAlumno().getId(), TipoNotificacion.CLASE_CANCELADA,
-                        mensaje + detallePago, clase.getId());
+                        mensaje + detallePago, clase.getId(), Destino.clase(clase.getId()));
             }
 
             clase.setEstado(EstadoClase.Cancelada);

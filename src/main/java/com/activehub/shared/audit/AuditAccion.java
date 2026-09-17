@@ -72,5 +72,8 @@ public enum AuditAccion {
     ROL_ASIGNADO,
     NIVEL_INTENSIDAD_CREADO,
     NIVEL_INTENSIDAD_ACTUALIZADO,
-    NIVEL_INTENSIDAD_ELIMINADO
+    NIVEL_INTENSIDAD_ELIMINADO,
+    /** Alguien mando el formulario "Reportar un problema" de /ayuda. El actor es null si no tenia cuenta. */
+    REPORTE_SOPORTE_CREADO,
+    REPORTE_SOPORTE_CERRADO
 }

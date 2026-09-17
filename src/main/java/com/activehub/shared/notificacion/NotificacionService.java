@@ -15,8 +15,14 @@ public class NotificacionService {
         this.usuarioRepository = usuarioRepository;
     }
 
-    public void notificar(UUID usuarioId, TipoNotificacion tipo, String mensaje, UUID entidadId) {
+    /**
+     * @param entidadId el registro que originó el aviso (trazabilidad).
+     * @param destino   a qué pantalla lleva el click; {@link Destino#ninguno()} si no hay una.
+     *                  Se resuelve en el usecase, que es quien tiene cargada la cadena
+     *                  inscripción → clase → actividad; el frontend no la tiene.
+     */
+    public void notificar(UUID usuarioId, TipoNotificacion tipo, String mensaje, UUID entidadId, Destino destino) {
         var usuario = usuarioRepository.getReferenceById(usuarioId);
-        notificacionRepository.save(new Notificacion(usuario, tipo, mensaje, entidadId));
+        notificacionRepository.save(new Notificacion(usuario, tipo, mensaje, entidadId, destino));
     }
 }

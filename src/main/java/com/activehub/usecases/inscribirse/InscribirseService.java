@@ -18,6 +18,7 @@ import com.activehub.shared.error.InscripcionYaExisteException;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinCuposDisponiblesException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
@@ -136,9 +137,13 @@ public class InscribirseService {
         String mensajeAlumno = inscripcion.getEstado() == EstadoInscripcion.INSCRIPTO
                 ? "Se confirmó tu inscripción a " + contexto + "."
                 : "Tu inscripción a " + contexto + " quedó pendiente hasta que el instructor confirme el pago en efectivo.";
-        notificacionService.notificar(alumnoId, TipoNotificacion.INSCRIPCION_CONFIRMADA, mensajeAlumno, inscripcion.getId());
         notificacionService.notificar(
-                instructorId, TipoNotificacion.NUEVA_INSCRIPCION, "Nueva inscripción en " + contexto + ".", inscripcion.getId());
+                alumnoId, TipoNotificacion.INSCRIPCION_CONFIRMADA, mensajeAlumno, inscripcion.getId(),
+                Destino.inscripcion(inscripcion.getId()));
+        notificacionService.notificar(
+                instructorId, TipoNotificacion.NUEVA_INSCRIPCION, "Nueva inscripción en " + contexto + ".", inscripcion.getId(),
+                // Al roster de la clase: es donde ve quien se anoto y donde confirma el cobro.
+                Destino.clase(claseId));
 
         auditService.registrar(
                 alumnoId,

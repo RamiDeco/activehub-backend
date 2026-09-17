@@ -8,6 +8,7 @@ import com.activehub.domain.actividad.EstadoClase;
 import com.activehub.domain.favorito.FavoritoRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
@@ -120,7 +121,9 @@ public class MaterializarAgendasService {
                 + "\" (uno de tus favoritos): " + NotificacionMensajes.formatFechaHora(inicio) + ".";
         for (var favorito : favoritoRepository.findByActividadId(agenda.getActividad().getId())) {
             notificacionService.notificar(
-                    favorito.getUsuario().getId(), TipoNotificacion.NUEVO_HORARIO_FAVORITO, mensaje, clase.getId());
+                    favorito.getUsuario().getId(), TipoNotificacion.NUEVO_HORARIO_FAVORITO, mensaje, clase.getId(),
+                    // Al detalle de la actividad, que es donde puede anotarse al horario nuevo.
+                    Destino.actividad(agenda.getActividad().getId()));
         }
         return true;
     }

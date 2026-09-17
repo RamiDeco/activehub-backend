@@ -23,6 +23,7 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
@@ -105,8 +106,8 @@ class CancelarInscripcionServiceTest {
 
         assertThat(inscripcion.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         verify(claseRepository).liberarCupo(claseId);
-        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CANCELADA), any(), eq(inscripcionId));
-        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.ALUMNO_CANCELO_INSCRIPCION), any(), eq(inscripcionId));
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CANCELADA), any(), eq(inscripcionId), eq(Destino.inscripcion(inscripcionId)));
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.ALUMNO_CANCELO_INSCRIPCION), any(), eq(inscripcionId), eq(Destino.clase(claseId)));
     }
 
     @Test

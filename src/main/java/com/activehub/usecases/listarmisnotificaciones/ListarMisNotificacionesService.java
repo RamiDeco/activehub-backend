@@ -19,7 +19,8 @@ public class ListarMisNotificacionesService {
     public List<ListarMisNotificacionesResponse> listar(UUID usuarioId) {
         return notificacionRepository.findByUsuarioIdOrderByCreatedAtDesc(usuarioId).stream()
                 .map(n -> new ListarMisNotificacionesResponse(
-                        n.getId(), n.getTipo().name(), n.getMensaje(), n.getEntidadId(), n.isLeida(), n.getCreatedAt()))
+                        n.getId(), n.getTipo().name(), n.getMensaje(), n.getEntidadId(),
+                        n.getDestinoTipo().name(), n.getDestinoId(), n.isLeida(), n.getCreatedAt()))
                 .toList();
     }
 }

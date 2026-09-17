@@ -7,6 +7,7 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.security.InstructorVerificadoGuard;
@@ -72,7 +73,7 @@ public class ResponderReseniaService {
                 resenia.getAlumno().getId(),
                 TipoNotificacion.RESENIA_RESPONDIDA,
                 "El instructor respondió tu reseña sobre \"" + resenia.getClase().getActividad().getNombre() + "\".",
-                resenia.getId());
+                resenia.getId(), Destino.resenia(resenia.getId()));
 
         auditService.registrar(instructorId, AuditAccion.RESENIA_RESPONDIDA, "Resenia", reseniaId, null);
 

@@ -25,6 +25,7 @@ import com.activehub.shared.security.InstructorVerificadoGuard;
 import com.activehub.shared.error.InscripcionYaExisteException;
 import com.activehub.shared.error.SinCuposDisponiblesException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
@@ -134,8 +135,8 @@ class InscribirseServiceTest {
         assertThat(response.pagoId()).isNotNull();
         verify(claseRepository).ocuparCupo(claseId);
         verify(paymentGateway).iniciarPago(any(), org.mockito.ArgumentMatchers.eq(450000L));
-        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), any(), any());
-        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.NUEVA_INSCRIPCION), any(), any());
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), any(), any(), any());
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.NUEVA_INSCRIPCION), any(), any(), eq(Destino.clase(claseId)));
     }
 
     @Test
@@ -151,7 +152,7 @@ class InscribirseServiceTest {
 
         assertThat(response.estado()).isEqualTo("PagoPendiente");
         verify(paymentGateway, never()).iniciarPago(any(), org.mockito.ArgumentMatchers.anyLong());
-        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), any(), any());
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), any(), any(), any());
     }
 
     @Test

@@ -25,6 +25,7 @@ import com.activehub.shared.security.InstructorVerificadoGuard;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
@@ -119,7 +120,7 @@ class CancelarClaseServiceTest {
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         verify(paymentGateway).cancelarPago("ref-abc");
         verify(notificacionService).notificar(
-                eq(inscripto.getAlumno().getId()), eq(TipoNotificacion.CLASE_CANCELADA), any(), eq(claseId));
+                eq(inscripto.getAlumno().getId()), eq(TipoNotificacion.CLASE_CANCELADA), any(), eq(claseId), eq(Destino.clase(claseId)));
     }
 
     @Test

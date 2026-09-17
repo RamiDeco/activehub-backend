@@ -13,6 +13,7 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.ActividadConInscriptosException;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import java.util.EnumSet;
@@ -97,7 +98,8 @@ public class EliminarActividadService {
                     actividad.getInstructor().getId(),
                     TipoNotificacion.ACTIVIDAD_ELIMINADA,
                     "Un administrador eliminó tu actividad \"" + actividad.getNombre() + "\".",
-                    actividad.getId());
+                    // Sin destino: la actividad ya no existe, el link solo llevaria a un 404.
+                    actividad.getId(), Destino.ninguno());
         }
 
         actividad.marcarBorrado();

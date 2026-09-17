@@ -33,7 +33,7 @@ class ListarMisResenasControllerTest {
         when(listarMisResenasService.listar(any())).thenReturn(List.of(
                 new ListarMisResenasResponse(
                         UUID.randomUUID(), UUID.randomUUID(), Instant.now(), UUID.randomUUID(), "Yoga",
-                        "Carla Nuñez", 4, "Buena clase", true, Instant.now())));
+                        "Carla Nuñez", 4, "Buena clase", true, false, null, null, Instant.now())));
 
         var authentication = new UsernamePasswordAuthenticationToken(UUID.randomUUID(), null, List.of());
 

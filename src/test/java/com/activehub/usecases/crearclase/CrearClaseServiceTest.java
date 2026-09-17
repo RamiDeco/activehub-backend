@@ -22,6 +22,7 @@ import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.security.InstructorVerificadoGuard;
@@ -259,6 +260,6 @@ class CrearClaseServiceTest {
         CrearClaseResponse response = service.crear(actividadId, request, instructorId);
 
         verify(notificacionService).notificar(
-                eq(alumnoId), eq(TipoNotificacion.NUEVO_HORARIO_FAVORITO), any(), eq(response.id()));
+                eq(alumnoId), eq(TipoNotificacion.NUEVO_HORARIO_FAVORITO), any(), eq(response.id()), eq(Destino.actividad(actividadId)));
     }
 }

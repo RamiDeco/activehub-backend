@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.activehub.domain.usuario.Usuario;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.Notificacion;
 import com.activehub.shared.notificacion.NotificacionRepository;
 import com.activehub.shared.notificacion.TipoNotificacion;
@@ -36,7 +37,10 @@ class ListarMisNotificacionesServiceTest {
         Usuario usuario = new Usuario();
         ReflectionTestUtils.setField(usuario, "id", usuarioId);
 
-        Notificacion notificacion = new Notificacion(usuario, TipoNotificacion.AUSENCIA_PROFESOR, "El instructor avisó que no podrá dar la clase.", UUID.randomUUID());
+        UUID claseId = UUID.randomUUID();
+        Notificacion notificacion = new Notificacion(
+                usuario, TipoNotificacion.AUSENCIA_PROFESOR, "El instructor avisó que no podrá dar la clase.",
+                claseId, Destino.clase(claseId));
         ReflectionTestUtils.setField(notificacion, "id", UUID.randomUUID());
 
         when(notificacionRepository.findByUsuarioIdOrderByCreatedAtDesc(usuarioId)).thenReturn(List.of(notificacion));
@@ -47,6 +51,9 @@ class ListarMisNotificacionesServiceTest {
         assertThat(resultado.get(0).tipo()).isEqualTo("AUSENCIA_PROFESOR");
         assertThat(resultado.get(0).mensaje()).isEqualTo("El instructor avisó que no podrá dar la clase.");
         assertThat(resultado.get(0).leida()).isFalse();
+        // El destino viaja al cliente resuelto: es lo que hace clickeable a la notificacion.
+        assertThat(resultado.get(0).destinoTipo()).isEqualTo("CLASE");
+        assertThat(resultado.get(0).destinoId()).isEqualTo(claseId);
     }
 
     @Test

@@ -48,6 +48,18 @@ public class Notificacion {
     @Column(name = "entidad_id")
     private UUID entidadId;
 
+    /**
+     * A donde lleva el click. Nunca nulo: lo que no tiene pantalla propia se guarda como
+     * {@link DestinoNotificacion#NINGUNO} y el frontend lo muestra sin link.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "destino_tipo", nullable = false, length = 30)
+    private DestinoNotificacion destinoTipo = DestinoNotificacion.NINGUNO;
+
+    /** El parametro de ruta de esa pantalla, ya resuelto. Nulo si el destino es NINGUNO. */
+    @Column(name = "destino_id")
+    private UUID destinoId;
+
     @Column(nullable = false)
     private boolean leida = false;
 
@@ -55,10 +67,12 @@ public class Notificacion {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    public Notificacion(Usuario usuario, TipoNotificacion tipo, String mensaje, UUID entidadId) {
+    public Notificacion(Usuario usuario, TipoNotificacion tipo, String mensaje, UUID entidadId, Destino destino) {
         this.usuario = usuario;
         this.tipo = tipo;
         this.mensaje = mensaje;
         this.entidadId = entidadId;
+        this.destinoTipo = destino.tipo();
+        this.destinoId = destino.id();
     }
 }

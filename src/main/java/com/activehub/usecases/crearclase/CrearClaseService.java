@@ -14,6 +14,7 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
@@ -115,7 +116,9 @@ public class CrearClaseService {
                 + "\" (uno de tus favoritos): " + NotificacionMensajes.formatFechaHora(clase.getFechaHora()) + ".";
         for (var favorito : favoritoRepository.findByActividadId(actividadId)) {
             notificacionService.notificar(
-                    favorito.getUsuario().getId(), TipoNotificacion.NUEVO_HORARIO_FAVORITO, mensaje, clase.getId());
+                    favorito.getUsuario().getId(), TipoNotificacion.NUEVO_HORARIO_FAVORITO, mensaje, clase.getId(),
+                    // Al detalle de la actividad, que es donde puede anotarse al horario nuevo.
+                    Destino.actividad(actividadId));
         }
 
         return new CrearClaseResponse(

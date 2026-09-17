@@ -40,6 +40,11 @@ public class SecurityConfig {
                                 "/api/auth/registro/instructor",
                                 "/api/auth/login"
                         ).permitAll()
+                        // "Reportar un problema" de /ayuda, que es una pantalla pública. Quien
+                        // necesita soporte muchas veces es justamente alguien que no pudo
+                        // registrarse o entrar: exigirle sesión lo dejaría sin forma de avisar.
+                        // El service acepta `autorId` en null y guarda el reporte como anónimo.
+                        .requestMatchers(HttpMethod.POST, "/api/soporte/reportes").permitAll()
                         // El catálogo público. Las tres listas de taxonomía van juntas
                         // porque el frontend las pide en un mismo Promise.all al arrancar,
                         // antes de que haya sesión: si una sola queda autenticada, la

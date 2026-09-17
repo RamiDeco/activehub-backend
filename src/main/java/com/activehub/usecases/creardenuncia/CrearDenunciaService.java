@@ -13,6 +13,7 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
@@ -99,7 +100,8 @@ public class CrearDenunciaService {
                 TipoNotificacion.DENUNCIA_RECIBIDA,
                 "Recibiste una denuncia por inasistencia a la clase de \"" + clase.getActividad().getNombre()
                         + "\" del " + NotificacionMensajes.formatFechaHora(clase.getFechaHora()) + ".",
-                denuncia.getId());
+                // El instructor no tiene bandeja de denuncias: el contexto del reclamo es la clase.
+                denuncia.getId(), Destino.clase(clase.getId()));
 
         auditService.registrar(alumnoId, AuditAccion.DENUNCIA_CREADA, "Denuncia", denuncia.getId(), null);
 

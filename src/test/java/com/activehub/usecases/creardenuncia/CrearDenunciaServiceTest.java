@@ -17,6 +17,7 @@ import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import java.time.Clock;
@@ -106,7 +107,8 @@ class CrearDenunciaServiceTest {
         assertThat(response.motivo()).isEqualTo("El instructor no se presentó.");
         org.mockito.Mockito.verify(notificacionService).notificar(
                 org.mockito.ArgumentMatchers.eq(instructorId), org.mockito.ArgumentMatchers.eq(TipoNotificacion.DENUNCIA_RECIBIDA),
-                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(Destino.clase(claseId)));
     }
 
     @Test
