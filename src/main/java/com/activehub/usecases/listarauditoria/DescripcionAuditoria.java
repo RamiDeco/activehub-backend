@@ -59,6 +59,10 @@ final class DescripcionAuditoria {
                     + (meta.isEmpty() ? "." : ": " + meta + ".");
 
             case REGISTRO_ALUMNO -> "Se registró un alumno nuevo.";
+            case REGISTRO_GOOGLE -> "Se registró un alumno nuevo con su cuenta de Google.";
+            case EMAIL_VERIFICADO -> actor + " confirmó su correo con el código que le enviamos.";
+            case EMAIL_CAMBIADO -> actor + " cambió su correo"
+                    + (meta.isEmpty() ? "." : " a " + meta + ", confirmándolo con un código.");
             case REGISTRO_INSTRUCTOR -> "Se registró un instructor nuevo.";
             case ADMIN_CREADO -> actor + " creó una cuenta de administrador.";
 

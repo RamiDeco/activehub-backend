@@ -10,6 +10,7 @@ import com.activehub.shared.error.DemasiadosIntentosException;
 import com.activehub.shared.security.IntentosLoginService;
 import com.activehub.shared.error.UsuarioSuspendidoException;
 import com.activehub.shared.security.JwtService;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -60,13 +61,26 @@ public class IniciarSesionService {
         // Con el Rol ya cargado: este método no es transaccional (ver javadoc de arriba) y
         // fuera de la sesión el proxy lazy de Rol no se puede inicializar.
         // Un DNI (solo dígitos) nunca puede ser un email, así que el discriminador es seguro.
-        Usuario usuario = (esDni(identificador)
-                ? usuarioRepository.findByDniConRol(identificador)
-                : usuarioRepository.findByEmailConRol(identificador))
+        //
+        // OJO: por email puede haber VARIAS cuentas. Desde V26 un correo sin confirmar no es
+        // único — es la regla pedida: mientras nadie ingresó el código, cualquiera puede
+        // registrarse con esa dirección. Así que "el usuario de este email" ya no tiene una
+        // sola respuesta, y lo que desambigua es la CONTRASEÑA: dos personas que tipearon el
+        // mismo correo tienen claves distintas. Se recorren las candidatas (la verificada
+        // primero, que es la dueña del correo) y se toma la que coincide.
+        List<Usuario> candidatas = esDni(identificador)
+                ? usuarioRepository.findByDniConRol(identificador).map(List::of).orElseGet(List::of)
+                : usuarioRepository.findAllByEmailConRol(identificador);
+
+        Usuario usuario = candidatas.stream()
+                .filter(u -> passwordEncoder.matches(request.password(), u.getPasswordHash()))
+                .findFirst()
                 .orElse(null);
 
-        if (usuario == null || !passwordEncoder.matches(request.password(), usuario.getPasswordHash())) {
-            UUID actorId = usuario != null ? usuario.getId() : null;
+        if (usuario == null) {
+            // Con varias candidatas no hay un "actor" al que atribuir el fallo; se registra
+            // sin actor, igual que un email inexistente.
+            UUID actorId = candidatas.size() == 1 ? candidatas.get(0).getId() : null;
             auditService.registrar(actorId, AuditAccion.LOGIN_FALLIDO, "Usuario", actorId, identificador);
             intentosLoginService.registrarFallo(identificador);
             throw new CredencialesInvalidasException();
@@ -80,7 +94,7 @@ public class IniciarSesionService {
         intentosLoginService.registrarExito(identificador);
         auditService.registrar(usuario.getId(), AuditAccion.LOGIN_OK, "Usuario", usuario.getId(), null);
 
-        String token = jwtService.emitir(usuario.getId(), usuario.getEmail(), usuario.getRol().getNombre());
+        String token = jwtService.emitir(usuario.getId(), usuario.getEmail(), usuario.getRol().getNombre(), usuario.isEmailVerificado());
 
         return new IniciarSesionResponse(token, new IniciarSesionResponse.Usuario(
                 usuario.getId(),
@@ -92,7 +106,9 @@ public class IniciarSesionService {
                 usuario.getRol().getNombre(),
                 usuario.getEstado().name(),
                 usuario.getCantidadPenalizaciones(),
-                usuario.getCreatedAt()
+                usuario.getCreatedAt(),
+                usuario.isEmailVerificado(),
+                usuario.getAuthProveedor().name()
         ));
     }
 

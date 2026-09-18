@@ -58,6 +58,8 @@ public class ObtenerUsuarioActualService {
                 usuario.getEstado().name(),
                 usuario.getCantidadPenalizaciones(),
                 usuario.getCreatedAt(),
+                usuario.isEmailVerificado(),
+                usuario.getAuthProveedor().name(),
                 intereses,
                 permisos
         );

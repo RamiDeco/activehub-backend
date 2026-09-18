@@ -29,6 +29,23 @@ spring:
     locations: classpath:db/migration
     schemas: public
     default-schema: public
+  # Gmail SMTP. Con `MAIL_USERNAME` vacio el starter igual levanta y `EmailSender` cae al modo
+  # "log" (ver su javadoc): sin esto, un checkout sin credenciales no podria ni registrar a
+  # nadie. La contraseña es una **contraseña de aplicacion** de Google, no la de la cuenta.
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+      # Sin timeouts, un SMTP que no responde cuelga el request de registro hasta el timeout
+      # del socket del sistema operativo.
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
   servlet:
     multipart:
       # El limite por archivo tiene que coincidir con el que promete la UI de registro
@@ -50,6 +67,25 @@ app:
     password: ${ADMIN_SEED_PASSWORD:}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  mail:
+    # De dónde sale el "From". Por defecto la propia cuenta de Gmail: **Gmail reescribe el
+    # remitente a la cuenta autenticada**, así que poner otra dirección acá no sirve de nada.
+    from: ${MAIL_FROM:${spring.mail.username:}}
+    from-nombre: ${MAIL_FROM_NOMBRE:ActiveHub}
+  verificacion-email:
+    # Ventana de validez del código. 15 min alcanza para ir al correo y volver, y deja corta
+    # la ventana en la que un código filtrado sirve para algo.
+    ttl-min: ${VERIFICACION_TTL_MIN:15}
+    # Reenvíos: mínimo entre dos envíos al mismo usuario, para no convertir el endpoint en un
+    # generador de spam contra un correo ajeno.
+    espera-reenvio-seg: ${VERIFICACION_ESPERA_REENVIO_SEG:60}
+    # Intentos fallidos antes de invalidar el código. Sin esto, 6 dígitos son 10^6
+    # combinaciones que un script prueba en minutos.
+    max-intentos: ${VERIFICACION_MAX_INTENTOS:5}
+  google:
+    # Client ID de la app web en Google Cloud Console. Vacío = "Continuar con Google"
+    # deshabilitado (el endpoint responde 400 y el frontend no muestra el botón).
+    client-id: ${GOOGLE_CLIENT_ID:}
   storage:
     documentos-instructor-dir: ${DOCUMENTOS_INSTRUCTOR_DIR:./uploads/documentos-instructor}
     fotos-perfil-dir: ${FOTOS_PERFIL_DIR:./uploads/fotos-perfil}

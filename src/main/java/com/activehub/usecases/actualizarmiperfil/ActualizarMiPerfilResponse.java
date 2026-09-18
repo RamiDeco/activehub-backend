@@ -9,6 +9,7 @@ public record ActualizarMiPerfilResponse(
         String apellido,
         String email,
         String telefono,
-        LocalDate fechaNacimiento
+        LocalDate fechaNacimiento,
+        String dni
 ) {
 }

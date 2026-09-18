@@ -261,6 +261,67 @@ Los tests de cada usecase verifican el destino, no lo dan por `any()`: es la par
 
 **`listarmisresenas` ganó `oculta`, `respuestaInstructor` y `respuestaInstructorAt`** como parte de esto. `RESENIA_RESPONDIDA` no tenía a dónde llevar: "Mis reseñas" del alumno no mostraba la respuesta del instructor en ningún lado (sólo se veía en la página pública de la actividad), así que el click aterrizaba en una fila idéntica a las demás.
 
+## Verificación de correo por código: qué reserva una dirección (V26)
+
+Al registrarse sale un mail con un **código de 6 dígitos**. Ingresarlo valida la cuenta. La regla de negocio que ordena todo lo demás:
+
+> **Un correo lo reserva la CONFIRMACIÓN, no el tipeo.** Mientras el código está enviado y sin ingresar, esa dirección sigue libre y otra persona puede registrarse con ella. Cuando alguien ingresa su código, queda tomada; sólo se libera si el dueño la cambia desde su perfil.
+
+Eso es, literalmente, un **índice único parcial**: `ux_usuario_email_verificado ON usuario (lower(email)) WHERE deleted = false AND email_verificado = true`. El índice viejo exigía unicidad sobre toda cuenta viva, así que equivocarse al tipear el correo de un tercero se lo inutilizaba para siempre.
+
+Consecuencias que **no son obvias** y que hay que respetar al tocar esto:
+
+- **"Buscar el usuario por email" dejó de tener una única respuesta.** El login usa `findAllByEmailConRol` (varias filas) y desambigua con la **contraseña**: dos personas que tipearon el mismo correo tienen claves distintas. El orden pone primero a la verificada, que es la dueña. `findByEmailConRol` (singular) quedó sólo para los casos en que el correo ya está verificado.
+- **La pregunta correcta es `existsVerificadoConEmail(email, excluirUsuarioId)`**, no `existsByEmailIgnoreCaseAndDeletedFalse`. La usan las dos altas, el cambio de correo y la edición de admin.
+- **El chequeo se repite al confirmar.** Entre el alta y la confirmación otra persona pudo haberlo verificado, así que `verificaremail` vuelve a preguntar justo antes de escribir y devuelve 409 en vez de dejar explotar el índice.
+- **`actualizarmiperfil` sí carga el DNI, y es la única forma de hacerlo después del alta.** Quien se registró con Google nunca pasó por un formulario que lo pidiera, así que sin esto no había manera de cargarlo nunca. Sigue siendo clave de unicidad (`existsByDniAndIdNotAndDeletedFalse`, que excluye a la propia cuenta) y habilita el login por DNI apenas se guarda.
+- **`actualizarmiperfil` ya NO cambia el correo: lo rechaza.** Era un agujero — el correo es la credencial verificada, y cambiarlo con un PUT sin confirmar dejaría tomar la casilla de cualquiera. Lo mismo vale para `actualizarusuarioadmin`, que sí lo cambia (es una corrección administrativa) pero **lo deja en `email_verificado = false`**: un admin no puede reservar la dirección de otro.
+- **El cambio de correo no toca la cuenta hasta confirmarse.** `solicitarcambioemail` sólo emite el código contra la dirección nueva (y pide la contraseña actual, porque es un cambio de credencial); el `usuario.email` lo reemplaza `verificaremail`. Un error de tipeo en el correo nuevo no deja al usuario sin el viejo, que además sigue reservado mientras duda.
+
+### Sin confirmar no se puede hacer NADA: `EmailVerificadoFilter`
+
+La cuenta existe y tiene token desde el alta, pero hasta ingresar el código lo único que
+responde son los dos endpoints del código, `/api/auth/me` y `/api/auth/refresh`. Todo lo demás
+es `403 EMAIL_SIN_VERIFICAR`.
+
+- **Está en el backend a propósito, no sólo en las rutas de React.** La guarda del cliente
+  evita que el usuario *navegue*; sin el filtro, el token que recibe al registrarse serviría
+  para inscribirse con un `fetch`. "No podés hacer nada hasta verificar" tiene que ser una
+  afirmación sobre el sistema, no sobre la pantalla.
+- **El flag viaja en el JWT (`emailVerificado`), no se consulta la base en cada request.** El
+  claim alcanza porque **sólo puede pasar de false a true**: un token viejo nunca habilita de
+  más. Y por eso **`verificaremail` devuelve un token NUEVO** — si el cliente siguiera con el
+  anterior, confirmar el código no desbloquearía nada hasta que venciera.
+- **Claim ausente = verificado.** Los tokens emitidos antes de que existiera quedarían
+  encerrados en la pantalla del código sin haber hecho nada.
+
+Lo demás vive en `shared/email/`: `VerificacionEmailService` (emitir/reemitir/validar) y `PlantillaEmail` (el HTML). Reglas que hace cumplir el service: **un solo código vigente** (se invalidan los pendientes antes de emitir), **espera mínima entre reenvíos**, **tope de intentos fallidos** (6 dígitos son 10^6) y el **código guardado hasheado**. El incremento de intentos se persiste con `saveAndFlush` antes de lanzar, por la misma razón que `iniciarsesion` no es `@Transactional`: si no, el rollback de la excepción se lleva el contador.
+
+### El mail: Gmail SMTP, y qué pasa sin credenciales
+
+`spring-boot-starter-mail` contra `smtp.gmail.com:587` con **contraseña de aplicación** (ver README). Dos decisiones:
+
+- **Sin `MAIL_USERNAME`, `EmailSender` escribe el mail en el log en vez de fallar.** Es lo que permite usar el repo sin secretos: si no, un checkout limpio no podría registrar a nadie y `ActivehubApiApplicationTests` dependería de una casilla real. **En ese modo el código aparece en el log del backend**, que es cómo se prueba el flujo en desarrollo.
+- **`enviar` nunca propaga: devuelve `false`.** Gmail puede estar caído o tardar más que el timeout, y ninguna de esas cosas justifica perder un alta ya guardada. Por eso las respuestas de registro traen `mailEnviado` y existe el botón de reenviar.
+
+`PlantillaEmail` es HTML de tablas con todo el CSS inline a propósito: Outlook renderiza con Word y Gmail borra el `<head>`. No agregar Thymeleaf para interpolar tres variables. Los colores son los mismos hex del frontend. `PlantillaEmailTest` escribe los dos mails en `target/mails-preview/` para poder abrirlos en el navegador — es la única forma real de revisar un diseño de mail sin mandarlo.
+
+## "Continuar con Google": el ID token se valida localmente
+
+`POST /api/auth/google` recibe el ID token de Google Identity Services y **es alta y login a la vez**: nadie que aprieta ese botón sabe si "ya tiene cuenta", eligió una identidad.
+
+- **`GoogleIdTokenVerifier` valida a mano con jjwt**, sin `google-api-client` (arrastra media docena de dependencias transitivas para bajar unas claves públicas y verificar una firma) y sin el endpoint `tokeninfo` (un viaje de red por login). Verifica **firma** contra el JWKS de Google, **`aud` == nuestro client id** (un token legítimo emitido para otra app está bien firmado: sin este chequeo serviría para entrar acá), `iss`, `exp` y **`email_verified`**. Las claves se cachean 6 h y se refrescan una vez si la firma no valida, para sobrevivir a la rotación.
+- **La cuenta de Google nace con `emailVerificado = true`** y no recibe código: Google ya confirmó la dirección. Como es el flag que reserva el correo, queda tomado en el acto.
+- **Si ya existía una cuenta verificada con ese correo, se entra a esa**, aunque se haya creado con contraseña: es la misma persona. Las cuentas sin verificar con esa dirección se ignoran — no probaron nada.
+- **El request lleva `rol`, y eso cambia el desenlace.** Tres modos:
+  - **`SESION`** — la cuenta ya existe (se entra siempre, venga el rol que venga), o el rol es `ALUMNO` y se crea en el acto.
+  - **`SIN_CUENTA`** — **el rol viene vacío**, que es el botón del *login*. Ahí no se crea nada: quien aprieta "Iniciar sesión con Google" espera entrar a su cuenta, no que le aparezca una nueva a medio llenar. La pantalla lo manda a registrarse.
+  - **`COMPLETAR_INSTRUCTOR`** — ver abajo.
+
+  Con `INSTRUCTOR` y sin cuenta previa **no se crea nada**: el alta de instructor exige documentación (RN-12) y Google no la trae, así que vuelve `modo: "COMPLETAR_INSTRUCTOR"` con la identidad para precargar el formulario. La cuenta la crea `registrarinstructor` cuando llegan los archivos, con el `googleIdToken` adjunto — **que se vuelve a verificar allá**, porque entre una cosa y la otra no se guarda estado y dar por bueno un "ya lo validamos" del cliente es confiar en el cliente. Ahí también se exige que el correo del formulario sea el de Google: si no, el token de una casilla serviría para registrar otra.
+- Con `googleIdToken`, `password` deja de ser obligatoria en el alta de instructor (por eso su `@NotBlank` pasó a ser una validación del Service, que es quien ve los dos campos juntos) y la cuenta nace `GOOGLE` + verificada.
+- La cuenta nueva por el camino de alumno queda sin teléfono ni fecha de nacimiento (Google no los da) y con un **`passwordHash` aleatorio**: `password_hash` es NOT NULL y esta cuenta no tiene contraseña. Por eso existe `usuario.auth_proveedor`: una cuenta `GOOGLE` no puede cambiar su contraseña ni su correo desde acá.
+
 ## Buscar ignora tildes: `translate()`, no `unaccent`
 
 Reportado: *"en TODAS las búsquedas del sistema, que no distinga entre tildes y no tildes"*. Buscar `natacion` no encontraba **Natación**: para SQL `ó` y `o` son caracteres distintos y `lower()` no cambia eso. En castellano no es un detalle — casi toda palabra larga lleva tilde, y escribir sin acento es lo normal al tipear rápido.

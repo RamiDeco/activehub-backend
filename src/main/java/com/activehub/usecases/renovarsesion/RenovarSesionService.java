@@ -43,7 +43,7 @@ public class RenovarSesionService {
             throw new UsuarioSuspendidoException();
         }
 
-        String token = jwtService.emitir(usuario.getId(), usuario.getEmail(), usuario.getRol().getNombre());
+        String token = jwtService.emitir(usuario.getId(), usuario.getEmail(), usuario.getRol().getNombre(), usuario.isEmailVerificado());
         return new RenovarSesionResponse(token, jwtService.getExpiracionMinutos());
     }
 }

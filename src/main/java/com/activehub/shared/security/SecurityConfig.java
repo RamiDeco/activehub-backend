@@ -15,15 +15,18 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final EmailVerificadoFilter emailVerificadoFilter;
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final RestAccessDeniedHandler restAccessDeniedHandler;
 
     public SecurityConfig(
             JwtService jwtService,
+            tools.jackson.databind.ObjectMapper objectMapper,
             RestAuthenticationEntryPoint restAuthenticationEntryPoint,
             RestAccessDeniedHandler restAccessDeniedHandler
     ) {
         this.jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtService);
+        this.emailVerificadoFilter = new EmailVerificadoFilter(jwtService, objectMapper);
         this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
         this.restAccessDeniedHandler = restAccessDeniedHandler;
     }
@@ -38,7 +41,15 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/registro/alumno",
                                 "/api/auth/registro/instructor",
-                                "/api/auth/login"
+                                "/api/auth/login",
+                                // "Continuar con Google" pasa por acá justamente para NO tener
+                                // sesión todavía. La credencial es el ID token, que se verifica
+                                // contra las claves públicas de Google (GoogleIdTokenVerifier).
+                                "/api/auth/google",
+                                // El client id es público por diseño (viaja en el HTML de
+                                // cualquier sitio con Google Sign-In) y la pantalla de login lo
+                                // necesita antes de que haya sesión.
+                                "/api/auth/google/config"
                         ).permitAll()
                         // "Reportar un problema" de /ayuda, que es una pantalla pública. Quien
                         // necesita soporte muchas veces es justamente alguien que no pudo
@@ -62,7 +73,10 @@ public class SecurityConfig {
                 .exceptionHandling(eh -> eh
                         .authenticationEntryPoint(restAuthenticationEntryPoint)
                         .accessDeniedHandler(restAccessDeniedHandler))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // Después del de autenticación: primero se sabe quién es, después si puede
+                // hacer algo más que confirmar su correo.
+                .addFilterAfter(emailVerificadoFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

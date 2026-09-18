@@ -16,7 +16,10 @@ public record IniciarSesionResponse(String token, Usuario usuario) {
             String rol,
             String estado,
             int cantidadPenalizaciones,
-            Instant createdAt
+            Instant createdAt,
+            /** Ver `ObtenerUsuarioActualResponse.emailVerificado`. */
+            boolean emailVerificado,
+            String authProveedor
     ) {
     }
 }

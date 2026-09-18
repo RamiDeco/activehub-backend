@@ -3,6 +3,8 @@ package com.activehub.usecases.renovarsesion;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -53,7 +55,7 @@ class RenovarSesionServiceTest {
     @Test
     void renovar_sesionActiva_emiteUnTokenNuevo() {
         when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
-        when(jwtService.emitir(usuarioId, "ana@activehub.test", RolNombre.ALUMNO.name())).thenReturn("token-nuevo");
+        when(jwtService.emitir(eq(usuarioId), eq("ana@activehub.test"), eq(RolNombre.ALUMNO.name()), anyBoolean())).thenReturn("token-nuevo");
         when(jwtService.getExpiracionMinutos()).thenReturn(30L);
 
         RenovarSesionResponse response = service.renovar(usuarioId);
@@ -71,7 +73,7 @@ class RenovarSesionServiceTest {
 
         assertThatThrownBy(() -> service.renovar(usuarioId)).isInstanceOf(UsuarioSuspendidoException.class);
 
-        verify(jwtService, never()).emitir(any(), any(), any());
+        verify(jwtService, never()).emitir(any(), any(), any(), anyBoolean());
     }
 
     @Test

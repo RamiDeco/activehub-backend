@@ -4,6 +4,7 @@ import com.activehub.domain.usuario.EstadoUsuario;
 import com.activehub.domain.actividad.TipoActividad;
 import com.activehub.domain.actividad.TipoActividadRepository;
 import com.activehub.domain.usuario.PerfilAlumno;
+import com.activehub.domain.usuario.PropositoVerificacion;
 import com.activehub.domain.usuario.PerfilAlumnoRepository;
 import com.activehub.domain.usuario.RolNombre;
 import com.activehub.domain.usuario.RolRepository;
@@ -13,6 +14,7 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.DniEnUsoException;
 import com.activehub.shared.error.EmailEnUsoException;
+import com.activehub.shared.email.VerificacionEmailService;
 import com.activehub.shared.security.JwtService;
 import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +31,7 @@ public class RegistrarAlumnoService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuditService auditService;
+    private final VerificacionEmailService verificacionEmailService;
 
     public RegistrarAlumnoService(
             UsuarioRepository usuarioRepository,
@@ -37,7 +40,8 @@ public class RegistrarAlumnoService {
             TipoActividadRepository tipoActividadRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
-            AuditService auditService
+            AuditService auditService,
+            VerificacionEmailService verificacionEmailService
     ) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
@@ -46,11 +50,15 @@ public class RegistrarAlumnoService {
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.auditService = auditService;
+        this.verificacionEmailService = verificacionEmailService;
     }
 
     @Transactional
     public RegistrarAlumnoResponse registrar(RegistrarAlumnoRequest request) {
-        if (usuarioRepository.existsByEmailIgnoreCaseAndDeletedFalse(request.email())) {
+        // Lo que bloquea un correo es que alguien lo haya CONFIRMADO con el código, no que lo
+        // haya tipeado (V26). Mientras esté sin verificar, esta misma dirección puede estar en
+        // otras altas pendientes y todas son válidas: gana la primera que ingrese su código.
+        if (usuarioRepository.existsVerificadoConEmail(request.email(), null)) {
             throw new EmailEnUsoException();
         }
 
@@ -92,9 +100,14 @@ public class RegistrarAlumnoService {
 
         auditService.registrar(usuario.getId(), AuditAccion.REGISTRO_ALUMNO, "Usuario", usuario.getId(), null);
 
-        String token = jwtService.emitir(usuario.getId(), usuario.getEmail(), RolNombre.ALUMNO.name());
+        // El código de 6 dígitos. La cuenta ya está guardada: si el SMTP falla, `emitir`
+        // devuelve false y el alta NO se pierde — el usuario tiene el botón de reenviar.
+        boolean mailEnviado = verificacionEmailService.emitir(
+                usuario, usuario.getEmail(), PropositoVerificacion.REGISTRO);
 
-        return new RegistrarAlumnoResponse(token, new RegistrarAlumnoResponse.Usuario(
+        String token = jwtService.emitir(usuario.getId(), usuario.getEmail(), RolNombre.ALUMNO.name(), usuario.isEmailVerificado());
+
+        return new RegistrarAlumnoResponse(token, mailEnviado, new RegistrarAlumnoResponse.Usuario(
                 usuario.getId(),
                 usuario.getNombre(),
                 usuario.getApellido(),
@@ -104,7 +117,9 @@ public class RegistrarAlumnoService {
                 rolAlumno.getNombre(),
                 usuario.getEstado().name(),
                 usuario.getCantidadPenalizaciones(),
-                usuario.getCreatedAt()
+                usuario.getCreatedAt(),
+                usuario.isEmailVerificado(),
+                usuario.getAuthProveedor().name()
         ));
     }
 }

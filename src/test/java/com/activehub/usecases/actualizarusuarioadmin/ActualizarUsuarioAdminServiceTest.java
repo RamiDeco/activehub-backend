@@ -89,7 +89,7 @@ class ActualizarUsuarioAdminServiceTest {
     @Test
     void actualizar_emailDeOtroUsuario_lanzaEmailEnUso() {
         when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
-        when(usuarioRepository.existsByEmailIgnoreCaseAndDeletedFalse("otro@activehub.test")).thenReturn(true);
+        when(usuarioRepository.existsVerificadoConEmail("otro@activehub.test", usuarioId)).thenReturn(true);
 
         assertThatThrownBy(() -> service.actualizar(
                 usuarioId,
@@ -99,6 +99,28 @@ class ActualizarUsuarioAdminServiceTest {
 
         verify(usuarioRepository, never()).save(any());
         verify(auditService, never()).registrar(any(), any(), any(), any(), any());
+    }
+
+    /**
+     * Un correo puesto por un administrador NO queda verificado: nadie demostro ser dueño de
+     * esa casilla. Si quedara en true, el admin reservaria la direccion de cualquiera con un
+     * PUT -- justo lo que el codigo de 6 digitos existe para evitar.
+     */
+    @Test
+    void actualizar_cambiandoElEmail_loDejaSinVerificar() {
+        usuario.setEmailVerificado(true);
+        usuario.setEmailVerificadoAt(java.time.Instant.now());
+        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.existsVerificadoConEmail("nuevo@activehub.test", usuarioId)).thenReturn(false);
+
+        service.actualizar(
+                usuarioId,
+                new ActualizarUsuarioAdminRequest("Ana", "Perez", "nuevo@activehub.test", "2611111111", null),
+                actorId);
+
+        assertThat(usuario.getEmail()).isEqualTo("nuevo@activehub.test");
+        assertThat(usuario.isEmailVerificado()).isFalse();
+        assertThat(usuario.getEmailVerificadoAt()).isNull();
     }
 
     @Test

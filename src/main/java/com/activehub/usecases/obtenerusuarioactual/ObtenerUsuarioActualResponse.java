@@ -17,6 +17,13 @@ public record ObtenerUsuarioActualResponse(
         String estado,
         int cantidadPenalizaciones,
         Instant createdAt,
+        /**
+         * Si confirmó su correo con el código de 6 dígitos. En false el frontend lo manda a
+         * la pantalla del código: hasta confirmarlo, su correo sigue libre para otro.
+         */
+        boolean emailVerificado,
+        /** LOCAL o GOOGLE. Una cuenta de Google no tiene contraseña ni puede cambiar su correo. */
+        String authProveedor,
         /** Solo para alumnos: para instructor/admin viaja vacía. Alimenta "Recomendado para vos". */
         List<Interes> intereses,
         /** Claves habilitadas para el rol (RN-19): el frontend oculta lo que el usuario no puede. */

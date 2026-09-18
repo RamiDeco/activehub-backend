@@ -65,8 +65,8 @@ class RegistrarInstructorControllerTest {
     private RegistrarInstructorResponse respuestaOk() {
         var usuario = new RegistrarInstructorResponse.Usuario(
                 UUID.randomUUID(), "Mateo", "Ríos", "mateo@email.com", "2611234567",
-                LocalDate.of(1990, 4, 2), "INSTRUCTOR", "ACTIVO", 0, Instant.now());
-        return new RegistrarInstructorResponse("token-jwt", usuario);
+                LocalDate.of(1990, 4, 2), "INSTRUCTOR", "ACTIVO", 0, Instant.now(), false, "LOCAL");
+        return new RegistrarInstructorResponse("token-jwt", true, usuario);
     }
 
     @Test

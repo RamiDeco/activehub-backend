@@ -3,6 +3,12 @@ package com.activehub.shared.audit;
 public enum AuditAccion {
     REGISTRO_ALUMNO,
     REGISTRO_INSTRUCTOR,
+    /** Alta creada con "Continuar con Google": nace con el correo ya verificado. */
+    REGISTRO_GOOGLE,
+    /** Ingresó el código de 6 dígitos del alta: a partir de acá el correo le queda reservado. */
+    EMAIL_VERIFICADO,
+    /** Confirmó un correo NUEVO desde su perfil. La metadata es la dirección nueva. */
+    EMAIL_CAMBIADO,
     LOGIN_OK,
     LOGIN_FALLIDO,
     LOGIN_BLOQUEADO,

@@ -40,14 +40,21 @@ public class JwtService {
      * El rol viaja como texto y no como enum: desde E4Ad-HU08 el admin puede crear roles
      * propios, y el filtro arma la authority `ROLE_<nombre>` con lo que venga en el claim.
      * Lo que decide el acceso son los permisos de `ConfiguracionRol` (RN-19), no el nombre.
+     *
+     * @param emailVerificado viaja en el token para que {@link EmailVerificadoFilter} no tenga
+     *                        que ir a la base en CADA request. Como el flag solo puede pasar
+     *                        de false a true, un token viejo nunca habilita de mas — y al
+     *                        confirmar el codigo se emite uno nuevo, asi que la restriccion se
+     *                        levanta en el acto en vez de esperar a que venza el anterior.
      */
-    public String emitir(UUID usuarioId, String email, String rol) {
+    public String emitir(UUID usuarioId, String email, String rol, boolean emailVerificado) {
         Date ahora = new Date();
         Date expira = new Date(ahora.getTime() + expirationMillis);
         return Jwts.builder()
                 .subject(usuarioId.toString())
                 .claim("email", email)
                 .claim("rol", rol)
+                .claim("emailVerificado", emailVerificado)
                 .issuedAt(ahora)
                 .expiration(expira)
                 .signWith(key)

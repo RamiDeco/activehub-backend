@@ -17,6 +17,8 @@ public enum ApiErrorCode {
     CLASE_CON_INSCRIPTOS(HttpStatus.CONFLICT),
     ACTIVIDAD_CON_INSCRIPTOS(HttpStatus.CONFLICT),
     DEMASIADOS_INTENTOS(HttpStatus.TOO_MANY_REQUESTS),
+    /** La cuenta existe pero no confirmo su correo: no puede hacer nada mas que confirmarlo. */
+    EMAIL_SIN_VERIFICAR(HttpStatus.FORBIDDEN),
     INSCRIPCION_YA_EXISTE(HttpStatus.CONFLICT),
     ERROR_INTERNO(HttpStatus.INTERNAL_SERVER_ERROR);
 

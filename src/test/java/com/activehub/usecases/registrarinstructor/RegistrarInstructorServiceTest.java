@@ -3,6 +3,7 @@ package com.activehub.usecases.registrarinstructor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -62,6 +63,8 @@ class RegistrarInstructorServiceTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private JwtService jwtService;
     @Mock private AuditService auditService;
+    @Mock private com.activehub.shared.email.VerificacionEmailService verificacionEmailService;
+    @Mock private com.activehub.shared.security.GoogleIdTokenVerifier googleIdTokenVerifier;
 
     private RegistrarInstructorService service;
     private Path directorio;
@@ -71,14 +74,15 @@ class RegistrarInstructorServiceTest {
         directorio = Files.createTempDirectory("ah-docs-instructor-test");
         service = new RegistrarInstructorService(
                 usuarioRepository, rolRepository, perfilInstructorRepository, documentoInstructorRepository,
-                passwordEncoder, jwtService, auditService, directorio.toString());
+                passwordEncoder, jwtService, auditService, verificacionEmailService, googleIdTokenVerifier,
+                directorio.toString());
 
         Rol rolInstructor = new Rol();
         rolInstructor.setNombre(RolNombre.INSTRUCTOR.name());
         when(rolRepository.findByNombre(RolNombre.INSTRUCTOR)).thenReturn(Optional.of(rolInstructor));
 
         when(passwordEncoder.encode(anyString())).thenReturn("hash-bcrypt");
-        when(jwtService.emitir(any(), anyString(), eq(RolNombre.INSTRUCTOR.name()))).thenReturn("token-jwt");
+        when(jwtService.emitir(any(), anyString(), eq(RolNombre.INSTRUCTOR.name()), anyBoolean())).thenReturn("token-jwt");
         when(usuarioRepository.saveAndFlush(any(Usuario.class))).thenAnswer(inv -> {
             Usuario u = inv.getArgument(0);
             ReflectionTestUtils.setField(u, "id", UUID.randomUUID());
@@ -108,7 +112,7 @@ class RegistrarInstructorServiceTest {
     private RegistrarInstructorRequest request() {
         return new RegistrarInstructorRequest(
                 "Mateo", "Ríos", "mateo@email.com", "2611234567", null, "Password1",
-                LocalDate.of(1990, 4, 2), "Running", 6, "Entrenador de running", true);
+                LocalDate.of(1990, 4, 2), "Running", 6, "Entrenador de running", true, null);
     }
 
     private MockMultipartFile pdf() {
@@ -220,7 +224,7 @@ class RegistrarInstructorServiceTest {
 
     @Test
     void registrar_emailEnUso_noEscribeArchivos() {
-        when(usuarioRepository.existsByEmailIgnoreCaseAndDeletedFalse("mateo@email.com")).thenReturn(true);
+        when(usuarioRepository.existsVerificadoConEmail("mateo@email.com", null)).thenReturn(true);
 
         assertThatThrownBy(() -> service.registrar(request(), List.of(pdf())))
                 .isInstanceOf(EmailEnUsoException.class);
@@ -233,7 +237,7 @@ class RegistrarInstructorServiceTest {
     void registrar_dniEnUso_noCreaLaCuenta() {
         var conDni = new RegistrarInstructorRequest(
                 "Mateo", "Ríos", "mateo@email.com", "2611234567", "30123456", "Password1",
-                LocalDate.of(1990, 4, 2), "Running", 6, "Entrenador", true);
+                LocalDate.of(1990, 4, 2), "Running", 6, "Entrenador", true, null);
         when(usuarioRepository.existsByDniAndDeletedFalse("30123456")).thenReturn(true);
 
         assertThatThrownBy(() -> service.registrar(conDni, List.of(pdf())))
@@ -246,7 +250,7 @@ class RegistrarInstructorServiceTest {
     void registrar_normalizaElEmailAMinusculas() {
         var mayus = new RegistrarInstructorRequest(
                 "Mateo", "Ríos", "  MATEO@Email.COM ", "2611234567", null, "Password1",
-                LocalDate.of(1990, 4, 2), "Running", 6, "Entrenador", true);
+                LocalDate.of(1990, 4, 2), "Running", 6, "Entrenador", true, null);
 
         RegistrarInstructorResponse response = service.registrar(mayus, List.of(pdf()));
 

@@ -51,6 +51,28 @@ La aplicación funciona out-of-the-box contra el Postgres del paso 2 sin configu
 | `JWT_EXPIRATION_MIN` | `120` | Minutos de validez del token |
 | `ADMIN_SEED_EMAIL` / `ADMIN_SEED_PASSWORD` | vacío (no siembra nada) | Si se completan ambas, al arrancar se crea un usuario ADMIN con esas credenciales (solo si no existe ya) |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Orígenes permitidos para llamar a la API (el puerto por defecto del frontend en Vite) |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | vacío (no manda mails) | Cuenta de Gmail y **contraseña de aplicación** con la que se envía el código de verificación. **Hacen falta las dos**: con una sola, el envío fallaría y el código se perdería, así que se cae al modo log |
+| `MAIL_FROM` / `MAIL_FROM_NOMBRE` | `MAIL_USERNAME` / `ActiveHub` | Remitente. Gmail reescribe el `From` a la cuenta autenticada, así que poner otra dirección no sirve |
+| `VERIFICACION_TTL_MIN` | `15` | Minutos que vale cada código |
+| `VERIFICACION_ESPERA_REENVIO_SEG` | `60` | Espera mínima entre dos envíos al mismo usuario |
+| `VERIFICACION_MAX_INTENTOS` | `5` | Intentos fallidos antes de invalidar el código |
+| `GOOGLE_CLIENT_ID` | vacío (botón oculto) | Client ID de la app web en Google Cloud Console, para "Continuar con Google" |
+
+### Correo (código de verificación)
+
+**Sin las credenciales completas la app arranca igual y el registro funciona**: en vez de mandar el mail, `EmailSender` escribe el código y el HTML completo en el log del backend, en nivel WARN. Es el modo de desarrollo y es lo que permite usar el repo sin secretos.
+
+Para mandar mails de verdad con Gmail hace falta una **contraseña de aplicación**, no la contraseña de la cuenta:
+
+1. Activar la verificación en dos pasos en la cuenta de Google.
+2. Google Account → Seguridad → *Contraseñas de aplicaciones* → generar una.
+3. Usar esa cadena de 16 caracteres como `MAIL_PASSWORD` (sin espacios) y el correo completo como `MAIL_USERNAME`.
+
+### "Continuar con Google"
+
+`GOOGLE_CLIENT_ID` sale de Google Cloud Console → *APIs & Services* → *Credentials* → *OAuth 2.0 Client ID* de tipo **Web application**, agregando `http://localhost:5173` (y el puerto que uses) en **Authorized JavaScript origins**. No hace falta client secret: el flujo es el de Google Identity Services, que entrega un ID token al navegador y el backend lo verifica contra las claves públicas de Google.
+
+El frontend **no** necesita su propia variable: pide el client id a `GET /api/auth/google/config`. Sin la variable configurada, ese endpoint responde `habilitado: false` y el botón directamente no se muestra.
 
 Para setearlas en Windows (PowerShell), antes de correr la app:
 
