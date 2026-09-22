@@ -1,5 +1,8 @@
 # CLAUDE.md — ActiveHub API (Spring Boot)
 
+> **BITÁCORA DEL INFORME — se mantiene siempre.** Todo cambio que pueda afectar el informe final del Proyecto Final (UTN FRM) se registra en `docs/BITACORA-INFORME.txt`, **de este repo y del frontend** (copias espejo, UTF-8, sin Markdown). Formato: un bloque `ESTADO GENERAL` al principio que se **reemplaza** en cada actualización, y debajo entradas numeradas que **solo se agregan** — nunca se borra ni se reescribe una entrada anterior; si algo cambió, se agrega una entrada nueva que lo aclare. Se actualiza al terminar cada tarea o grupo de commits y antes de cerrar la sesión de trabajo.
+> Reglas que no se negocian: los números salen de **ejecutar comandos**, no de estimar (suite de tests, conteo de casos de uso y migraciones, ESLint), indicando el comando usado; se distingue IMPLEMENTADO / PROBADO / PARCIAL / PENDIENTE / RETIRADO y **nunca** se marca como probado algo que no se ejecutó; los textos de interfaz nuevos o modificados se copian **literales** (sirven para el manual de usuario); **nunca** se escriben contraseñas, tokens, claves ni cadenas de conexión — de las variables de entorno, solo el nombre. El formato completo de cada entrada está en la cabecera del propio archivo y en el encargo original del usuario.
+
 Convenciones de este repositorio. Leer **antes** de escribir código. El contexto funcional completo y los contratos originales están en `design_handoff_activehub/` (documento de la facultad — ver la sección "Desviaciones respecto al documento original" más abajo para lo que cambió en la práctica).
 
 ## Qué es
@@ -70,9 +73,9 @@ Se descartó Google Maps Platform (exige cuenta de facturación con tarjeta incl
 
 El widget flotante de chat funciona y responde por coincidencia de palabras contra `lib/faqs.ts` (la misma fuente que la pantalla pública de Ayuda), y la sección "Asistente de beneficios y prevenciones" del detalle de actividad existe con su botón, su estado de carga y su resultado, generado con plantillas por nivel de intensidad. **Nada de esto consume un modelo de lenguaje**, y el copy no promete IA en ningún lado. Falta: credenciales de Groq, el endpoint del backend que arme el prompt controlado y la persistencia del informe generado por alumno + actividad + versión del perfil de salud.
 
-**Pendientes de verdad:**
+**Ítem 8 — Motor de recomendaciones: HECHO.** Ver "Recomendaciones" más abajo. El filtrado de `/alumno/explorar` sigue siendo tradicional a propósito (texto sin tildes, categoría, tipo en cascada, nivel, precio, cupos, fecha, franja horaria, radio, instructor, orden): ahí el alumno está buscando algo concreto. Lo que se recomienda es el Home.
 
-- **8. Motor de recomendaciones en Búsqueda** — hoy el filtrado de `/alumno/explorar` es tradicional (texto sin tildes, categoría, tipo en cascada, nivel, precio, cupos, fecha, franja horaria, radio de cercanía, instructor, orden). El "Recomendado para vos" del Home cruza los intereses declarados del alumno contra el `tipoActividadId` de cada actividad (V19), pero no aprende de búsquedas ni de inscripciones previas.
+**Pendientes de verdad:**
 - **12. Mercado Pago real** — al final, según lo acordado con el usuario. `PaymentGateway` ya tiene el contrato listo para enchufar el SDK real sin tocar los usecases que lo usan; toda la máquina de estados (`Retenido` → `Liberado`/`Cancelado`), la acreditación automática y los reintegros ya funcionan contra el mock.
 - **Deploy** (Render/Vercel) — la aplicación ya está lista (puerto, DB, CORS, secreto JWT, credenciales externas y ahora el bucket de Supabase Storage son variables de entorno), pero el despliegue no se hizo.
 
@@ -341,6 +344,49 @@ Lo que no es obvio y hay que respetar:
 - **Las sesiones abiertas siguen abiertas.** El JWT es stateless y no hay tabla de sesiones; un token emitido antes del cambio vale hasta que venza (30 min). Está asumido: lo que cierra el acceso es que la contraseña vieja ya no sirve para sacar uno nuevo. Si algún día hace falta cortar en el acto, el camino es un claim de versión de credencial en el token, **no** una tabla de sesiones.
 - Audita con `AuditAccion.PASSWORD_RESTABLECIDA`, distinta de `PASSWORD_CAMBIADA`: esa la hace alguien que ya estaba adentro y sabía la anterior.
 - La política de la contraseña nueva es la misma RN-20 de siempre, en el Request DTO.
+
+## Recomendaciones: seis señales, un puntaje y una explicación (V27)
+
+`recomendaractividades` (`GET /api/alumno/recomendaciones?lat&lng&limite`, permiso `catalogo.explorar`) reemplaza al "Recomendado para vos" que vivía **en el cliente** y que tenía tres defectos: no puntuaba ni ordenaba (dentro de los que matcheaban quedaba el orden del catálogo), no miraba nada más que los intereses declarados, y dos alumnos con los mismos intereses veían exactamente lo mismo.
+
+**Dos clases, y la lógica no está en el Service.** `PerfilDeGustos` resume al alumno en cuatro afinidades (tipo, categoría, nivel, instructor) a partir de seis señales; `RecomendarActividadesService` puntúa cada actividad candidata con esas afinidades más cuatro factores de la actividad. Las dos son **package-private dentro del slice**: es lógica de este caso de uso, no del dominio.
+
+Las seis señales y su peso están en el javadoc de `PerfilDeGustos`. Cuatro decisiones que hay que respetar si se tocan los números:
+
+- **Lo que hizo pesa más que lo que miró** (inscripción 2,0 contra vista 0,6). Una inscripción es plata y tiempo.
+- **Lo viejo pesa menos**: ×1,0 el último mes, ×0,6 hasta los tres meses, ×0,3 después. Sin decaimiento el alumno queda casado para siempre con lo que hizo el primer mes. **El interés declarado es la excepción y no decae**: es una afirmación vigente hasta que la edite.
+- **Una reseña mala resta** (el factor es `(puntaje - 3) / 2`, así que 3 es neutro). Es la única señal negativa y hace falta: sin ella, haber ido una vez a algo que resultó malo lo vuelve una recomendación más fuerte todavía.
+- **Los cuatro mapas se normalizan a [-1, 1]** al cerrar el perfil. Sin eso, un alumno con dos años de historial tendría números diez veces más grandes que uno nuevo y los pesos del motor significarían cosas distintas para cada uno.
+
+El puntaje final:
+
+```
+puntaje = 4,0·afinidadTipo + 2,0·afinidadCategoria + 1,5·afinidadNivel + 1,5·afinidadInstructor
+        + 1,2·calidad + 0,8·precio + 1,0·cercanía + 0,6·disponibilidad
+        - 1,0 si ya hizo esa misma actividad
+```
+
+Los cuatro factores de la actividad también están en [-1, 1], así que los pesos se leen como importancia relativa. `calidad` sale del rating (3 es neutro, 0 = sin reseñas no suma ni resta), `precio` compara contra la **mediana** de lo que el alumno pagó (la mediana y no el promedio: una sola actividad cara corre el promedio), `cercanía` es por tramos con Haversine y `disponibilidad` mira la próxima clase y su cupo.
+
+Reglas que no son obvias:
+
+- **Sin señales no se recomienda nada.** `sinSenales: true` y lista vacía. Rellenar con cualquier cosa y llamarlo "recomendado" es exactamente la mentira que había antes; la pantalla muestra la invitación a cargar intereses.
+- **Un puntaje negativo no se muestra**: si la única evidencia es en contra, no hay recomendación.
+- **Se excluyen los favoritos y las actividades con una clase futura ya anotada.** Siguen contando como señal de gusto, pero recomendárselas no le agrega nada. Las que ya cursó sí aparecen, penalizadas.
+- **Sólo oferta de instructores verificados** (RN-16), reusando `ActividadSpecifications.deInstructorVerificado()`.
+- **Los motivos se arman mientras se puntúa, no después.** Reconstruirlos aparte es la forma segura de que expliquen algo distinto de lo que se calculó. Son el texto que la pantalla muestra debajo de cada tarjeta.
+- **`lat`/`lng` son opcionales**: sin ellas la cercanía no participa, en vez de inventar una distancia.
+- **No hay modelo ni entrenamiento**: el puntaje se recalcula en cada pedido. "Aprende" en el sentido de que inscribirse, marcar un favorito, calificar, mirar o buscar cambia el resultado del pedido siguiente.
+
+### Las dos señales que no existían: `interaccion_alumno` (V27)
+
+Inscripciones, favoritos y reseñas ya estaban en el modelo. Lo que no se guardaba en ningún lado era **qué mira** el alumno y **qué busca**, así que V27 agrega una tabla de solo-append (como `audit_log`, y por la misma razón: no tiene sentido actualizar ni dar de baja un hecho ocurrido).
+
+- **Una tabla y no dos**: son el mismo hecho —"mostró interés en algo, en tal momento"— y el motor las consume juntas y con el mismo decaimiento. `tipo` no lleva CHECK, igual que `notificacion.tipo`.
+- **`registrarinteraccion`** (`POST /api/alumno/interacciones`) es quien las escribe. Existe como endpoint propio porque ver una actividad pega a un endpoint **público** (meter una escritura ahí obligaría a decidir si hay alumno en medio de una lectura del catálogo) y buscar no pega a ninguno: el filtrado de Explorar es todo del cliente.
+- **Antirrebote de 10 minutos** por (alumno, tipo, contenido) y **mínimo 3 caracteres** para un término. Sin eso, abrir diez veces la misma actividad la convierte en el gusto dominante del alumno, y cada tecla del buscador sería una búsqueda.
+- **El término es dato personal de comportamiento**: se guarda con `@SinHtml`, recortado a 120 caracteres, **no se expone en ningún endpoint de lectura** (ni al propio alumno) y sólo lo lee el motor, en memoria.
+- El actor sale **siempre del token**: nadie puede ensuciar las recomendaciones de otro.
 
 ## Almacenamiento de archivos: una interfaz, disco o Supabase Storage
 

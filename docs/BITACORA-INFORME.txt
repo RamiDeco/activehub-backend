@@ -2,25 +2,58 @@ BITACORA DEL INFORME - PROYECTO FINAL ActiveHub (UTN FRM)
 Repositorio: activehub-backend
 Archivo espejo: activehub-frontend/docs/BITACORA-INFORME.txt
 
-=== ESTADO GENERAL (actualizado: 2026-09-22) ===
-Casos de uso implementados en el backend: 107
-(comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
-Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword.
+COMO SE MANTIENE ESTE ARCHIVO
+- Se registra todo cambio del sistema que pueda afectar el informe final. No se redacta el informe: se registran hechos precisos, completos y verificables.
+- Hay una copia espejo en el otro repositorio (activehub-backend y activehub-frontend). Las dos se mantienen iguales, salvo las dos lineas del encabezado.
+- El bloque ESTADO GENERAL se REEMPLAZA en cada actualizacion. Las entradas SOLO SE AGREGAN: nunca se borra ni se reescribe una entrada anterior; si algo cambio, se agrega una entrada nueva que lo aclare.
+- Cuando escribir: al terminar cada tarea o grupo de commits relacionados, y siempre antes de cerrar la sesion de trabajo (actualizando tambien ESTADO GENERAL).
+- Espanol, texto plano, sin Markdown. Hechos concretos: nombres, numeros, versiones y codigos.
+- Se distingue IMPLEMENTADO (codigo hecho), PROBADO (con prueba automatizada o manual efectivamente ejecutada), PARCIAL, PENDIENTE y RETIRADO. NUNCA se marca como probado algo que no se ejecuto.
+- Los numeros se obtienen ejecutando comandos, no estimando (casos de uso, archivos de prueba y pruebas con el resultado de la suite, migraciones, ESLint). Se indica el comando usado.
+- Los textos de interfaz nuevos o modificados se copian LITERALES (botones, campos con * si son obligatorios, titulos, mensajes de error y de exito, dialogos de confirmacion). Se usan para el manual de usuario.
+- Si un cambio modifica un comportamiento existente, se describe el comportamiento nuevo completo, no solo la diferencia.
+- SEGURIDAD: nunca se escriben contrasenias reales, tokens, claves de API ni cadenas de conexion. De las variables de entorno, solo el nombre. Usuarios de prueba solo si son cuentas de demostracion, marcadas como tales.
+- Si se crea una pantalla, una historia de usuario o una regla nueva, se propone el codigo siguiente de su serie y se marca como NUEVO.
+- Si se reemplaza una tecnologia o se cambia una decision de diseno: que habia antes, que hay ahora, por que, que alternativas se evaluaron y que impacto tiene.
+- Cada vez que avanza un item de PENDIENTES CONOCIDOS se indica explicitamente, por ejemplo: "PENDIENTE 1: PENDIENTE -> PROBADO".
 
-Pruebas automatizadas del backend: 175 archivos / 743 pruebas / resultado: 743 correctas, 0 fallidas, 0 con error, 0 omitidas
+TERMINOLOGIA Y CODIGOS DEL PROYECTO
+- Roles: Alumno, Instructor, Administrador.
+- Epicas: E1-A Acceso y Autenticacion; E2-I Gestion Profesional del Instructor; E3-A Experiencia y Reservas del Alumno; E4-Ad Administracion y Gobierno.
+- Historias de usuario: E1A-HU01 a HU04, E2I-HU01 a HU12, E3A-HU01 a HU12, E4Ad-HU01 a HU10 (mas las propuestas como NUEVAS en las entradas de este archivo). Se indica tambien el numero de criterio de aceptacion afectado.
+- Pantallas: SYS-PAN-ERR; E1A-PAN-01 a 09 (la 03 no existe); E2I-PAN-01 a 13; E3A-PAN-01 a 13; E4Ad-PAN-01 a 10 (mas las propuestas como NUEVAS).
+- Reglas de negocio: RN-01 a RN-20 (mas las propuestas como NUEVAS).
+- Estados: Inscripcion (PreInscripcion, PagoPendiente, Inscripto, Cancelada); Clase (Programada, Habilitada, Cancelada, Finalizada); Pago (Retenido, Liberado, Cancelado, Efectivo); Denuncia (Pendiente, En Auditoria, Resuelta); Instructor (En revision, Verificado, Rechazada). Se dice "inscripcion" o "preinscripcion", nunca "reserva". Se escribe "Mercado Pago" separado.
+- Modulos del alcance (15): Autenticacion y Control de Acceso; Gestion de Usuarios, Roles y Permisos; Seguridad; Auditoria y Trazabilidad; Alumno; Instructor; Actividades; Reservas y Pagos; Historial y Calificaciones; Busqueda y Filtrado; Administracion y Soporte; Reportes e Informes; Tablero / Dashboard; Configuracion y Parametros; Ayuda y Soporte al Usuario.
+- Riesgos: R01 integracion frontend-backend; R02 Mercado Pago; R03 concurrencia de cupos; R04 ambigüedad de reglas; R05 inconsistencias documentacion-sistema; R06 pruebas insuficientes; R07 perdida del repositorio; R08 disponibilidad de integrantes; R09 cronograma; R10 cambios de alcance; R11 APIs externas; R12 Render; R13 Vercel; R14 caida de la nube; R15 planes gratuitos (mas los propuestos como NUEVOS).
+- Pruebas manuales documentadas: PRU-01 a PRU-09.
+
+LINEA DE BASE DEL INFORME (estado que refleja el informe escrito)
+105 casos de uso en el backend; 169 archivos de prueba; migraciones V1 a V26; ESLint del frontend con 0 errores y 12 advertencias; pantallas hasta E1A-PAN-09, E2I-PAN-13, E3A-PAN-13 y E4Ad-PAN-10. Todo lo que difiera de esta linea de base esta registrado en las entradas de abajo.
+
+CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambios")
+FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
+TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
+
+=== ESTADO GENERAL (actualizado: 2026-09-22) ===
+Casos de uso implementados en el backend: 109
+(comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
+Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion.
+
+Pruebas automatizadas del backend: 179 archivos / 780 pruebas / resultado: 780 correctas, 0 fallidas, 0 con error, 0 omitidas
 (comando de conteo de archivos: find src/test -name "*Test.java" | wc -l)
 (comando de ejecucion: JAVA_HOME=C:\Users\Facundo\.jdks\corretto-21.0.10 ./mvnw -B test)
-(salida literal: "Tests run: 743, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS")
+(salida literal: "Tests run: 780, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS")
 
 Pruebas automatizadas del frontend: no hay
 (comando en activehub-frontend: find src -name "*.test.*" -o -name "*.spec.*" | wc -l  ->  0)
 
-Migraciones Flyway: V1 a V26 (ultima: V26__verificacion_email)
-(comando: ls src/main/resources/db/migration | wc -l  ->  26)
-Sin migracion nueva en esta actualizacion: la recuperacion de contrasenia reusa la tabla verificacion_email.
+Migraciones Flyway: V1 a V27 (ultima: V27__interaccion_alumno)
+(comando: ls src/main/resources/db/migration | wc -l  ->  27)
 
-ESLint del frontend: 0 errores / 12 advertencias
-(comando: npx eslint .  en activehub-frontend; salida literal: "12 problems (0 errors, 12 warnings)")
+ESLint del frontend: 0 errores / 11 advertencias
+(comando: npx eslint .  en activehub-frontend; salida literal: "11 problems (0 errors, 11 warnings)")
+Cambio respecto de la linea de base: eran 12 advertencias. La que desaparecio es la del useMemo de "Recomendado para vos" del Home, que dejo de existir al mover el calculo al backend (ENTRADA 004).
 Typecheck del frontend: sin errores (comando: npx tsc -b).
 
 Pantallas implementadas: 41 archivos de pantalla en activehub-frontend/src/pages (nueva respecto de la linea de base: E1A-PAN-10 Recuperar contrasenia, codigo propuesto NUEVO)
@@ -28,37 +61,37 @@ Pantallas implementadas: 41 archivos de pantalla en activehub-frontend/src/pages
 Observacion: sigue sin verificarse la correspondencia entre los 45 codigos de pantalla del catalogo y los archivos de src/pages (ver ENTRADA 001).
 
 Estado por modulo (los 15):
-1. Autenticacion y Control de Acceso - PROBADO - login con JWT, renovacion de sesion, verificacion de correo, alta con Google y, desde esta actualizacion, recuperacion de contrasenia por correo; cubierto por la suite de 743 pruebas y por prueba manual de extremo a extremo (ver ENTRADA 002).
-2. Gestion de Usuarios, Roles y Permisos - PROBADO - roles y permisos por migraciones V18, V20 y V22.
-3. Seguridad - PROBADO - JWT, guardas por permiso, secretos por variable de entorno y recuperacion de contrasenia sin revelar si la cuenta existe. Dejo de ser PARCIAL: el pendiente que lo mantenia asi era la recuperacion de contrasenia.
-4. Auditoria y Trazabilidad - PROBADO - paquete com.activehub.shared.audit; accion nueva PASSWORD_RESTABLECIDA.
-5. Alumno - PROBADO - perfil, intereses, datos de salud, favoritos, calendario.
-6. Instructor - PROBADO - solicitud, documentos, verificacion, actividades, clases, metricas, resenias.
-7. Actividades - PROBADO - alta, edicion, taxonomia, niveles, fotos, geolocalizacion.
+1. Autenticacion y Control de Acceso - PROBADO - login con JWT, renovacion de sesion, verificacion de correo, alta con Google y recuperacion de contrasenia por correo.
+2. Gestion de Usuarios, Roles y Permisos - PROBADO.
+3. Seguridad - PROBADO.
+4. Auditoria y Trazabilidad - PROBADO.
+5. Alumno - PROBADO.
+6. Instructor - PROBADO.
+7. Actividades - PROBADO - alta, edicion, taxonomia, niveles, fotos (ahora en Supabase Storage), geolocalizacion.
 8. Reservas y Pagos - PROBADO CON PASARELA SIMULADA - MockPaymentGateway (PENDIENTE 1).
 9. Historial y Calificaciones - PROBADO.
-10. Busqueda y Filtrado - PROBADO.
+10. Busqueda y Filtrado - PROBADO - filtrado tradicional en Explorar y, desde esta actualizacion, motor de recomendaciones con puntaje en el Home del alumno.
 11. Administracion y Soporte - PROBADO.
 12. Reportes e Informes - PROBADO.
 13. Tablero / Dashboard - PROBADO.
-14. Configuracion y Parametros - PROBADO - parametros por variables de entorno; se agregaron las tres de Supabase Storage.
+14. Configuracion y Parametros - PROBADO - parametros por variables de entorno, incluidas las tres de Supabase Storage.
 15. Ayuda y Soporte al Usuario - PARCIAL - pantalla Ayuda y reportes de soporte implementados; sin modelo de lenguaje (PENDIENTE 3) y sin manual de usuario en la plataforma (PENDIENTE 9).
 
 Pendientes conocidos:
 1 (integracion real con Mercado Pago) - PENDIENTE - hoy MockPaymentGateway.
-2 (recuperacion de contrasenia por correo) - PROBADO - implementado y probado el 2026-09-22 (ENTRADA 002). PENDIENTE 2: PENDIENTE -> PROBADO.
-3 (asistente con modelo de lenguaje, chatbot con Groq, recomendaciones adaptativas) - PENDIENTE.
-4 (imagenes en Supabase Storage) - PARCIAL - el codigo esta implementado y probado con pruebas automatizadas; falta crear el bucket en Supabase, cargar las variables de entorno en el despliegue, migrar los archivos que hoy estan en ./uploads y probarlo contra un proyecto real. La optimizacion de imagenes sigue PENDIENTE. PENDIENTE 4: PENDIENTE -> PARCIAL.
-5 (despliegue en Render, Vercel y Supabase) - PENDIENTE - no desplegado.
+2 (recuperacion de contrasenia por correo) - PROBADO (ENTRADA 002).
+3 (asistente con modelo de lenguaje y chatbot con Groq) - PENDIENTE. El motor de recomendaciones adaptativo, que era la tercera parte de este pendiente, quedo PROBADO en la ENTRADA 004; lo que falta es solo lo que depende de un modelo de lenguaje.
+4 (imagenes en Supabase Storage) - PROBADO - bucket creado, 15 archivos migrados y lectura verificada contra el proyecto real (ENTRADA 003). PENDIENTE 4: PARCIAL -> PROBADO. Queda aparte la optimizacion de imagenes, que nunca se implemento.
+5 (despliegue en Render, Vercel y Supabase) - PARCIAL - la base y el almacenamiento de archivos ya corren contra Supabase; el backend en Render y el frontend en Vercel siguen sin desplegarse. PENDIENTE 5: PENDIENTE -> PARCIAL.
 6 (pruebas automatizadas del frontend) - PENDIENTE - 0 archivos de prueba.
-7 (ESLint en GitHub Actions) - PENDIENTE - el archivo .github/workflows/eslint.yml existe en la rama remota origin/FabriVersion2 del frontend, no en integracion ni en main.
+7 (ESLint en GitHub Actions) - PENDIENTE.
 8 (renombrar integracion a develop y etiquetar la version en main) - PENDIENTE.
 9 (manual de usuario integrado en la plataforma) - PENDIENTE.
-10 (ejecucion de PRU-01 a PRU-09) - PENDIENTE - ninguna ejecutada ni registrada.
+10 (ejecucion de PRU-01 a PRU-09) - PENDIENTE.
 
-Despliegue: backend (Render) - no desplegado; frontend (Vercel) - no desplegado; base de datos productiva (Supabase) - no desplegada; Supabase Storage - bucket no creado. URL: no desplegado.
+Despliegue: backend (Render) - no desplegado; frontend (Vercel) - no desplegado; base de datos (Supabase) - en uso desde el entorno de desarrollo; Supabase Storage - bucket "activehub" creado y en uso (privado). URL publica: no desplegado.
 
-Modelo de ramas: rama activa integracion en los dos repositorios. Sin etiquetas. No existe la rama develop. Al 2026-09-22 los cambios de la ENTRADA 002 estan en el arbol de trabajo, sin commit.
+Modelo de ramas: rama activa integracion en los dos repositorios. Sin etiquetas. No existe la rama develop. Lo de las ENTRADAS 002 y 003 (recuperacion de contrasenia y Supabase Storage) lo commiteo el usuario el 2026-09-22 con el mensaje "Agregada la posibilidad de recuperar contrasenia olvidada. Arreglos de bugs menores.": backend 4ef25fd, frontend 8c8fd42. Lo de las ENTRADAS 004 y 005 (motor de recomendaciones, baja de la actividad de prueba y cabecera de este archivo) sigue en el arbol de trabajo, sin commit.
 === FIN ESTADO GENERAL ===
 
 
@@ -308,3 +341,293 @@ PENDIENTE QUE QUEDA:
  - Confirmar si corresponde elevar a regla de negocio las tres restricciones de la recuperacion (correo verificado, proveedor LOCAL, respuesta indistinguible).
  - Commitear los cambios en los dos repositorios.
 === FIN ENTRADA 002 ===
+
+
+=== ENTRADA 003 ===
+FECHA: 2026-09-22
+REPOSITORIO: activehub-backend
+RAMA Y COMMITS: integracion - sin commit al momento de este registro - sin Pull Request
+TIPO: INFRAESTRUCTURA/DESPLIEGUE
+TITULO: Puesta en funcionamiento de Supabase Storage: bucket creado y archivos migrados desde el disco
+
+QUE CAMBIA PARA EL USUARIO: nada visible, y es el resultado buscado. Alumno, Instructor y Administrador suben, ven y descargan las fotos de perfil, las fotos y la galeria de actividades y la documentacion del instructor exactamente igual que antes y por las mismas direcciones. Lo que cambia es donde quedan guardados los archivos: ahora en el bucket de Supabase y no en el disco del servidor.
+
+TEXTOS DE INTERFAZ (literales): sin cambios
+
+DETALLE TECNICO:
+ - Se creo el bucket "activehub" en el proyecto de Supabase mlxzfijxyaklwkidatbu, con visibilidad PRIVADA (POST /storage/v1/bucket con {"id":"activehub","name":"activehub","public":false}; respuesta HTTP 200).
+ - Se completaron en el archivo .env del backend las tres variables de configuracion del almacenamiento (solo los nombres): SUPABASE_STORAGE_URL, SUPABASE_STORAGE_SERVICE_KEY y SUPABASE_STORAGE_BUCKET. El archivo .env esta en .gitignore (verificado con git check-ignore), asi que la clave no queda versionada.
+ - La URL del proyecto se derivo del nombre de usuario de la base que ya estaba configurado; no se pidio ningun dato nuevo mas que la clave de servicio.
+ - Se migraron los archivos de activehub-backend/uploads al bucket con una subida por HTTP PUT por archivo, respetando la carpeta de cada tipo (fotos-perfil, fotos-actividad, documentos-instructor) y enviando el tipo de contenido real de cada uno (image/jpeg, image/png, application/pdf).
+ - Resultado de la migracion: 15 archivos subidos, 0 fallidos, 1 omitido. Detalle: 13 fotos de actividad (2,4 MB), 2 fotos de perfil, 1 documento de instructor.
+ - El archivo omitido es e388a07b-5c2d-4d85-9f5a-0b8c63aafa42.png, la imagen de la actividad de prueba "Trekking por el campo" (id 64c1f787-9a0b-4b3d-8364-7c09ef2b13a9), que se decidio no conservar. Es el mismo archivo para la portada y para la unica imagen de la galeria de esa actividad.
+ - Los archivos locales de uploads se conservaron como respaldo, por decision del usuario.
+
+ESTADO: PENDIENTE 4 (imagenes en Supabase Storage): PARCIAL -> PROBADO.
+Evidencia: el backend arranco con el registro "Almacenamiento de archivos: Supabase Storage (bucket activehub)" y las nueve portadas de actividad del catalogo se sirvieron desde el bucket con el tamanio correcto.
+
+HISTORIAS DE USUARIO Y CRITERIOS: sin cambios. Ninguna historia cambia de comportamiento: el almacenamiento es interno.
+
+PANTALLAS: sin cambios. Ninguna pantalla se modifico, que era el objetivo del diseno de la ENTRADA 002: el bucket es privado y los archivos se siguen sirviendo por los mismos endpoints.
+
+REGLAS DE NEGOCIO: sin cambios.
+
+MODULOS: Actividades; Instructor; Alumno; Configuracion y Parametros.
+
+CASOS DE USO: sin cambios en el codigo. Los diez casos de uso que manejan archivos pasaron a escribir y leer contra Supabase por configuracion, sin recompilar.
+
+ENTIDADES Y MIGRACIONES: sin migracion. No se modifico ninguna fila: en la base se guarda solo el nombre del archivo, nunca una ruta ni una direccion web.
+
+TECNOLOGIAS: Supabase Storage, ahora efectivamente en uso (antes solo estaba implementado el cliente). Documentacion oficial: https://supabase.com/docs/guides/storage
+
+COSTOS: sin impacto. El bucket entra en el plan gratuito del mismo proyecto de Supabase que ya se usa para la base (limite de 1 GB). Ocupado tras la migracion: alrededor de 2,8 MB.
+
+RIESGOS: R15 (cambios en planes gratuitos) - vigente - evidencia: el almacenamiento pasa a depender del limite de 1 GB del plan gratuito. R12 (indisponibilidad de Render) - mitigado - evidencia: los archivos ya no viven en el disco efimero del contenedor, asi que un reinicio no los pierde. R16 (exposicion de la clave de servicio, propuesto en la ENTRADA 002) - vigente y mitigado - evidencia: la clave la cargo el usuario directamente en el .env, que esta en .gitignore, y nunca se escribio en el chat ni en un archivo versionado.
+
+SEGURIDAD: el bucket es privado y no se generan direcciones publicas ni firmadas. La documentacion del instructor (DNI y certificados) se sigue sirviendo por un endpoint con permiso. La clave de servicio, que saltea las politicas de seguridad a nivel de fila, vive solo en el .env del backend.
+
+PRUEBAS: automatizadas nuevas: ninguna (el codigo ya estaba cubierto por las 37 pruebas de la ENTRADA 002).
+Manuales ejecutadas el 2026-09-22 contra una instancia aislada en el puerto 8091, apuntando al bucket real:
+ - Caso 1: arranque del backend. Resultado obtenido: linea de registro "Almacenamiento de archivos: Supabase Storage (bucket activehub)". APROBADA.
+ - Caso 2: lectura de las 9 portadas de actividad del catalogo. Resultado obtenido: HTTP 200 en las 9, con el tamanio exacto de cada archivo original (entre 107.547 y 359.277 bytes). Primera lectura 2,27 segundos; las siguientes, inmediatas. APROBADA.
+ - Caso 3: lectura de la foto de la actividad de prueba, que no se subio. Resultado obtenido: HTTP 404. APROBADA (es lo esperado).
+ - Caso 4: listado del contenido del bucket por carpeta. Resultado obtenido: 2 archivos en fotos-perfil, 12 en fotos-actividad y 1 en documentos-instructor; el archivo omitido no figura. APROBADA.
+ - Observacion: /api/fotos/perfil/{id} devuelve 404 para cuatro usuarios del catalogo de demostracion, pero con el mensaje "El usuario no tiene foto de perfil": no tienen foto cargada, no es una falla del almacenamiento.
+ - Archivo de evidencia: no se guardo; las salidas quedaron en la sesion de trabajo.
+
+ANALISIS ESTATICO: no se ejecuto en esta tarea (no se toco el frontend). El resultado vigente es el de la ENTRADA 004.
+
+DESPLIEGUE Y CONFIGURACION: bucket "activehub" creado en el proyecto de Supabase el 2026-09-22. Variables de entorno cargadas en el entorno de desarrollo: SUPABASE_STORAGE_URL, SUPABASE_STORAGE_SERVICE_KEY, SUPABASE_STORAGE_BUCKET. Para el despliegue en Render hay que cargar las mismas tres.
+
+DECISIONES:
+ - Bucket privado y no publico. Justificacion: la documentacion del instructor no puede quedar accesible por direccion; ademas asi el frontend no cambia. Alternativa descartada: bucket publico con direcciones directas.
+ - Conservar los archivos locales como respaldo en vez de borrarlos. Justificacion: quitar las dos variables del .env devuelve todo al disco sin perder nada. Decision del usuario.
+ - Migrar tambien la documentacion del instructor y no solo las imagenes. Justificacion: los tres tipos de archivo se leen por la misma interfaz; migrar solo las fotos dejaria la documentacion sin poder leerse apenas se activara Supabase.
+
+ERRORES DETECTADOS: sintoma: las primeras lecturas de fotos devolvieron codigo 000 (sin respuesta). Causa: el backend todavia estaba terminando de arrancar. Correccion: ninguna; al reintentar respondieron HTTP 200. Como se detecto: al verificar la migracion.
+
+CAPTURAS SUGERIDAS:
+ supabase-bucket-activehub.png - panel de Supabase mostrando el bucket "activehub" marcado como privado y sus tres carpetas.
+ supabase-archivos-migrados.png - el contenido de la carpeta fotos-actividad en el panel de Supabase.
+ backend-arranque-supabase.png - consola del backend con la linea "Almacenamiento de archivos: Supabase Storage (bucket activehub)".
+ actividad-con-foto-desde-supabase.png - el detalle de una actividad en el navegador, con la foto cargada desde el bucket.
+
+PENDIENTE QUE QUEDA:
+ - Eliminar la actividad de prueba "Trekking por el campo" (id 64c1f787-9a0b-4b3d-8364-7c09ef2b13a9, instructor Pepe Instructor, precio 99999, sin clases asociadas). Queda a cargo del usuario, desde la aplicacion, con una cuenta de administrador o la del instructor duenio. Su imagen ya no esta en el bucket.
+ - Borrar el archivo local e388a07b-5c2d-4d85-9f5a-0b8c63aafa42.png una vez eliminada la actividad.
+ - Cargar las tres variables de entorno en Render cuando se haga el despliegue.
+ - Optimizacion de imagenes (redimensionado y compresion al subir), que nunca se implemento.
+=== FIN ENTRADA 003 ===
+
+=== ENTRADA 004 ===
+FECHA: 2026-09-22
+REPOSITORIO: ambos
+RAMA Y COMMITS: integracion - sin commit al momento de este registro - sin Pull Request
+TIPO: NUEVA FUNCIONALIDAD
+TITULO: Motor de recomendaciones del alumno: puntaje, seis senales y explicacion de cada recomendacion
+
+QUE CAMBIA PARA EL USUARIO:
+Para el Alumno. El bloque "Recomendado para vos" del inicio dejo de ser una lista armada con el orden del catalogo y pasa a ser una lista puntuada y ordenada, calculada para esa persona. Ahora se tienen en cuenta seis cosas: los intereses deportivos que declaro, las clases a las que se inscribio, sus favoritos, las resenias que escribio, las actividades cuyo detalle abrio y lo que busco en el buscador. Debajo de cada actividad recomendada aparecen hasta dos carteles que explican por que se la recomienda.
+Si el alumno no declaro intereses y no tiene ningun historial, el sistema NO recomienda nada: muestra una invitacion a cargar los intereses, con dos botones. Antes, en ese mismo caso, se mostraban las tres primeras actividades del catalogo bajo el titulo "Recomendado para vos".
+Dos alumnos con los mismos intereses declarados ya no ven lo mismo si su historial es distinto.
+Para Instructor y Administrador no cambia nada. En la pagina publica de inicio (landing) tampoco: sin sesion no hay a quien recomendarle nada, y se mantiene como estaba (catalogo y actividades mejor calificadas).
+
+TEXTOS DE INTERFAZ (literales):
+Inicio del alumno (E3A-PAN-01), seccion "Recomendado para vos":
+  Titulo (sin cambios): "Recomendado para vos"
+  Bajada, con intereses declarados: "En base a tus intereses (Yoga, Natación) y en lo que venís haciendo"
+  Bajada, sin intereses declarados: "En base a tus clases, favoritos y lo que venís mirando"
+  Cartel de carga: "Cargando recomendaciones, por favor espere"
+  Cartel de error: "No se pudieron cargar tus recomendaciones"  (con el boton "Reintentar" del componente compartido)
+  Estado sin senales, titulo: "Todavía no sabemos qué recomendarte."
+  Estado sin senales, texto: "Cargá tus intereses deportivos en tu perfil o anotate en tu primera clase, y acá vas a ver actividades elegidas para vos."
+  Estado sin senales, botones: "Cargar mis intereses"  y  "Explorar actividades"
+  Estado con senales pero sin coincidencias: "Por ahora no encontramos actividades que encajen con lo que te gusta."  (boton "Explorar actividades")
+  Texto retirado: "Todavía no tenemos recomendaciones para vos. ¡Explorá todas las actividades!"
+Carteles de motivo que puede mostrar cada actividad recomendada (los arma el backend):
+  "Coincide con tu interés en {tipo de actividad}"
+  "Parecida a las clases de {tipo de actividad} que ya hiciste"
+  "Del tipo de actividades que venís mirando: {tipo de actividad}"
+  "De {categoría}, una categoría que te interesa"
+  "Con {nombre y apellido del instructor}, que ya te dio clases"
+  "Mismo nivel que venís haciendo: {nivel}"
+  "Bien calificada por otros alumnos ({rating})"
+  "A {N,N} km tuyo"
+  "A menos de 100 m tuyo"
+  "En tu rango de precio habitual"
+  "Ya la hiciste antes"
+Mensajes de error de los endpoints nuevos (no se muestran en pantalla; el registro de senales falla en silencio):
+  "Tipo de interacción desconocido."
+  "Falta la actividad de la interacción."
+  "Falta el término de la búsqueda."
+  "El término no puede superar los 120 caracteres"
+  "El tipo de interacción es obligatorio"
+
+DETALLE TECNICO:
+Backend (activehub-backend):
+ - Caso de uso nuevo recomendaractividades: GET /api/alumno/recomendaciones?lat&lng&limite, permiso catalogo.explorar. Devuelve {sinSenales, recomendadas[]}, donde cada recomendada trae los mismos campos que el catalogo mas su puntaje y sus motivos.
+ - Caso de uso nuevo registrarinteraccion: POST /api/alumno/interacciones, permiso catalogo.explorar, responde 204. Recibe {tipo, actividadId, termino}.
+ - Dominio nuevo com.activehub.domain.interaccion: entidad InteraccionAlumno (solo-append, no extiende BaseEntity), enum TipoInteraccion (BUSQUEDA, VISTA_ACTIVIDAD) y su repositorio.
+ - El motor son dos clases dentro del propio caso de uso: PerfilDeGustos (resume al alumno en cuatro afinidades: tipo de actividad, categoria, nivel de intensidad e instructor) y RecomendarActividadesService (puntua cada actividad candidata). Mas una clase auxiliar Texto, que normaliza sin tildes para cruzar los terminos buscados contra los nombres del catalogo.
+ - Pesos de las senales sobre las afinidades: interes declarado (tipo 3,0 / categoria 1,2), inscripcion no cancelada (tipo 2,0 / categoria 0,8 / nivel 1,2 / instructor 1,0), favorito (2,0 / 0,8 / 0,6 / 1,0), resenia propia (tipo hasta +-2,0 e instructor hasta +-1,5 segun el puntaje), vista del detalle (tipo 0,6 / categoria 0,25) y busqueda coincidente (0,8).
+ - Decaimiento temporal de las senales de comportamiento: factor 1,0 el ultimo mes, 0,6 hasta los tres meses y 0,3 de ahi en adelante. El interes declarado no decae.
+ - Las cuatro afinidades se normalizan al rango -1 a 1 antes de puntuar, para que un alumno con mucho historial y uno recien llegado se midan con la misma vara.
+ - Formula del puntaje: 4,0 x afinidad de tipo + 2,0 x afinidad de categoria + 1,5 x afinidad de nivel + 1,5 x afinidad de instructor + 1,2 x calidad + 0,8 x afinidad de precio + 1,0 x cercania + 0,6 x disponibilidad, menos 1,0 si el alumno ya hizo esa misma actividad.
+ - Calidad: se deriva del rating de la actividad, donde 3 es neutro; una actividad sin resenias no suma ni resta. Precio: compara contra la MEDIANA de lo que el alumno pago (no el promedio, para que una sola actividad cara no le corra el presupuesto). Cercania: por tramos (2 km, 5 km, 10 km) con la formula de Haversine, solo si el cliente mando sus coordenadas. Disponibilidad: mira la proxima clase y su cupo.
+ - Se excluyen de la lista los favoritos del alumno y las actividades en las que ya tiene una clase futura reservada; las que ya curso si aparecen, penalizadas. Solo entran actividades de instructores verificados (RN-16), reusando ActividadSpecifications.deInstructorVerificado().
+ - Sin ninguna senal, la respuesta viene vacia con sinSenales en true. Un puntaje negativo no se muestra.
+ - Antirrebote de 10 minutos por (alumno, tipo, contenido) al registrar una senal, y minimo de 3 caracteres para un termino de busqueda.
+Frontend (activehub-frontend):
+ - DataContext: funciones nuevas listarRecomendaciones(coordenadas, limite) y registrarInteraccion(tipo, datos). La segunda se traga cualquier error a proposito.
+ - pages/alumno/Home.tsx: se elimino el calculo local de recomendaciones y se reemplazo por la llamada al backend, con sus cuatro estados (cargando, error con Reintentar, sin senales, lista vacia) y los carteles de motivo debajo de cada tarjeta. Se vuelve a pedir cuando llegan las coordenadas del navegador, porque la cercania es parte del puntaje.
+ - pages/alumno/Detalle.tsx: registra la vista de la actividad, solo si hay sesion.
+ - pages/alumno/Explorar.tsx: registra el termino buscado con un retardo de 1 segundo desde la ultima tecla.
+ - La landing publica no se toco.
+
+ESTADO: IMPLEMENTADO y PROBADO. El item 8 del roadmap (motor de recomendaciones) pasa de PENDIENTE a PROBADO, y con el la tercera parte del PENDIENTE 3 de la bitacora ("motor de recomendaciones adaptativo"); lo que queda de ese pendiente es solo lo que depende de un modelo de lenguaje.
+Evidencia: 37 pruebas automatizadas nuevas y prueba manual de extremo a extremo contra la base real (detalle en PRUEBAS).
+
+HISTORIAS DE USUARIO Y CRITERIOS:
+ - E3A-HU01 (inicio del alumno), criterio de "Recomendado para vos": MODIFICADO. Comportamiento nuevo completo: el sistema muestra hasta tres actividades ordenadas por un puntaje calculado sobre seis senales del alumno, cada una con hasta dos motivos visibles; si el alumno no tiene ninguna senal, no se muestra ninguna actividad sino una invitacion a cargar sus intereses; si tiene senales pero ninguna actividad alcanza un puntaje positivo, se muestra el mensaje de que no hay coincidencias.
+ - E3A-HU13 (NUEVO, propuesto; la serie E3A llegaba hasta HU12): "Como alumno quiero que la plataforma me recomiende actividades en base a mis intereses y a lo que ya hice, para descubrir actividades que me puedan gustar sin tener que buscarlas."
+   Criterio 1: "Cuando entro al inicio y tengo intereses declarados o historial / Espero ver actividades elegidas para mi, ordenadas de mas a menos afin." - IMPLEMENTADO y PROBADO.
+   Criterio 2: "Cuando veo una actividad recomendada / Espero entender por que me la recomiendan." - IMPLEMENTADO y PROBADO.
+   Criterio 3: "Cuando no declare intereses y no tengo historial / Espero que el sistema no invente recomendaciones y me invite a cargar mis intereses." - IMPLEMENTADO y PROBADO.
+   Criterio 4: "Cuando me inscribo a una clase, marco un favorito, califico, miro una actividad o busco algo / Espero que las recomendaciones siguientes lo tengan en cuenta." - IMPLEMENTADO y PROBADO.
+   Criterio 5: "Cuando califique mal una actividad / Espero que el sistema no me recomiende mas de lo mismo." - IMPLEMENTADO. PROBADO con prueba automatizada.
+   Criterio 6: "Cuando ya tengo una actividad en favoritos o ya me anote a una clase futura de ella / Espero que no me la recomienden de nuevo." - IMPLEMENTADO. PROBADO con prueba automatizada.
+   Criterio 7: "Cuando doy permiso de ubicacion / Espero que las actividades cercanas tengan prioridad." - IMPLEMENTADO y PROBADO.
+   Criterio 8: "Cuando no doy permiso de ubicacion / Espero que el sistema no afirme distancias que no puede calcular." - IMPLEMENTADO y PROBADO.
+ - E3A-HU03 (busqueda y filtrado): sin cambios en su comportamiento. El filtrado de Explorar sigue siendo el mismo; lo unico que se agrega es el registro del termino buscado, que no altera los resultados de esa pantalla.
+
+PANTALLAS:
+ - MODIFICADA: E3A-PAN-01 "Inicio del alumno" - la seccion "Recomendado para vos" cambia de contenido, de estados y de textos.
+ - MODIFICADAS sin cambio visible: E3A-PAN-02 "Explorar" y E3A-PAN-04 "Detalle de actividad" (ver nota), que ahora registran senales de comportamiento sin alterar lo que se ve.
+   NOTA: los codigos E3A-PAN-02 y E3A-PAN-04 se asignan por correspondencia con los archivos Explorar.tsx y Detalle.tsx y NO estan verificados contra el catalogo del informe (ver la observacion de la ENTRADA 001).
+ - Nuevas: ninguna. Retiradas: ninguna.
+
+REGLAS DE NEGOCIO:
+ - RN-21 (NUEVA, propuesta; la serie llegaba hasta RN-20): "El sistema solo recomienda actividades a un alumno del que tiene al menos una senal de interes: un interes deportivo declarado, una inscripcion no cancelada, un favorito, una resenia, una vista de actividad o una busqueda que coincida con el catalogo. Sin ninguna senal no se muestra ninguna recomendacion. Tampoco se recomienda una actividad cuyo puntaje calculado no sea positivo, ni una que el alumno ya tenga en favoritos o en la que ya tenga una clase futura reservada."
+ - RN-16 (solo opera oferta de instructores verificados): se aplica tambien a las recomendaciones, sin cambios en su texto.
+
+MODULOS: Busqueda y Filtrado; Alumno; Actividades; Auditoria y Trazabilidad (no se audita la lectura de recomendaciones, pero si queda registro de las senales en su propia tabla).
+
+CASOS DE USO: nuevos - recomendaractividades, registrarinteraccion. Total: 107 -> 109.
+
+ENTIDADES Y MIGRACIONES: migracion V27__interaccion_alumno. Crea la tabla interaccion_alumno (id, usuario_id, tipo, actividad_id, termino, created_at) con un indice por (usuario_id, created_at DESC). Entidad nueva InteraccionAlumno y enum nuevo TipoInteraccion. No modifica ninguna tabla existente. Es idempotente, como exige el trabajo contra el pooler de Supabase.
+
+TECNOLOGIAS: ninguna nueva. No se agrego ninguna dependencia al pom.xml ni al package.json: el motor es codigo propio, sin biblioteca de aprendizaje automatico ni modelo entrenado. Es un sistema de recomendacion basado en contenido (compara las caracteristicas de las actividades contra un perfil de gustos construido con el comportamiento del alumno), calculado en el momento de cada pedido.
+
+COSTOS: sin impacto. La tabla nueva ocupa unos pocos bytes por interaccion dentro de la misma base de Supabase ya en uso.
+
+RIESGOS:
+ - R03 (concurrencia en la ocupacion de cupos) - sin cambios: las recomendaciones no reservan nada.
+ - R04 (ambigüedad de reglas de negocio) - vigente - evidencia: la especificacion pide un motor de recomendaciones pero no define con que senales ni con que pesos; los criterios de E3A-HU13 y la regla RN-21 se proponen en esta entrada y hay que confirmarlos con la catedra.
+ - R06 (pruebas insuficientes) - mitigado parcialmente - evidencia: 37 pruebas automatizadas nuevas; el frontend sigue sin pruebas.
+ - Riesgo nuevo R17 (propuesto): las recomendaciones dependen de datos de comportamiento del alumno, que son datos personales. Probabilidad: baja. Impacto: medio. Medida preventiva: la tabla no se expone en ningun endpoint de lectura, ni siquiera al propio alumno; el termino buscado se valida con @SinHtml y se recorta a 120 caracteres; el actor sale siempre del token. Medida correctiva: la tabla se puede vaciar sin afectar ninguna otra funcionalidad, porque el motor vuelve a funcionar con las senales que ya viven en el modelo.
+ - Riesgo nuevo R18 (propuesto): el motor recorre todo el catalogo en memoria en cada pedido. Probabilidad: baja hoy (el catalogo tiene 10 actividades). Impacto: medio si el catalogo creciera mucho. Medida preventiva: el tope de interacciones leidas es 200 y el resultado se recorta a 20 como maximo. Medida correctiva: si el catalogo creciera, hay que pre-filtrar las candidatas por afinidad antes de puntuarlas.
+
+SEGURIDAD:
+ - Los dos endpoints exigen sesion y el permiso catalogo.explorar; el alumno sale siempre del token, nunca de un parametro, asi que nadie puede pedir las recomendaciones de otro ni ensuciar las de otro.
+ - El termino buscado lleva @SinHtml y un maximo de 120 caracteres.
+ - Las senales de comportamiento no se devuelven en ningun endpoint.
+
+PRUEBAS:
+Automatizadas nuevas: 37 pruebas en 4 archivos nuevos.
+ - src/test/java/com/activehub/usecases/recomendaractividades/RecomendarActividadesServiceTest.java - 21 pruebas unitarias de servicio (incluye los tres defectos que se venian a corregir: que ordena por puntaje, que mira el historial y no solo los intereses, y que dos alumnos con los mismos intereses y distinto historial obtienen resultados distintos).
+ - src/test/java/com/activehub/usecases/recomendaractividades/RecomendarActividadesControllerTest.java - 3 pruebas de controlador.
+ - src/test/java/com/activehub/usecases/registrarinteraccion/RegistrarInteraccionServiceTest.java - 10 pruebas unitarias de servicio.
+ - src/test/java/com/activehub/usecases/registrarinteraccion/RegistrarInteraccionControllerTest.java - 3 pruebas de controlador.
+Resultado completo de la suite del backend, ejecutada el 2026-09-22 con el comando JAVA_HOME=C:\Users\Facundo\.jdks\corretto-21.0.10 ./mvnw -B test:
+  "Tests run: 780, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS".
+Antes de este cambio eran 743 pruebas en 175 archivos; ahora son 780 en 179 archivos.
+Pruebas automatizadas del frontend: siguen sin existir (PENDIENTE 6). Se ejecutaron el typecheck (npx tsc -b, sin errores) y ESLint.
+Manuales ejecutadas el 2026-09-22 contra una instancia aislada en el puerto 8093, con la base real y el correo en modo registro:
+ - Datos usados: cuenta de alumno de prueba creada y dada de baja en la misma sesion, con correo e2e-reco-<marca de tiempo>@activehub.test. No es un usuario de demostracion para evaluadores.
+ - Caso 1: pedir recomendaciones sin intereses ni historial. Resultado obtenido: {"sinSenales":true,"recomendadas":[]}. APROBADA.
+ - Caso 2: cargar el interes "Yoga" y volver a pedir. Resultado obtenido: primera "Yoga al amanecer" con puntaje 7,46 y motivos ["Coincide con tu interés en Yoga","Bien calificada por otros alumnos (4.4)"]; detras, actividades de la categoria Bienestar con puntajes 2,60 y 1,93. APROBADA.
+ - Caso 3: registrar la vista del detalle de una actividad de Trekking y volver a pedir. Resultado obtenido: aparecen "Trekking por la montaña" (3,37) y "Trekking Cordón del Plata" (2,19), las dos con el motivo "Del tipo de actividades que venís mirando: Trekking", que antes no estaban en la lista. APROBADA. Es la evidencia de que el motor aprende del comportamiento.
+ - Caso 4: registrar dos veces la misma busqueda y la misma vista dentro de la ventana de 10 minutos. Resultado obtenido: HTTP 204 en las cuatro llamadas y una sola fila guardada por cada una (el puntaje no se movio en la segunda). APROBADA.
+ - Caso 5: pedir recomendaciones con coordenadas de Mendoza. Resultado obtenido: los motivos incluyen "A 0.6 km tuyo". APROBADA, con la observacion del formato que se corrigio (ver ERRORES DETECTADOS).
+ - Caso 6: baja de la cuenta de prueba. Resultado obtenido: HTTP 204 y login posterior HTTP 401. APROBADA.
+ - Archivo de evidencia: no se guardo; las salidas quedaron en la sesion de trabajo.
+ - NO se probo la pantalla en el navegador. El frontend quedo verificado con typecheck y ESLint.
+
+ANALISIS ESTATICO: ESLint ejecutado en activehub-frontend con "npx eslint ." el 2026-09-22. Resultado: 0 errores, 11 advertencias. Salida literal: "11 problems (0 errors, 11 warnings)". Cambio respecto de la linea de base (12 advertencias): desaparecio una advertencia de react-hooks/exhaustive-deps del Home, porque el useMemo que calculaba las recomendaciones dejo de existir. Durante el desarrollo aparecio 1 error de la regla react-hooks/set-state-in-effect ("Calling setState synchronously within an effect can trigger cascading renders"), que se corrigio antes de cerrar (ver ERRORES DETECTADOS).
+
+DESPLIEGUE Y CONFIGURACION: sin variables de entorno nuevas. La migracion V27 se aplica sola al arrancar el backend o al correr la suite.
+
+DECISIONES:
+ - Motor basado en contenido y calculado en el momento, sin modelo entrenado ni biblioteca de aprendizaje automatico. Justificacion: con un catalogo de diez actividades y pocos alumnos no hay datos para entrenar nada, y un motor explicable es lo que permite mostrar el por que de cada recomendacion y defenderlo en la presentacion. Alternativa descartada: filtrado colaborativo (recomendar lo que le gusto a alumnos parecidos), que necesita una masa de usuarios que el sistema no tiene y no sabria explicar sus resultados.
+ - El calculo va en el backend y no en el cliente. Justificacion: las senales viven en la base, el puntaje tiene que ser el mismo para cualquier cliente y el cliente no deberia poder ver el historial completo del alumno para calcularlo.
+ - Sin senales no se recomienda nada. Justificacion: rellenar con las primeras actividades del catalogo y rotularlas "Recomendado para vos" es una afirmacion falsa. Alternativa descartada: mostrar las mejor calificadas como respaldo, que es lo que ya hace la landing publica.
+ - Guardar las vistas y las busquedas en una sola tabla. Justificacion: son el mismo hecho y el motor las consume juntas y con el mismo decaimiento.
+ - Registrar las senales con un endpoint propio en vez de deducirlas del trafico. Justificacion: ver una actividad pega a un endpoint publico y buscar no pega a ninguno, porque el filtrado de Explorar es del lado del cliente.
+ - Excluir los favoritos de la lista pero conservarlos como senal. Justificacion: el alumno ya los tiene guardados; recomendarle lo que ya eligio no le descubre nada.
+ - Usar la mediana y no el promedio para el precio habitual. Justificacion: una sola actividad cara corre el promedio y arruina el resto de las recomendaciones.
+ - Ambigüedad resuelta: la especificacion no define las senales ni los pesos del motor. Se eligieron los seis que ya estaban disponibles en el modelo mas las dos que faltaban, y los pesos quedaron documentados y centralizados en constantes para poder ajustarlos.
+
+ERRORES DETECTADOS:
+ - Sintoma: registrar la vista de una actividad devolvia HTTP 500. Causa: la consulta de antirrebote era una sola para los dos tipos de senal y recibia null en el parametro de texto cuando se trataba de una vista; Postgres interpreta ese null sin tipo como bytea y la funcion lower(bytea) no existe. Correccion: se separo en dos consultas, una por tipo de senal, sin parametros opcionales. Como se detecto: ejecutando el flujo contra la base real. Ninguna prueba automatizada con objetos simulados podia detectarlo, porque el error solo existe cuando la consulta llega a la base; queda anotado como argumento a favor de probar siempre contra la base antes de dar un caso de uso por terminado.
+ - Sintoma: ESLint reportaba 1 error, "Calling setState synchronously within an effect can trigger cascading renders", en el Home. Causa: la funcion de carga de recomendaciones prendia el indicador de carga de forma sincrona dentro del efecto. Correccion: el indicador arranca encendido y solo el boton "Reintentar", que es un evento del usuario, lo vuelve a prender. Como se detecto: corriendo ESLint antes de cerrar.
+ - Sintoma: el motivo de cercania decia "A 0.0 km tuyo" y el de calificacion "(4.4)". Causa: se formateaban los numeros con punto decimal y sin caso especial para distancias muy chicas. Correccion: coma decimal, y por debajo de 100 metros el texto es "A menos de 100 m tuyo". Como se detecto: leyendo la respuesta real del endpoint.
+
+CAPTURAS SUGERIDAS:
+ recomendaciones-home.png - la seccion "Recomendado para vos" con tres actividades y sus carteles de motivo visibles.
+ recomendaciones-sin-senales.png - el estado "Todavía no sabemos qué recomendarte." con los dos botones.
+ recomendaciones-respuesta-api.png - la respuesta del endpoint mostrando puntaje y motivos de cada actividad.
+ recomendaciones-antes-despues.png - comparacion del orden antes y despues de registrar una vista de Trekking.
+ suite-backend-780.png - consola con "Tests run: 780, Failures: 0, Errors: 0, Skipped: 0" y "BUILD SUCCESS".
+ migracion-v27.png - el archivo V27__interaccion_alumno.sql y la tabla creada en el panel de Supabase.
+
+PENDIENTE QUE QUEDA:
+ - Probar la seccion en el navegador y sacar las capturas.
+ - Confirmar con la catedra los codigos propuestos E3A-HU13, RN-21, R17 y R18, y sus textos.
+ - Ajustar los pesos del motor con datos reales de uso, si la catedra lo pide: hoy estan elegidos por criterio y documentados, no calibrados con datos.
+ - Pruebas automatizadas del frontend de esta seccion (PENDIENTE 6).
+ - Evaluar si conviene mostrar recomendaciones tambien en Explorar; hoy esa pantalla sigue siendo filtrado tradicional a proposito.
+=== FIN ENTRADA 004 ===
+
+
+=== ENTRADA 005 ===
+FECHA: 2026-09-22
+REPOSITORIO: ambos
+RAMA Y COMMITS: integracion - sin commit al momento de este registro - sin Pull Request
+TIPO: DATOS/MIGRACION
+TITULO: Baja de la actividad de prueba "Trekking por el campo", borrado de su imagen y cierre de los pendientes de la ENTRADA 003
+
+QUE CAMBIA PARA EL USUARIO: la actividad de prueba "Trekking por el campo" ya no figura en el catalogo, asi que ningun Alumno la ve al explorar ni puede inscribirse a ella. No cambia nada mas para ningun rol.
+
+TEXTOS DE INTERFAZ (literales): sin cambios
+
+DETALLE TECNICO:
+ - El usuario elimino la actividad "Trekking por el campo" (id 64c1f787-9a0b-4b3d-8364-7c09ef2b13a9, instructor Pepe Instructor, categoria Defensa Personal, precio 99999, sin clases asociadas) desde la aplicacion, con una cuenta con permiso. La baja del sistema es logica (soft-delete), como toda entidad de catalogo.
+ - Se borro el archivo de su imagen del disco del backend: activehub-backend/uploads/fotos-actividad/e388a07b-5c2d-4d85-9f5a-0b8c63aafa42.png (289.342 bytes). Era el mismo archivo para la portada y para la unica imagen de su galeria. La carpeta quedo con 12 archivos (antes 13).
+ - Ese archivo nunca se subio al bucket de Supabase: se omitio a proposito en la migracion de la ENTRADA 003.
+ - Se agrego una cabecera al propio archivo de bitacora (arriba del bloque ESTADO GENERAL) con las reglas de mantenimiento, la terminologia y los codigos del proyecto, la linea de base del informe y la lista de campos de cada entrada. Motivo: que el archivo sea autosuficiente y se pueda seguir manteniendo sin depender del historial de la conversacion.
+ - Se agrego en la cabecera de los dos CLAUDE.md (backend y frontend) un bloque que remite a esta bitacora y resume sus reglas, para que quede a la vista de cualquiera que trabaje en los repositorios.
+
+ESTADO: los dos pendientes que dejo abiertos la ENTRADA 003 quedan cerrados: la baja de la actividad de prueba (IMPLEMENTADA por el usuario) y el borrado de su imagen local (IMPLEMENTADO y verificado por listado del directorio).
+La baja de la actividad esta INFORMADA POR EL USUARIO y NO fue verificada contra la base: al momento de este registro no habia ninguna instancia del backend levantada. Queda como verificacion pendiente comprobar que la actividad no figura en GET /api/actividades.
+
+HISTORIAS DE USUARIO Y CRITERIOS: sin cambios
+PANTALLAS: sin cambios
+REGLAS DE NEGOCIO: sin cambios
+MODULOS: Actividades
+CASOS DE USO: sin cambios. La baja se hizo con eliminaractividad, ya existente.
+ENTIDADES Y MIGRACIONES: sin migracion. Es un dato, no un cambio de modelo.
+TECNOLOGIAS: sin cambios
+COSTOS: sin impacto
+RIESGOS: sin cambios
+SEGURIDAD: sin cambios
+PRUEBAS: automatizadas nuevas: ninguna. El usuario informa haber probado en el navegador la seccion "Recomendado para vos" de la ENTRADA 004; esa prueba la ejecuto el usuario y no esta documentada caso por caso en esta bitacora, asi que no se registra como PRU-xx ni se detalla su resultado.
+ANALISIS ESTATICO: no se ejecuto en esta tarea. El resultado vigente sigue siendo el de la ENTRADA 004 (0 errores, 11 advertencias).
+DESPLIEGUE Y CONFIGURACION: sin cambios
+DECISIONES: la baja de la actividad la hizo el usuario desde la aplicacion, y no se hizo por consulta directa a la base ni creando una cuenta de administrador temporal. Justificacion: pasar por el caso de uso ejecuta la cascada y las validaciones del sistema, y evita crear y despues borrar una cuenta con permisos en la base compartida del equipo. Alternativas descartadas: modificar la fila por SQL (se saltea las reglas de negocio) y sembrar un administrador temporal (deja rastro de alta y baja en la auditoria).
+ERRORES DETECTADOS: sin cambios
+CAPTURAS SUGERIDAS:
+ catalogo-sin-actividad-de-prueba.png - la pantalla Explorar del alumno, sin la actividad "Trekking por el campo".
+PENDIENTE QUE QUEDA:
+ - Verificar contra la base, la proxima vez que haya un backend levantado, que "Trekking por el campo" no figura en el catalogo.
+ - Commitear los cambios de las ENTRADAS 004 y 005 en los dos repositorios.
+=== FIN ENTRADA 005 ===
