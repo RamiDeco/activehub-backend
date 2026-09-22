@@ -13,7 +13,8 @@ API REST de ActiveHub: plataforma de gestión de actividades deportivas/recreati
 - Pagos: interfaz `PaymentGateway` con **MockPaymentGateway** activo (sin integración real con Mercado Pago todavía — ítem 12 del roadmap).
 - **Redis quedó descartado, no diferido.** Su única función prevista era el bloqueo temporal de cupo; el control de concurrencia se resolvió con un `UPDATE` condicional atómico en Postgres (ver `ClaseRepository.ocuparCupo`), que es más simple y no agrega un segundo almacén que pueda desincronizarse. No volver a proponerlo sin un caso de uso nuevo que lo justifique.
 - Sin deploy: todo corre en local (`./mvnw spring-boot:run`) contra la base de Supabase. Render/Vercel siguen pendientes.
-- Tamaño actual: **105 casos de uso**, **26 migraciones** (V1 a V26), **18 claves de permiso**.
+- Archivos subidos: interfaz `AlmacenamientoArchivos` (`shared/storage/`) con dos implementaciones — **disco** (por defecto) y **Supabase Storage** (se activa solo si hay credenciales). Ver "Almacenamiento de archivos" más abajo.
+- Tamaño actual: **107 casos de uso**, **26 migraciones** (V1 a V26), **18 claves de permiso**.
 
 ## Arquitectura — POR CASOS DE USO (vertical slice). NO negociable.
 - **Cada caso de uso = un paquete bajo `com.activehub.usecases.<verbo+sustantivo>/`** con exactamente: `XxxController`, `XxxService`, `XxxRequest` (DTO in, cuando aplica), `XxxResponse` (DTO out).
@@ -61,9 +62,9 @@ Se descartó Google Maps Platform (exige cuenta de facturación con tarjeta incl
 - **La distancia y el filtro por radio están implementados del lado del cliente**, con la fórmula de Haversine contra la geolocalización del navegador (`lib/geo.ts` del frontend). Alimentan "Cerca de tu ubicación" del Home, el orden "Cercanas" y el filtro de radio de Explorar. **No hay consulta espacial en el backend ni extensión PostGIS**, y no hace falta: es coherente con la convención de "el backend devuelve todo sin paginar y el frontend agrega/filtra/ordena".
 - Lo único que queda del ítem: si alguna vez el catálogo crece lo suficiente como para que filtrar en el cliente deje de ser viable, habrá que mover el filtro por radio a una consulta del servidor. Hoy no es un problema.
 
-**Ítem 10 — Imágenes: HECHO contra disco local; falta la nube.**
+**Ítem 10 — Imágenes: HECHO, y el destino ya puede ser Supabase Storage.**
 
-`photoTint` dejó de ser lo único que había. Existen los endpoints de subida y lectura (`subirfotoactividad`, `agregarimagenactividad`, `eliminarimagenactividad`, `verfotoactividad`, `verimagenactividad`, `subirfotoperfil`, `verfotoperfil`, `subirdocumento`, `descargardocumentoinstructor`), con validación de tipo MIME, extensión y tamaño (5MB), renombrado con id propio y reversión de la escritura en disco si la transacción hace rollback. Los archivos se guardan en el filesystem del backend, en las rutas de `app.storage.*`. **Lo pendiente es sólo el destino**: mover el almacenamiento a Supabase Storage. Como toda la escritura pasa por un único punto por tipo de archivo, el cambio no toca los usecases.
+`photoTint` dejó de ser lo único que había. Existen los endpoints de subida y lectura (`subirfotoactividad`, `agregarimagenactividad`, `eliminarimagenactividad`, `verfotoactividad`, `verimagenactividad`, `subirfotoperfil`, `verfotoperfil`, `subirdocumento`, `descargardocumentoinstructor`), con validación de tipo MIME, extensión y tamaño (5MB), renombrado con id propio y reversión de la escritura en disco si la transacción hace rollback. Los nueve usecases ya no tocan el filesystem: escriben y leen por `AlmacenamientoArchivos`, y el destino lo decide la configuración (disco o Supabase Storage). Ver la sección propia más abajo. **Lo que queda del ítem** es operativo, no de código: crear el bucket en el proyecto de Supabase, cargar las variables de entorno en el despliegue y migrar los archivos que hoy están en `./uploads`. Sigue faltando también la optimización de imágenes (redimensionado/compresión al subir), que nunca se implementó.
 
 **Ítem 11 — IA y chatbot: la UI existe, el modelo no.**
 
@@ -73,8 +74,9 @@ El widget flotante de chat funciona y responde por coincidencia de palabras cont
 
 - **8. Motor de recomendaciones en Búsqueda** — hoy el filtrado de `/alumno/explorar` es tradicional (texto sin tildes, categoría, tipo en cascada, nivel, precio, cupos, fecha, franja horaria, radio de cercanía, instructor, orden). El "Recomendado para vos" del Home cruza los intereses declarados del alumno contra el `tipoActividadId` de cada actividad (V19), pero no aprende de búsquedas ni de inscripciones previas.
 - **12. Mercado Pago real** — al final, según lo acordado con el usuario. `PaymentGateway` ya tiene el contrato listo para enchufar el SDK real sin tocar los usecases que lo usan; toda la máquina de estados (`Retenido` → `Liberado`/`Cancelado`), la acreditación automática y los reintegros ya funcionan contra el mock.
-- **Deploy** (Render/Vercel) — la aplicación ya está lista (puerto, DB, CORS, secreto JWT y credenciales externas son variables de entorno), pero el despliegue no se hizo.
-- **Recuperación de contraseña por olvido** — nunca tuvo HU ni pantalla. El usuario autenticado sí puede cambiar su contraseña y su correo.
+- **Deploy** (Render/Vercel) — la aplicación ya está lista (puerto, DB, CORS, secreto JWT, credenciales externas y ahora el bucket de Supabase Storage son variables de entorno), pero el despliegue no se hizo.
+
+**Recuperación de contraseña por olvido: HECHA** (ver la sección propia más abajo). Era el único camino de credenciales que faltaba; el usuario autenticado ya podía cambiar su contraseña y su correo.
 
 ## Las 7 decisiones del usuario (resueltas — no reabrirlas sin que él lo pida)
 
@@ -326,6 +328,33 @@ Lo demás vive en `shared/email/`: `VerificacionEmailService` (emitir/reemitir/v
 
 `PlantillaEmail` es HTML de tablas con todo el CSS inline a propósito: Outlook renderiza con Word y Gmail borra el `<head>`. No agregar Thymeleaf para interpolar tres variables. Los colores son los mismos hex del frontend. `PlantillaEmailTest` escribe los dos mails en `target/mails-preview/` para poder abrirlos en el navegador — es la única forma real de revisar un diseño de mail sin mandarlo.
 
+## Recuperar la contraseña olvidada: el código habilita UNA cosa
+
+Dos slices públicos, sin sesión, con el mismo código de 6 dígitos de V26: `solicitarrecuperacionpassword` (`POST /api/auth/recuperar-password`) y `restablecerpassword` (`POST /api/auth/recuperar-password/confirmar`). **No hay tabla ni migración nueva**: se reusa `verificacion_email` con un `PropositoVerificacion` nuevo, `RECUPERACION_PASSWORD`. Los dos endpoints están en la lista `permitAll` de `SecurityConfig`, por la razón obvia: los pide quien no puede entrar.
+
+Lo que no es obvio y hay que respetar:
+
+- **La respuesta de "pedir el código" es la MISMA exista o no la cuenta.** Si contestara distinto sería un oráculo de enumeración: probando direcciones se averigua quién está registrado. Por eso los tres desenlaces que no emiten nada —no hay cuenta, es de Google, el correo no está verificado— devuelven el mismo `{envioHabilitado, ttlMin}` que el caso feliz, y por eso **se traga el `DemasiadosIntentosException`** de la espera entre reenvíos: dejar salir el 429 sólo para los correos registrados vuelve a delatar cuáles existen. El mismo criterio en el paso 2: correo inexistente, cuenta de Google y código de otro propósito devuelven el **mismo texto** que un código equivocado.
+- **Sólo se recupera una cuenta verificada y `LOCAL`.** Un correo sin confirmar puede ser de cualquiera (es la regla de V26), así que mandarle un código sería mandárselo a quien lo tipeó y no a quien lo tiene; y una cuenta de Google no tiene contraseña utilizable, así que "recuperarla" no le devuelve el acceso.
+- **El propósito se verifica ANTES de consumir el código.** `VerificacionEmailService.validar` valida el **último** código del usuario sea cual sea su propósito, y al validarlo lo marca como usado: si el propósito se mirara después, un código de alta o de cambio de correo se consumiría acá antes de ser rechazado y el usuario lo perdería sin haberlo usado. Se lee primero con `findFirstByUsuarioIdOrderByCreatedAtDesc` y recién entonces se valida.
+- **No devuelve token: restablecer no inicia sesión.** Escribir la contraseña una vez en el login es lo que confirma que se la guardó.
+- **Las sesiones abiertas siguen abiertas.** El JWT es stateless y no hay tabla de sesiones; un token emitido antes del cambio vale hasta que venza (30 min). Está asumido: lo que cierra el acceso es que la contraseña vieja ya no sirve para sacar uno nuevo. Si algún día hace falta cortar en el acto, el camino es un claim de versión de credencial en el token, **no** una tabla de sesiones.
+- Audita con `AuditAccion.PASSWORD_RESTABLECIDA`, distinta de `PASSWORD_CAMBIADA`: esa la hace alguien que ya estaba adentro y sabía la anterior.
+- La política de la contraseña nueva es la misma RN-20 de siempre, en el Request DTO.
+
+## Almacenamiento de archivos: una interfaz, disco o Supabase Storage
+
+`shared/storage/AlmacenamientoArchivos` es la misma clase de costura que `PaymentGateway`: los **nueve** usecases que suben o leen archivos (`subirfotoperfil`, `verfotoperfil`, `subirfotoactividad`, `verfotoactividad`, `agregarimagenactividad`, `eliminarimagenactividad`, `verimagenactividad`, `subirdocumento`, `descargardocumentoinstructor`, más `registrarinstructor`) **ya no conocen el filesystem**. Ninguno vuelve a importar `java.nio.file`.
+
+- **Tres métodos y un enum.** `guardar` / `leer` / `borrarSiExiste`, y `CarpetaArchivos` (`FOTOS_PERFIL`, `FOTOS_ACTIVIDAD`, `DOCUMENTOS_INSTRUCTOR`) decide el directorio en disco o el prefijo dentro del bucket.
+- **`borrarSiExiste` NUNCA lanza**, y es parte del contrato: se llama para limpiar una foto ya reemplazada o un huérfano de un rollback, y fallar ahí convertiría una operación exitosa en un error para el usuario.
+- **En la base se guarda sólo el NOMBRE del archivo**, nunca una ruta ni una URL. Es exactamente lo que permitió cambiar el destino sin migrar una fila, y hay que mantenerlo: una URL de Supabase ata las filas a un proyecto concreto y deja de resolver el día que el bucket cambie.
+- **La implementación se elige por configuración presente, no por un flag** (`AlmacenamientoConfig`). Con `SUPABASE_STORAGE_URL` y `SUPABASE_STORAGE_SERVICE_KEY` cargadas se usa Supabase; con alguna vacía, disco. Un `modo=supabase` sería una tercera cosa que puede quedar desincronizada de las credenciales (encendido sin clave: todo falla; apagado con clave: el despliegue escribe en un disco que se borra solo). **El modo elegido se loguea al arrancar** — es la forma de darse cuenta de que a un despliegue no le llegó una variable.
+- **El bucket es PRIVADO y los archivos se siguen sirviendo por nuestra API.** No se generan URLs públicas ni firmadas. La documentación del instructor son DNI y certificados de terceros: en un bucket público, adivinar la URL alcanza para leerlos salteando el permiso que hoy los protege. Efecto colateral bueno: el frontend no cambió ni una línea. El costo es que cada imagen viaja dos veces (Supabase → backend → navegador), despreciable con el `Cache-Control` de una hora que ya mandan esos endpoints.
+- **`AlmacenamientoSupabase` habla REST a mano con `HttpClient`** (PUT/GET/DELETE sobre `/storage/v1/object/{bucket}/{carpeta}/{nombre}`, con `Authorization: Bearer` y `x-upsert: true`), sin SDK: mismo criterio que `GoogleIdTokenVerifier`. El cliente HTTP se **inyecta** para poder testearlo sin un proyecto de Supabase.
+- **La clave es la `service_role`**, que saltea RLS: sólo backend, nunca en el frontend ni versionada.
+- **Disco sigue siendo el modo por defecto y el de desarrollo**, y es efímero en la nube: en Render el contenedor pierde su disco en cada despliegue. Ése es el motivo de todo esto.
+
 ## "Continuar con Google": el ID token se valida localmente
 
 `POST /api/auth/google` recibe el ID token de Google Identity Services y **es alta y login a la vez**: nadie que aprieta ese botón sabe si "ya tiene cuenta", eligió una identidad.
@@ -403,7 +432,7 @@ Reportado: *"en TODAS las búsquedas del sistema, que no distinga entre tildes y
 - **Zona horaria:** todo se guarda como `Instant` (UTC), pero cuando hay que pasar a calendario ("qué día de la semana es", "venció hoy") la respuesta depende de la zona **del negocio**, no del servidor: usar `shared/time/Zonas.AR`. La constante estaba duplicada en tres servicios; la última copia que quedaba (`LevantarSuspensionesVencidasService`) también se sacó.
 
 ## Tests
-Cada slice "andando" = test de Service (regla + caso de error, ej. duplicado/en-uso/no-encontrado/sin-permiso) y test de Controller (status + shape del DTO) en verde. Antes de dar por terminado un cambio, correr la suite completa, no solo el paquete tocado. **Hoy: 706 tests en verde en 169 clases, y ningún caso de uso sin test de Service.**
+Cada slice "andando" = test de Service (regla + caso de error, ej. duplicado/en-uso/no-encontrado/sin-permiso) y test de Controller (status + shape del DTO) en verde. Antes de dar por terminado un cambio, correr la suite completa, no solo el paquete tocado. **Hoy: 743 tests en verde en 175 clases, y ningún caso de uso sin test de Service.**
 
 **`./mvnw test` SÍ necesita la base.** La mayoría de los tests son unitarios con mocks o `@WebMvcTest` y no la tocan, pero los `@SpringBootTest` (`ActivehubApiApplicationTests`, `CatalogoPublicoTest`, `BusquedaSinTildesTest`) levantan el contexto completo contra Supabase — ver la sección "Los tests corren contra la base REAL". Sin conexión, la suite no pasa.
 

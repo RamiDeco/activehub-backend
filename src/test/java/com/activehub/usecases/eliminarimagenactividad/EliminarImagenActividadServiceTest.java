@@ -13,6 +13,7 @@ import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
+import com.activehub.shared.storage.AlmacenamientoDisco;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,8 +43,10 @@ class EliminarImagenActividadServiceTest {
     @BeforeEach
     void setUp() throws IOException {
         directorio = Files.createTempDirectory("ah-imagenes-del-test");
+        AlmacenamientoDisco almacenamiento =
+                new AlmacenamientoDisco(directorio.toString(), directorio.toString(), directorio.toString());
         service = new EliminarImagenActividadService(
-                actividadRepository, actividadImagenRepository, auditService, directorio.toString());
+                actividadRepository, actividadImagenRepository, auditService, almacenamiento);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();

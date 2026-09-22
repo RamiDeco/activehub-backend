@@ -25,6 +25,7 @@ import com.activehub.shared.error.DniEnUsoException;
 import com.activehub.shared.error.EmailEnUsoException;
 import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.security.JwtService;
+import com.activehub.shared.storage.AlmacenamientoDisco;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -72,10 +73,12 @@ class RegistrarInstructorServiceTest {
     @BeforeEach
     void setUp() throws IOException {
         directorio = Files.createTempDirectory("ah-docs-instructor-test");
+        AlmacenamientoDisco almacenamiento =
+                new AlmacenamientoDisco(directorio.toString(), directorio.toString(), directorio.toString());
         service = new RegistrarInstructorService(
                 usuarioRepository, rolRepository, perfilInstructorRepository, documentoInstructorRepository,
                 passwordEncoder, jwtService, auditService, verificacionEmailService, googleIdTokenVerifier,
-                directorio.toString());
+                almacenamiento);
 
         Rol rolInstructor = new Rol();
         rolInstructor.setNombre(RolNombre.INSTRUCTOR.name());

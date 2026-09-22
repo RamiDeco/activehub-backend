@@ -10,6 +10,7 @@ import com.activehub.domain.usuario.PerfilInstructor;
 import com.activehub.domain.usuario.PerfilInstructorRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.error.NoEncontradoException;
+import com.activehub.shared.storage.AlmacenamientoDisco;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -40,8 +41,10 @@ class DescargarDocumentoInstructorServiceTest {
 
     @BeforeEach
     void setUp() {
+        AlmacenamientoDisco almacenamiento =
+                new AlmacenamientoDisco(tempDir.toString(), tempDir.toString(), tempDir.toString());
         service = new DescargarDocumentoInstructorService(
-                perfilInstructorRepository, documentoInstructorRepository, tempDir.toString());
+                perfilInstructorRepository, documentoInstructorRepository, almacenamiento);
 
         instructorId = UUID.randomUUID();
         Usuario usuario = new Usuario();

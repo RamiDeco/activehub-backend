@@ -42,6 +42,12 @@ public class SecurityConfig {
                                 "/api/auth/registro/alumno",
                                 "/api/auth/registro/instructor",
                                 "/api/auth/login",
+                                // "¿Olvidaste tu contraseña?": las pide quien justamente no
+                                // puede iniciar sesión, así que exigir token las haría
+                                // inalcanzables. Ninguna de las dos revela si la cuenta
+                                // existe — ver SolicitarRecuperacionPasswordService.
+                                "/api/auth/recuperar-password",
+                                "/api/auth/recuperar-password/confirmar",
                                 // "Continuar con Google" pasa por acá justamente para NO tener
                                 // sesión todavía. La credencial es el ID token, que se verifica
                                 // contra las claves públicas de Google (GoogleIdTokenVerifier).

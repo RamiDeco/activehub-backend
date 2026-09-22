@@ -1,0 +1,310 @@
+BITACORA DEL INFORME - PROYECTO FINAL ActiveHub (UTN FRM)
+Repositorio: activehub-backend
+Archivo espejo: activehub-frontend/docs/BITACORA-INFORME.txt
+
+=== ESTADO GENERAL (actualizado: 2026-09-22) ===
+Casos de uso implementados en el backend: 107
+(comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
+Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword.
+
+Pruebas automatizadas del backend: 175 archivos / 743 pruebas / resultado: 743 correctas, 0 fallidas, 0 con error, 0 omitidas
+(comando de conteo de archivos: find src/test -name "*Test.java" | wc -l)
+(comando de ejecucion: JAVA_HOME=C:\Users\Facundo\.jdks\corretto-21.0.10 ./mvnw -B test)
+(salida literal: "Tests run: 743, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS")
+
+Pruebas automatizadas del frontend: no hay
+(comando en activehub-frontend: find src -name "*.test.*" -o -name "*.spec.*" | wc -l  ->  0)
+
+Migraciones Flyway: V1 a V26 (ultima: V26__verificacion_email)
+(comando: ls src/main/resources/db/migration | wc -l  ->  26)
+Sin migracion nueva en esta actualizacion: la recuperacion de contrasenia reusa la tabla verificacion_email.
+
+ESLint del frontend: 0 errores / 12 advertencias
+(comando: npx eslint .  en activehub-frontend; salida literal: "12 problems (0 errors, 12 warnings)")
+Typecheck del frontend: sin errores (comando: npx tsc -b).
+
+Pantallas implementadas: 41 archivos de pantalla en activehub-frontend/src/pages (nueva respecto de la linea de base: E1A-PAN-10 Recuperar contrasenia, codigo propuesto NUEVO)
+(comando: find src/pages -name "*.tsx" | wc -l  ->  41)
+Observacion: sigue sin verificarse la correspondencia entre los 45 codigos de pantalla del catalogo y los archivos de src/pages (ver ENTRADA 001).
+
+Estado por modulo (los 15):
+1. Autenticacion y Control de Acceso - PROBADO - login con JWT, renovacion de sesion, verificacion de correo, alta con Google y, desde esta actualizacion, recuperacion de contrasenia por correo; cubierto por la suite de 743 pruebas y por prueba manual de extremo a extremo (ver ENTRADA 002).
+2. Gestion de Usuarios, Roles y Permisos - PROBADO - roles y permisos por migraciones V18, V20 y V22.
+3. Seguridad - PROBADO - JWT, guardas por permiso, secretos por variable de entorno y recuperacion de contrasenia sin revelar si la cuenta existe. Dejo de ser PARCIAL: el pendiente que lo mantenia asi era la recuperacion de contrasenia.
+4. Auditoria y Trazabilidad - PROBADO - paquete com.activehub.shared.audit; accion nueva PASSWORD_RESTABLECIDA.
+5. Alumno - PROBADO - perfil, intereses, datos de salud, favoritos, calendario.
+6. Instructor - PROBADO - solicitud, documentos, verificacion, actividades, clases, metricas, resenias.
+7. Actividades - PROBADO - alta, edicion, taxonomia, niveles, fotos, geolocalizacion.
+8. Reservas y Pagos - PROBADO CON PASARELA SIMULADA - MockPaymentGateway (PENDIENTE 1).
+9. Historial y Calificaciones - PROBADO.
+10. Busqueda y Filtrado - PROBADO.
+11. Administracion y Soporte - PROBADO.
+12. Reportes e Informes - PROBADO.
+13. Tablero / Dashboard - PROBADO.
+14. Configuracion y Parametros - PROBADO - parametros por variables de entorno; se agregaron las tres de Supabase Storage.
+15. Ayuda y Soporte al Usuario - PARCIAL - pantalla Ayuda y reportes de soporte implementados; sin modelo de lenguaje (PENDIENTE 3) y sin manual de usuario en la plataforma (PENDIENTE 9).
+
+Pendientes conocidos:
+1 (integracion real con Mercado Pago) - PENDIENTE - hoy MockPaymentGateway.
+2 (recuperacion de contrasenia por correo) - PROBADO - implementado y probado el 2026-09-22 (ENTRADA 002). PENDIENTE 2: PENDIENTE -> PROBADO.
+3 (asistente con modelo de lenguaje, chatbot con Groq, recomendaciones adaptativas) - PENDIENTE.
+4 (imagenes en Supabase Storage) - PARCIAL - el codigo esta implementado y probado con pruebas automatizadas; falta crear el bucket en Supabase, cargar las variables de entorno en el despliegue, migrar los archivos que hoy estan en ./uploads y probarlo contra un proyecto real. La optimizacion de imagenes sigue PENDIENTE. PENDIENTE 4: PENDIENTE -> PARCIAL.
+5 (despliegue en Render, Vercel y Supabase) - PENDIENTE - no desplegado.
+6 (pruebas automatizadas del frontend) - PENDIENTE - 0 archivos de prueba.
+7 (ESLint en GitHub Actions) - PENDIENTE - el archivo .github/workflows/eslint.yml existe en la rama remota origin/FabriVersion2 del frontend, no en integracion ni en main.
+8 (renombrar integracion a develop y etiquetar la version en main) - PENDIENTE.
+9 (manual de usuario integrado en la plataforma) - PENDIENTE.
+10 (ejecucion de PRU-01 a PRU-09) - PENDIENTE - ninguna ejecutada ni registrada.
+
+Despliegue: backend (Render) - no desplegado; frontend (Vercel) - no desplegado; base de datos productiva (Supabase) - no desplegada; Supabase Storage - bucket no creado. URL: no desplegado.
+
+Modelo de ramas: rama activa integracion en los dos repositorios. Sin etiquetas. No existe la rama develop. Al 2026-09-22 los cambios de la ENTRADA 002 estan en el arbol de trabajo, sin commit.
+=== FIN ESTADO GENERAL ===
+
+
+=== ENTRADA 001 ===
+FECHA: 2026-09-22
+REPOSITORIO: ambos
+RAMA Y COMMITS: integracion - backend 5f5c5c3, frontend e65f2ee - sin Pull Request (relevamiento, sin cambios de codigo de aplicacion)
+TIPO: DOCUMENTACION
+TITULO: Alta de la bitacora del informe y relevamiento del estado real contra la linea de base
+QUE CAMBIA PARA EL USUARIO: sin cambios. No se modifico codigo de la aplicacion; no cambia nada para Alumno, Instructor ni Administrador.
+TEXTOS DE INTERFAZ (literales): sin cambios
+DETALLE TECNICO: se creo docs/BITACORA-INFORME.txt en activehub-backend y en activehub-frontend, en UTF-8. Se relevo el estado del codigo ejecutando los comandos citados en ESTADO GENERAL. Para ejecutar la suite del backend hubo que apuntar JAVA_HOME a un JDK 21 (C:\Users\Facundo\.jdks\corretto-21.0.10): el java del PATH es 17.0.11 y el pom.xml declara java.version igual a 21, por lo que "./mvnw -B test" con el JDK 17 falla con "has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0".
+ESTADO: linea de base del informe -> verificada. Evidencia: salidas de los comandos citadas literalmente en ESTADO GENERAL.
+ Coincidencias con la linea de base (sin diferencia): 105 casos de uso; 169 archivos de prueba; migraciones V1 a V26; ESLint del frontend con 0 errores y 12 advertencias.
+ Diferencias y datos nuevos respecto de la linea de base:
+ a) La linea de base no indicaba la cantidad de pruebas ni el resultado de la suite. Dato verificado el 2026-09-22: 706 pruebas, 706 correctas, 0 fallidas, 0 con error, 0 omitidas.
+ b) La linea de base enumera 45 codigos de pantalla y el frontend tiene 40 archivos en src/pages. No se verifico la correspondencia codigo-archivo; queda PENDIENTE y puede afectar el recuento de pantallas del informe.
+ c) Los commits 3f7d605 (backend) y d95f376 (frontend), del 2026-09-17, se titulan "Anadido registro con Google y cambios menores"; en el backend existe la variable de entorno GOOGLE_CLIENT_ID y en el frontend el componente BotonGoogle y la pantalla src/pages/auth/CompletarRegistro.tsx. El alta con cuenta de Google no figura en la linea de base del informe. Queda por verificar si el informe ya la describe; si no, hay que documentarla en la epica E1-A.
+ d) Los commits 3d96f07 (backend) y d7d7184 (frontend), del 2026-09-17, incorporan soporte, indicadores de carga y notificaciones con enlace. Las migraciones asociadas V24__soporte y V25__notificacion_destino estan dentro del rango V1 a V26 de la linea de base.
+HISTORIAS DE USUARIO Y CRITERIOS: sin cambios
+PANTALLAS: sin cambios
+REGLAS DE NEGOCIO: sin cambios
+MODULOS: sin cambios. El relevamiento cubre los 15 modulos del alcance; su estado esta en ESTADO GENERAL.
+CASOS DE USO: sin cambios. Total verificado: 105 directorios en src/main/java/com/activehub/usecases.
+ENTIDADES Y MIGRACIONES: sin cambios. Ultima migracion existente: V26__verificacion_email.
+TECNOLOGIAS: sin cambios. Versiones relevadas para el informe: backend sobre Java 21 (pom.xml) con Maven Wrapper (mvnw) y Flyway; frontend con React 19.2.7, React Router DOM 7.18.2, TypeScript 6.0.2, @vitejs/plugin-react 6.0.3, ESLint 10.6.0, typescript-eslint 8.62.0 y Leaflet 1.9.4 (activehub-frontend/package.json). Documentacion oficial: https://spring.io/projects/spring-boot - https://documentation.red-gate.com/flyway - https://react.dev - https://reactrouter.com - https://www.typescriptlang.org/docs - https://vite.dev - https://eslint.org/docs/latest - https://leafletjs.com/reference.html
+COSTOS: sin impacto
+RIESGOS: R05 (inconsistencias entre documentacion y sistema) - vigente - evidencia: puntos b) y c) del campo ESTADO. R06 (pruebas insuficientes) - vigente - evidencia: 0 archivos de prueba en el frontend (PENDIENTE 6). R07 (perdida del repositorio o de la documentacion) - mitigado parcialmente - evidencia: esta bitacora queda versionada en los dos repositorios. R02 (integracion con Mercado Pago) - vigente - evidencia: MockPaymentGateway (PENDIENTE 1). R12 y R13 (indisponibilidad de Render y de Vercel) - vigentes y no materializables aun - evidencia: todavia no hay despliegue (PENDIENTE 5).
+SEGURIDAD: sin cambios. Se verifico que las credenciales y los parametros sensibles del backend se leen por variable de entorno; se registran solo los nombres: DATABASE_URL, DATABASE_USERNAME, DATABASE_PASSWORD, DB_POOL_SIZE, JWT_SECRET, JWT_EXPIRATION_MIN, MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM, MAIL_FROM_NOMBRE, GOOGLE_CLIENT_ID, ADMIN_SEED_EMAIL, ADMIN_SEED_PASSWORD, CORS_ALLOWED_ORIGINS, PORT, FOTOS_PERFIL_DIR, FOTOS_ACTIVIDAD_DIR, DOCUMENTOS_INSTRUCTOR_DIR, VERIFICACION_TTL_MIN, VERIFICACION_MAX_INTENTOS, VERIFICACION_ESPERA_REENVIO_SEG.
+PRUEBAS: automatizadas nuevas: ninguna. Resultado completo de la suite del backend ejecutada el 2026-09-22: "Tests run: 706, Failures: 0, Errors: 0, Skipped: 0", "BUILD SUCCESS", tiempo total 01:51 min, comando "JAVA_HOME=C:\Users\Facundo\.jdks\corretto-21.0.10 ./mvnw -B test". Manuales ejecutadas: ninguna; PRU-01 a PRU-09 siguen PENDIENTES.
+ANALISIS ESTATICO: ESLint ejecutado en activehub-frontend con "npx eslint ." el 2026-09-22. Resultado: 0 errores, 12 advertencias. Regla involucrada en las 12: react-hooks/exhaustive-deps. Mensaje tipico: "React Hook useCallback has a missing dependency: 'data'. Either include it or remove the dependency array". Entre los archivos con advertencia: src/pages/alumno/Perfil.tsx (linea 132, useMemo), src/pages/instructor/HistorialClases.tsx (linea 54), src/pages/instructor/Metricas.tsx (linea 62), src/pages/instructor/ProximasClases.tsx (linea 44) y src/pages/instructor/Resenas.tsx (linea 56). Salida final: "12 problems (0 errors, 12 warnings)" y "0 errors and 1 warning potentially fixable with the --fix option".
+DESPLIEGUE Y CONFIGURACION: sin cambios. No desplegado. Sin variables de entorno nuevas.
+DECISIONES: se decidio registrar la cantidad de archivos de pantalla (40) en lugar de afirmar un numero de pantallas implementadas segun los codigos del catalogo, porque la correspondencia entre codigo de pantalla y archivo no esta verificada y afirmarla seria una estimacion. Alternativa descartada: dar por implementadas las 45 pantallas de la linea de base sin verificacion. Ambiguedad resuelta: la bitacora se mantiene duplicada e identica en los dos repositorios, con la unica diferencia del encabezado, tal como pide la consigna.
+ERRORES DETECTADOS: sintoma: "./mvnw -B test" termina con SurefireBooterForkException y el mensaje "class file version 65.0 ... up to 61.0". Causa: el java del PATH es 17.0.11 mientras que el proyecto compila para Java 21 y en target habia clases ya compiladas con JDK 21. Correccion: ejecutar la suite con JAVA_HOME apuntando a C:\Users\Facundo\.jdks\corretto-21.0.10. Como se detecto: al ejecutar la suite para este relevamiento.
+CAPTURAS SUGERIDAS:
+ suite-backend-706.png - consola con la salida "Tests run: 706, Failures: 0, Errors: 0, Skipped: 0" y "BUILD SUCCESS".
+ eslint-frontend-0e-12w.png - consola con la salida "12 problems (0 errors, 12 warnings)".
+ migraciones-v1-v26.png - listado del directorio src/main/resources/db/migration desde V1__esquema.sql hasta V26__verificacion_email.sql.
+ casos-de-uso-105.png - consola con el conteo de 105 directorios en src/main/java/com/activehub/usecases.
+PENDIENTE QUE QUEDA: verificar la correspondencia entre los 45 codigos de pantalla del catalogo y los 40 archivos de src/pages; confirmar si el informe ya documenta el alta con cuenta de Google; ejecutar y registrar PRU-01 a PRU-09; avanzar los PENDIENTES 1 a 10.
+=== FIN ENTRADA 001 ===
+
+
+=== ENTRADA 002 ===
+FECHA: 2026-09-22
+REPOSITORIO: ambos
+RAMA Y COMMITS: integracion - sin commit al momento de este registro (los cambios estan en el arbol de trabajo de los dos repositorios) - sin Pull Request
+TIPO: NUEVA FUNCIONALIDAD
+TITULO: Recuperacion de contrasenia por correo (PENDIENTE 2) y almacenamiento de archivos en Supabase Storage detras de una interfaz (PENDIENTE 4)
+
+QUE CAMBIA PARA EL USUARIO:
+Los tres roles (Alumno, Instructor, Administrador) pueden recuperar su contrasenia sin ayuda de un administrador. Pasos: en la pantalla de inicio de sesion se toca "¿Olvidaste tu contrasenia?"; se abre la pantalla nueva "Recuperar contrasenia"; se ingresa el correo de la cuenta y se toca "Enviarme el codigo"; llega un correo con un codigo de 6 digitos que vence en 15 minutos; en la misma pantalla se ingresa el codigo en seis casillas, se escribe la contrasenia nueva dos veces y se toca "Guardar contrasenia nueva"; la pantalla confirma "Contrasena actualizada" y el boton "Ir a iniciar sesion" lleva al login, donde se entra con la contrasenia nueva. Restablecer NO inicia sesion automaticamente.
+La pantalla nunca afirma que la cuenta exista: dice "Si hay una cuenta registrada con <correo>, le enviamos un codigo de 6 digitos". Una cuenta creada con "Continuar con Google" no tiene contrasenia propia y la pantalla lo aclara, remitiendo al boton de Google.
+El almacenamiento de archivos NO cambia nada para el usuario: las fotos de perfil, las fotos y la galeria de actividades y la documentacion del instructor se suben, se ven y se descargan exactamente igual, por las mismas direcciones. Lo que cambia es donde quedan guardados los archivos del lado del servidor.
+
+TEXTOS DE INTERFAZ (literales):
+Pantalla de inicio de sesion (E1A-PAN-01), enlace que antes no hacia nada y ahora navega:
+  "¿Olvidaste tu contraseña?"
+Pantalla nueva E1A-PAN-10 "Recuperar contrasenia", paso 1:
+  Titulo: "Recuperar contraseña"
+  Texto: "Ingresá el correo de tu cuenta y te enviamos un código de 6 dígitos para elegir una contraseña nueva."
+  Campo: "Correo electrónico *"   (marcador de posicion: "vos@email.com")
+  Boton: "Enviarme el código"   (mientras envia: "Enviando…")
+  Superposicion de carga: "Enviando tu código"
+Paso 2:
+  Titulo: "Elegí una contraseña nueva"
+  Texto: "Si hay una cuenta registrada con {correo}, le enviamos un código de 6 dígitos. Vence en {N} minutos."
+  Campo: "Código de 6 dígitos *"   (seis casillas, etiqueta de accesibilidad "Dígito 1" a "Dígito 6")
+  Campo: "Contraseña nueva *"   (marcador de posicion: "••••••••")
+  Campo: "Repetir contraseña nueva *"   (marcador de posicion: "••••••••")
+  Boton: "Guardar contraseña nueva"   (mientras envia: "Guardando…")
+  Superposicion de carga: "Guardando tu contraseña"
+  Texto: "¿No te llegó?"  +  enlace "Pedir otro código"
+  Aviso al pedir otro codigo: "Pedimos un código nuevo. Puede tardar un minuto en llegar."
+  Aviso cuando el servidor de correo no esta configurado: "Generamos el código, pero el servidor de correo no está configurado. Pedíselo a quien administra la plataforma."
+Paso 3 (exito):
+  Titulo: "Contraseña actualizada"
+  Texto: "Ya podés iniciar sesión con tu contraseña nueva."
+  Boton: "Ir a iniciar sesión"
+Pie de la pantalla (los tres pasos):
+  Texto: "Si creaste tu cuenta con “Continuar con Google”, no tenés contraseña propia: entrá desde el botón de Google en la pantalla de inicio de sesión."
+  Enlace: "Volver a iniciar sesión"
+Mensajes de error que muestra la pantalla (los escribe el backend salvo los dos primeros):
+  "Ingresá el código de 6 dígitos que te enviamos."
+  "Las contraseñas no coinciden."
+  "El código no es correcto o ya venció. Pedí uno nuevo."
+  "El código no es correcto. Te quedan 4 intentos."   (el numero baja con cada intento; con 1 dice "Te queda 1 intento.")
+  "La contraseña nueva tiene que ser distinta de la actual."
+  "La contraseña debe tener al menos 8 caracteres, una mayúscula y un número"
+  "El código tiene 6 dígitos"
+  "Ingresá tu correo"
+  "Ingresá un correo válido"
+  "No pudimos enviar el código. Intentá de nuevo."
+  "No pudimos cambiar tu contraseña. Intentá de nuevo."
+Correo nuevo (asunto y cuerpo, plantilla PlantillaEmail):
+  Asunto: "{codigo} — Recuperá tu contraseña de ActiveHub"
+  Titulo: "Recuperá tu contraseña"
+  Texto: "Hola {nombre}, Pediste recuperar la contraseña de tu cuenta de ActiveHub. Ingresá este código en la app y elegí una contraseña nueva."
+  Bloque del codigo: "Tu código" / "{codigo}" / "Vence en 15 minutos"
+  Cierre: "Tu contraseña actual sigue funcionando hasta que ingreses el código y elijas una nueva. Si no pediste recuperarla, ignorá este mail: sin el código nadie puede cambiarla."
+  Pie (sin cambios): "Este código es de un solo uso y personal: no lo compartas con nadie. ActiveHub nunca te va a pedir tu código por teléfono ni por chat." / "ActiveHub · Actividades deportivas y recreativas en Mendoza"
+Sin cambios en ningun otro texto de interfaz. No se agregaron dialogos de confirmacion.
+
+DETALLE TECNICO:
+Backend (activehub-backend):
+ - Caso de uso nuevo solicitarrecuperacionpassword: POST /api/auth/recuperar-password, publico. Recibe {email}. Devuelve {envioHabilitado, ttlMin}. Busca la cuenta con UsuarioRepository.findAllByEmailConRol y se queda con la primera que este verificada y sea de proveedor LOCAL; si la encuentra, emite el codigo con VerificacionEmailService.reemitir y proposito RECUPERACION_PASSWORD.
+ - Caso de uso nuevo restablecerpassword: POST /api/auth/recuperar-password/confirmar, publico. Recibe {email, codigo, contraseniaNueva}. Devuelve {email}. Lee el ultimo codigo del usuario, verifica que su proposito sea RECUPERACION_PASSWORD ANTES de consumirlo, lo valida, comprueba que la contrasenia nueva sea distinta de la actual, guarda el hash con BCrypt y audita.
+ - Valor nuevo en el enum PropositoVerificacion: RECUPERACION_PASSWORD. No hay tabla ni migracion nueva: se reusa verificacion_email (V26).
+ - Valor nuevo en el enum AuditAccion: PASSWORD_RESTABLECIDA, distinto de PASSWORD_CAMBIADA (que la hace alguien ya logueado y sabiendo la anterior). Su texto en DescripcionAuditoria es "{actor} restableció su contraseña con un código enviado a su correo.".
+ - PlantillaEmail.asunto y PlantillaEmail.cuerpo pasaron de un condicional de dos ramas a un switch exhaustivo sobre el enum, sin rama por defecto: agregar un proposito sin darle texto propio no compila.
+ - SecurityConfig: las dos rutas nuevas se agregaron a la lista permitAll.
+ - Paquete nuevo shared/storage con: interfaz AlmacenamientoArchivos (metodos guardar, leer, borrarSiExiste, descripcion), enum CarpetaArchivos (FOTOS_PERFIL, FOTOS_ACTIVIDAD, DOCUMENTOS_INSTRUCTOR), AlmacenamientoDisco, AlmacenamientoSupabase, AlmacenamientoConfig y AlmacenamientoException.
+ - AlmacenamientoSupabase usa java.net.http.HttpClient contra la API REST de Supabase Storage: PUT, GET y DELETE sobre /storage/v1/object/{bucket}/{carpeta}/{nombre}, con cabeceras Authorization: Bearer y x-upsert: true. No se agrego ninguna dependencia al pom.xml.
+ - AlmacenamientoConfig elige la implementacion por configuracion presente, no por un indicador de modo: con la URL y la clave de servicio cargadas usa Supabase; si falta alguna de las dos, disco. El modo elegido se escribe en el registro de arranque ("Almacenamiento de archivos: ...").
+ - Diez clases dejaron de usar java.nio.file y pasaron a la interfaz: SubirFotoPerfilService, VerFotoPerfilService, SubirFotoActividadService, VerFotoActividadService, AgregarImagenActividadService, EliminarImagenActividadService, VerImagenActividadService, SubirDocumentoService, DescargarDocumentoInstructorService y RegistrarInstructorService.
+ - En la base de datos se sigue guardando solo el NOMBRE del archivo (usuario.foto_path, actividad.foto_path, actividad_imagen.path, documento_instructor.ruta_archivo), nunca una ruta ni una direccion web. Por eso el cambio de destino no necesito migrar ninguna fila.
+ - El bucket es privado: no se generan direcciones publicas ni firmadas y los archivos se siguen sirviendo por los mismos endpoints (/api/fotos/**, /api/instructor/documentos/**), por lo que el frontend no cambio para esto.
+Frontend (activehub-frontend):
+ - Pantalla nueva src/pages/auth/RecuperarPassword.tsx, ruta publica /recuperar-password registrada en App.tsx fuera de todas las guardas.
+ - AuthContext gano dos funciones: solicitarRecuperacionPassword(email) y restablecerPassword(email, codigo, contraseniaNueva).
+ - Login.tsx: el enlace "¿Olvidaste tu contraseña?" era un elemento sin accion y ahora navega a /recuperar-password.
+ - La pantalla valida antes de gastar el codigo: seis digitos, politica RN-20 con el ayudante passwordStrength y coincidencia de las dos contrasenias. Al fallar limpia el codigo y conserva la contrasenia ya escrita.
+
+ESTADO: PENDIENTE 2 (recuperacion de contrasenia por correo): PENDIENTE -> PROBADO. PENDIENTE 4 (imagenes en Supabase Storage): PENDIENTE -> PARCIAL.
+Evidencia: suite del backend con 743 pruebas correctas y prueba manual de extremo a extremo ejecutada el 2026-09-22 contra una instancia aislada en el puerto 8092 (detalle en PRUEBAS).
+
+HISTORIAS DE USUARIO Y CRITERIOS:
+ - E1A-HU05 (NUEVO, propuesto; es el siguiente de la serie de la epica E1-A, que llegaba hasta HU04): "Como usuario registrado quiero recuperar mi contrasenia por correo cuando la olvide, para volver a entrar a mi cuenta sin ayuda de un administrador."
+   Criterio 1: "Cuando estoy en la pantalla de inicio de sesion y no recuerdo mi contrasenia / Espero poder tocar '¿Olvidaste tu contrasenia?' y llegar a una pantalla que me pida el correo de mi cuenta." - IMPLEMENTADO y PROBADO.
+   Criterio 2: "Cuando ingreso el correo de mi cuenta y confirmo / Espero recibir un correo con un codigo de 6 digitos y que la pantalla me diga cuanto vale ese codigo." - IMPLEMENTADO y PROBADO (15 minutos, parametro VERIFICACION_TTL_MIN).
+   Criterio 3: "Cuando ingreso un correo que no esta registrado / Espero que el sistema no me revele si esa cuenta existe o no." - IMPLEMENTADO y PROBADO.
+   Criterio 4: "Cuando ingreso el codigo correcto y una contrasenia nueva valida / Espero que se guarde y poder iniciar sesion con ella." - IMPLEMENTADO y PROBADO.
+   Criterio 5: "Cuando ingreso un codigo equivocado / Espero un mensaje que me diga cuantos intentos me quedan y que el codigo se invalide al agotarlos." - IMPLEMENTADO y PROBADO (tope de 5 intentos, parametro VERIFICACION_MAX_INTENTOS).
+   Criterio 6: "Cuando elijo una contrasenia que no cumple la politica o que es igual a la actual / Espero que el sistema la rechace explicando el motivo." - IMPLEMENTADO y PROBADO.
+   Criterio 7: "Cuando mi cuenta fue creada con Google / Espero que el sistema no me ofrezca una contrasenia que no tengo y me indique entrar con Google." - IMPLEMENTADO (el backend no emite codigo y la pantalla lo explica). PROBADO solo con prueba automatizada.
+   Criterio 8: "Cuando termino de cambiar la contrasenia / Espero que el sistema no me deje adentro sin escribirla, sino que me lleve a iniciar sesion." - IMPLEMENTADO y PROBADO.
+ - E1A-HU02 (inicio de sesion): sin cambios en sus criterios; la contrasenia nueva entra por el mismo login.
+ - E3A-HU12 criterio 6 (cambio de contrasenia del usuario logueado): sin cambios. Es otro camino y sigue pidiendo la contrasenia actual.
+
+PANTALLAS:
+ - NUEVA: E1A-PAN-10 "Recuperar contrasenia" (codigo propuesto; la serie E1A llegaba hasta PAN-09). Archivo activehub-frontend/src/pages/auth/RecuperarPassword.tsx, ruta /recuperar-password.
+ - MODIFICADA: E1A-PAN-01 "Inicio de sesion" - el enlace "¿Olvidaste tu contrasenia?" ahora navega a E1A-PAN-10.
+ - Retiradas: ninguna.
+
+REGLAS DE NEGOCIO:
+ - RN-20 (politica de contrasenia: minimo 8 caracteres, una mayuscula y un numero) se aplica tal cual a la contrasenia nueva. Sin cambios en su texto.
+ - No se creo ninguna regla nueva. Las tres restricciones que impone el caso de uso se documentan aca por si la catedra pide elevarlas a regla: solo puede recuperar una cuenta con el correo ya verificado; solo puede recuperar una cuenta de proveedor LOCAL (una cuenta de Google no tiene contrasenia utilizable); el sistema responde igual exista o no la cuenta.
+
+MODULOS: Autenticacion y Control de Acceso; Seguridad; Auditoria y Trazabilidad (accion nueva); Configuracion y Parametros (variables nuevas); Instructor y Actividades (solo por el cambio de almacenamiento de sus archivos, sin cambio funcional).
+
+CASOS DE USO: nuevos - solicitarrecuperacionpassword, restablecerpassword. Modificados (solo por el cambio de almacenamiento, sin cambio de comportamiento): subirfotoperfil, verfotoperfil, subirfotoactividad, verfotoactividad, agregarimagenactividad, eliminarimagenactividad, verimagenactividad, subirdocumento, descargardocumentoinstructor, registrarinstructor. Total: 105 -> 107.
+
+ENTIDADES Y MIGRACIONES: sin migracion nueva. Ultima migracion: V26__verificacion_email. No se agregaron ni modificaron columnas: la recuperacion reusa la tabla verificacion_email con un valor nuevo en su columna proposito (la columna no tiene restriccion CHECK, por eso el valor nuevo no necesita migracion).
+
+TECNOLOGIAS:
+ - Supabase Storage (servicio de almacenamiento de objetos de Supabase), usado por su API REST. Documentacion oficial: https://supabase.com/docs/guides/storage
+ - Se accede con java.net.http.HttpClient, que es parte de la biblioteca estandar de Java 21. Documentacion: https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpClient.html
+ - No se agrego ninguna dependencia nueva al pom.xml ni al package.json.
+ - Reemplazo: el almacenamiento en el disco del servidor deja de ser el unico destino posible. Motivo tecnico: en Render el disco del contenedor es efimero y se pierde en cada despliegue y en cada reinicio, de modo que las fotos subidas desapareceran aunque las filas de la base sigan apuntandolas. Alternativas evaluadas: (a) disco persistente de Render, descartado porque en Render es una prestacion de pago y ademas ata los archivos a una sola instancia; (b) un cliente de Supabase para Java de terceros, descartado porque no hay cliente oficial y los disponibles arrastran su propio cliente HTTP y su propia biblioteca de JSON para tres llamadas; (c) guardar las imagenes en la base de datos como datos binarios, descartado por costo de almacenamiento y de transferencia en el plan gratuito de Supabase. Impacto: ninguna pantalla cambia, ninguna fila de la base cambia, y el costo queda dentro del plan gratuito.
+ - El disco sigue siendo el destino por defecto y el modo de desarrollo.
+
+COSTOS: sin impacto. Supabase Storage esta incluido en el plan gratuito del mismo proyecto de Supabase que ya se usa para la base de datos (limite del plan gratuito: 1 GB de almacenamiento). El correo de recuperacion usa el mismo Gmail SMTP ya configurado, sin costo adicional.
+
+RIESGOS:
+ - R15 (cambios en planes gratuitos) - vigente - evidencia: el almacenamiento de archivos pasa a depender del limite de 1 GB del plan gratuito de Supabase. Medida preventiva: el destino es una interfaz con dos implementaciones, asi que volver al disco o mover a otro proveedor es cambiar una clase y tres variables de entorno.
+ - R12 (indisponibilidad de Render) - mitigado parcialmente - evidencia: los archivos dejan de vivir en el disco efimero del contenedor, asi que un reinicio de Render ya no los pierde.
+ - R11 (cambios en APIs externas) - vigente - evidencia: se agrega una dependencia funcional de la API REST de Supabase Storage. Medida preventiva: son tres llamadas (PUT, GET, DELETE) sobre un unico punto del codigo; medida correctiva: quitar las dos variables de entorno vuelve a disco sin recompilar.
+ - Riesgo nuevo R16 (propuesto): exposicion de la clave de servicio (service_role) de Supabase, que saltea las politicas de seguridad a nivel de fila. Probabilidad: baja. Impacto: alto. Medida preventiva: la clave se lee por variable de entorno (SUPABASE_STORAGE_SERVICE_KEY), nunca se versiona, nunca viaja al frontend y no aparece en el registro de arranque (hay una prueba automatizada que verifica que la descripcion del almacenamiento no la contenga). Medida correctiva: rotar la clave desde el panel de Supabase y actualizar la variable de entorno del despliegue.
+ - R06 (pruebas insuficientes) - vigente - evidencia: el frontend sigue sin pruebas automatizadas, y la pantalla nueva tampoco las tiene.
+
+SEGURIDAD:
+ - Los dos endpoints nuevos son publicos por necesidad (los usa quien no puede iniciar sesion) y estan diseniados para no revelar si una cuenta existe: correo inexistente, cuenta de Google y correo sin verificar devuelven exactamente la misma respuesta que el caso valido, y en el segundo paso el mismo mensaje de error que un codigo equivocado.
+ - La espera minima entre reenvios se aplica igual, pero su error no se propaga: si se propagara, el codigo 429 solo apareceria para los correos registrados y volveria a delatar cuales existen.
+ - El codigo se guarda hasheado, vence a los 15 minutos, admite 5 intentos y es de un solo uso (reglas ya existentes de VerificacionEmailService).
+ - El proposito del codigo se verifica antes de consumirlo: un codigo de alta o de cambio de correo no puede cambiar una contrasenia, y ademas no se consume al intentarlo.
+ - Limitacion conocida y asumida: las sesiones ya abiertas siguen valiendo hasta que venza su token (30 minutos), porque el JWT no tiene estado y no hay tabla de sesiones. Lo que cierra el acceso es que la contrasenia vieja deja de servir para obtener un token nuevo.
+ - La documentacion del instructor (DNI y certificados de terceros) se guarda en un bucket privado y se sigue sirviendo por un endpoint con permiso: no se generan direcciones publicas.
+ - La clave de servicio de Supabase solo vive en el backend.
+
+PRUEBAS:
+Automatizadas nuevas: 37 pruebas en 6 archivos nuevos.
+ - src/test/java/com/activehub/usecases/solicitarrecuperacionpassword/SolicitarRecuperacionPasswordServiceTest.java - 6 pruebas unitarias de servicio.
+ - src/test/java/com/activehub/usecases/solicitarrecuperacionpassword/SolicitarRecuperacionPasswordControllerTest.java - 2 pruebas de controlador (@WebMvcTest).
+ - src/test/java/com/activehub/usecases/restablecerpassword/RestablecerPasswordServiceTest.java - 7 pruebas unitarias de servicio.
+ - src/test/java/com/activehub/usecases/restablecerpassword/RestablecerPasswordControllerTest.java - 3 pruebas de controlador.
+ - src/test/java/com/activehub/shared/storage/AlmacenamientoDiscoTest.java - 5 pruebas con directorio temporal real.
+ - src/test/java/com/activehub/shared/storage/AlmacenamientoSupabaseTest.java - 10 pruebas con cliente HTTP simulado.
+ - src/test/java/com/activehub/shared/storage/AlmacenamientoConfigTest.java - 4 pruebas de la eleccion de implementacion.
+Ademas se modificaron 10 archivos de prueba existentes para construir los servicios con AlmacenamientoDisco en lugar de una ruta de texto.
+Resultado completo de la suite del backend, ejecutada el 2026-09-22 con el comando JAVA_HOME=C:\Users\Facundo\.jdks\corretto-21.0.10 ./mvnw -B test:
+  "Tests run: 743, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS".
+Antes de este cambio eran 706 pruebas en 169 archivos; ahora son 743 en 175 archivos.
+Pruebas automatizadas del frontend: siguen sin existir (PENDIENTE 6). Se ejecuto el typecheck (npx tsc -b) sin errores.
+Manuales ejecutadas (no corresponden a PRU-01 a PRU-09, que siguen pendientes; se registran como prueba manual de la funcionalidad nueva):
+ - Entorno: instancia aislada del backend en el puerto 8092, levantada con MAIL_USERNAME y MAIL_PASSWORD vacias para que el correo quede en el registro del servidor en lugar de enviarse (modo de desarrollo de EmailSender). No se toco ningun proceso del usuario.
+ - Datos usados: cuenta de prueba dada de alta y dada de baja en la misma sesion, con correo e2e-recuperacion-<marca de tiempo>@activehub.test, contrasenia inicial y contrasenia nueva de prueba (no se registran aca por la regla de seguridad). No es un usuario de demostracion para evaluadores.
+ - Caso 1: pedir codigo con un correo no registrado. Resultado obtenido: HTTP 200 con {"envioHabilitado":true,"ttlMin":15}, identico al caso valido, y ningun correo emitido. APROBADA.
+ - Caso 2: pedir codigo con un correo mal formado. Resultado obtenido: HTTP 400 con el campo email y el mensaje "Ingresá un correo válido". APROBADA.
+ - Caso 3: confirmar con un codigo inventado para un correo no registrado. Resultado obtenido: HTTP 400 con "El código no es correcto o ya venció. Pedí uno nuevo.". APROBADA.
+ - Caso 4: pedir el codigo menos de 60 segundos despues de haber recibido otro. Resultado obtenido: HTTP 200 con la respuesta de siempre y sin emitir un codigo nuevo (la espera minima entre envios se aplica y su error no se propaga). APROBADA.
+ - Caso 5: pedir el codigo pasada la espera, con una cuenta verificada. Resultado obtenido: correo generado con el asunto "106533 — Recuperá tu contraseña de ActiveHub" (asunto propio del proposito nuevo). APROBADA.
+ - Caso 6: confirmar con un codigo equivocado. Resultado obtenido: HTTP 400 con "El código no es correcto. Te quedan 4 intentos.". APROBADA.
+ - Caso 7: confirmar con el codigo correcto. Resultado obtenido: HTTP 200 con {"email":"e2e-recuperacion-...@activehub.test"} y sin token (no inicia sesion). APROBADA.
+ - Caso 8: iniciar sesion con la contrasenia vieja. Resultado obtenido: HTTP 401 CREDENCIALES_INVALIDAS. APROBADA.
+ - Caso 9: iniciar sesion con la contrasenia nueva. Resultado obtenido: HTTP 200 con token. APROBADA.
+ - Limpieza: la cuenta de prueba se dio de baja con DELETE /api/usuarios/me (HTTP 204) y el login posterior devolvio HTTP 401.
+ - Archivo de evidencia: no se guardo archivo de evidencia; las salidas quedaron en la sesion de trabajo. PENDIENTE guardar capturas (ver CAPTURAS SUGERIDAS).
+ - NO se probo contra un proyecto real de Supabase Storage: no hay bucket creado ni credenciales cargadas. El camino de Supabase esta cubierto solo por pruebas automatizadas con cliente HTTP simulado.
+ - NO se probo la pantalla nueva en el navegador. El frontend quedo verificado solo con typecheck y ESLint.
+
+ANALISIS ESTATICO: ESLint ejecutado en activehub-frontend con "npx eslint ." el 2026-09-22, despues de los cambios. Resultado: 0 errores, 12 advertencias, todas de la regla react-hooks/exhaustive-deps y todas preexistentes. Salida literal: "12 problems (0 errors, 12 warnings)". Sin cambios respecto de la linea de base. La pantalla nueva no agrego ninguna advertencia.
+
+DESPLIEGUE Y CONFIGURACION: no desplegado. Variables de entorno nuevas (solo los nombres): SUPABASE_STORAGE_URL, SUPABASE_STORAGE_SERVICE_KEY, SUPABASE_STORAGE_BUCKET (su valor por defecto es "activehub"). Si las dos primeras estan vacias, el sistema guarda en disco como hasta ahora; no hace falta cargarlas para desarrollar. En application.yml quedaron bajo app.storage.supabase.
+
+DECISIONES:
+ - Reusar la tabla verificacion_email con un proposito nuevo en lugar de crear una tabla de tokens de recuperacion. Justificacion: es el mismo objeto (un secreto de un solo uso, con vencimiento, contador de intentos y hash) y ya tiene implementadas las cuatro reglas que hacen falta. Alternativa descartada: tabla password_reset_token con su migracion, que habria duplicado esas reglas.
+ - Codigo de 6 digitos en lugar de un enlace con token en el correo. Justificacion: es el mecanismo que el usuario ya conoce del alta y del cambio de correo, no depende de que el enlace sobreviva al cliente de correo y no expone el secreto en el historial del navegador. Alternativa descartada: enlace con token.
+ - Responder lo mismo exista o no la cuenta, en los dos pasos. Justificacion: evitar que el endpoint sirva para averiguar quien esta registrado. Ambiguedad resuelta: la especificacion no dice que debe pasar con un correo desconocido.
+ - No devolver token al restablecer. Justificacion: escribir la contrasenia una vez confirma que quedo guardada. Alternativa descartada: iniciar sesion automaticamente.
+ - Verificar el proposito del codigo antes de consumirlo. Justificacion: si se verificara despues, un codigo de alta o de cambio de correo se marcaria como usado antes de ser rechazado y el usuario lo perderia.
+ - No revocar las sesiones abiertas. Justificacion: el JWT no tiene estado y agregar una tabla de sesiones es un cambio de arquitectura mayor para una ventana de 30 minutos. Alternativa evaluada: un dato de version de credencial dentro del token; queda registrada como camino si se decide cerrarlas en el acto.
+ - Elegir el destino de los archivos por configuracion presente y no por un indicador de modo. Justificacion: un indicador es un tercer dato que puede quedar desincronizado de las credenciales (encendido sin clave: fallan todas las subidas; apagado con clave: el despliegue escribe en un disco que se borra solo).
+ - Bucket privado y archivos servidos por la propia API, en lugar de direcciones publicas o firmadas. Justificacion: la documentacion del instructor no puede quedar accesible por direccion, y asi el frontend no cambia. Costo aceptado: cada imagen viaja dos veces.
+ - Guardar solo el nombre del archivo en la base, sin direccion web. Justificacion: es lo que permitio cambiar el destino sin migrar ninguna fila.
+
+ERRORES DETECTADOS:
+ - Sintoma: en la prueba manual, pedir el codigo de recuperacion inmediatamente despues de crear la cuenta devolvia la respuesta correcta pero no generaba ningun correo. Causa: no es un error, es la espera minima entre envios (VERIFICACION_ESPERA_REENVIO_SEG, 60 segundos por defecto) contada desde el codigo del alta, cuyo error se traga a proposito para no revelar que la cuenta existe. Correccion: ninguna en el codigo; queda documentado el comportamiento. Como se detecto: al ejecutar la prueba manual de extremo a extremo.
+ - Sintoma: al ejecutar la suite del backend con el java del PATH (17.0.11) falla con "class file version 65.0". Causa: el proyecto compila para Java 21. Correccion: ejecutar con JAVA_HOME apuntando al JDK 21. Ya estaba registrado en la ENTRADA 001; se repite porque vuelve a aplicar.
+
+CAPTURAS SUGERIDAS:
+ recuperar-password-paso1.png - pantalla E1A-PAN-10 con el campo "Correo electrónico *" y el boton "Enviarme el código".
+ recuperar-password-paso2.png - pantalla E1A-PAN-10 con las seis casillas del codigo y los dos campos de contrasenia.
+ recuperar-password-exito.png - pantalla con "Contraseña actualizada" y el boton "Ir a iniciar sesión".
+ recuperar-password-error-codigo.png - el mensaje "El código no es correcto. Te quedan 4 intentos.".
+ login-enlace-olvidaste.png - la pantalla de inicio de sesion mostrando el enlace "¿Olvidaste tu contraseña?" ya activo.
+ mail-recuperacion.png - el correo recibido, con el asunto "Recuperá tu contraseña de ActiveHub" y el bloque del codigo.
+ suite-backend-743.png - consola con "Tests run: 743, Failures: 0, Errors: 0, Skipped: 0" y "BUILD SUCCESS".
+ eslint-frontend-0e-12w-post.png - consola con "12 problems (0 errors, 12 warnings)" despues del cambio.
+ almacenamiento-arranque.png - registro de arranque del backend con la linea "Almacenamiento de archivos: ...".
+ codigo-almacenamiento-interfaz.png - el archivo AlmacenamientoArchivos.java mostrando los tres metodos.
+
+PENDIENTE QUE QUEDA:
+ - Probar la pantalla E1A-PAN-10 en el navegador y sacar las capturas.
+ - Crear el bucket en el proyecto de Supabase, cargar las tres variables de entorno, migrar los archivos que hoy estan en ./uploads y probar subida y lectura contra el proyecto real. Hasta entonces el PENDIENTE 4 queda en PARCIAL.
+ - Optimizacion de imagenes (redimensionado y compresion al subir), que nunca se implemento.
+ - Decidir si la catedra quiere que E1A-HU05 y E1A-PAN-10 entren al informe con esos codigos.
+ - Confirmar si corresponde elevar a regla de negocio las tres restricciones de la recuperacion (correo verificado, proveedor LOCAL, respuesta indistinguible).
+ - Commitear los cambios en los dos repositorios.
+=== FIN ENTRADA 002 ===

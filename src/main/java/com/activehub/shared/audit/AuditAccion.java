@@ -54,6 +54,12 @@ public enum AuditAccion {
     USUARIO_ACTUALIZADO,
     PERFIL_ACTUALIZADO,
     PASSWORD_CAMBIADA,
+    /**
+     * Restableció su contraseña desde "¿Olvidaste tu contraseña?": sin sesión previa y con el
+     * código de 6 dígitos que le llegó al correo. Se distingue de PASSWORD_CAMBIADA a propósito,
+     * que la hace alguien que ya estaba adentro y sabía la contraseña anterior.
+     */
+    PASSWORD_RESTABLECIDA,
     CUENTA_DADA_DE_BAJA,
     RESENIA_ACTUALIZADA,
     RESENIA_RESPONDIDA,

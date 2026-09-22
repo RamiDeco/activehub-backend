@@ -17,6 +17,7 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.storage.AlmacenamientoDisco;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.UUID;
@@ -48,8 +49,10 @@ class SubirDocumentoServiceTest {
 
     @BeforeEach
     void setUp() {
+        AlmacenamientoDisco almacenamiento =
+                new AlmacenamientoDisco(tempDir.toString(), tempDir.toString(), tempDir.toString());
         service = new SubirDocumentoService(
-                perfilInstructorRepository, documentoInstructorRepository, auditService, tempDir.toString());
+                perfilInstructorRepository, documentoInstructorRepository, auditService, almacenamiento);
 
         instructorId = UUID.randomUUID();
         Usuario usuario = new Usuario();

@@ -19,16 +19,16 @@ import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.email.VerificacionEmailService;
 import com.activehub.shared.security.GoogleIdTokenVerifier;
 import com.activehub.shared.security.JwtService;
+import com.activehub.shared.storage.AlmacenamientoArchivos;
+import com.activehub.shared.storage.AlmacenamientoException;
+import com.activehub.shared.storage.CarpetaArchivos;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,7 +65,7 @@ public class RegistrarInstructorService {
     private final AuditService auditService;
     private final VerificacionEmailService verificacionEmailService;
     private final GoogleIdTokenVerifier googleIdTokenVerifier;
-    private final String directorioAlmacenamiento;
+    private final AlmacenamientoArchivos almacenamiento;
 
     public RegistrarInstructorService(
             UsuarioRepository usuarioRepository,
@@ -77,7 +77,7 @@ public class RegistrarInstructorService {
             AuditService auditService,
             VerificacionEmailService verificacionEmailService,
             GoogleIdTokenVerifier googleIdTokenVerifier,
-            @Value("${app.storage.documentos-instructor-dir}") String directorioAlmacenamiento
+            AlmacenamientoArchivos almacenamiento
     ) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
@@ -88,7 +88,7 @@ public class RegistrarInstructorService {
         this.auditService = auditService;
         this.verificacionEmailService = verificacionEmailService;
         this.googleIdTokenVerifier = googleIdTokenVerifier;
-        this.directorioAlmacenamiento = directorioAlmacenamiento;
+        this.almacenamiento = almacenamiento;
     }
 
     @Transactional
@@ -203,20 +203,21 @@ public class RegistrarInstructorService {
     }
 
     private void guardarDocumentos(List<MultipartFile> documentos, PerfilInstructor perfil, UUID actorId) {
-        List<Path> escritos = new ArrayList<>();
+        List<String> escritos = new ArrayList<>();
         registrarLimpiezaSiHayRollback(escritos);
 
-        Path directorio = Path.of(directorioAlmacenamiento);
         for (MultipartFile archivo : documentos) {
             String nombreOriginal = archivo.getOriginalFilename() != null ? archivo.getOriginalFilename() : "documento";
-            String nombreEnDisco = UUID.randomUUID() + extension(nombreOriginal);
-            Path destino = directorio.resolve(nombreEnDisco);
+            String nombreGuardado = UUID.randomUUID() + extension(nombreOriginal);
 
             try {
-                Files.createDirectories(directorio);
-                Files.write(destino, archivo.getBytes());
-                escritos.add(destino);
-            } catch (IOException e) {
+                almacenamiento.guardar(
+                        CarpetaArchivos.DOCUMENTOS_INSTRUCTOR,
+                        nombreGuardado,
+                        archivo.getBytes(),
+                        archivo.getContentType());
+                escritos.add(nombreGuardado);
+            } catch (IOException | AlmacenamientoException e) {
                 // Rompe la transaccion: no queda ni Usuario ni PerfilInstructor. Se devuelve
                 // como ValidacionException para que el mensaje llegue tal cual a la pantalla.
                 log.error("Fallo al guardar la documentacion del alta de instructor", e);
@@ -226,7 +227,7 @@ public class RegistrarInstructorService {
             DocumentoInstructor documento = new DocumentoInstructor();
             documento.setPerfilInstructor(perfil);
             documento.setTipoDocumento(archivo.getContentType());
-            documento.setRutaArchivo(nombreEnDisco);
+            documento.setRutaArchivo(nombreGuardado);
             documento.setNombreArchivo(nombreOriginal);
             documento.setTamanioBytes(archivo.getSize());
             documentoInstructorRepository.save(documento);
@@ -237,10 +238,11 @@ public class RegistrarInstructorService {
     }
 
     /**
-     * El filesystem no participa de la transaccion: si la base hace rollback despues de
-     * haber escrito archivos, hay que borrarlos para no dejar huerfanos en disco.
+     * El almacenamiento no participa de la transaccion —ni el disco ni Supabase Storage—: si
+     * la base hace rollback despues de haber escrito archivos, hay que borrarlos para no dejar
+     * huerfanos.
      */
-    private void registrarLimpiezaSiHayRollback(List<Path> escritos) {
+    private void registrarLimpiezaSiHayRollback(List<String> escritos) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             return;
         }
@@ -250,12 +252,10 @@ public class RegistrarInstructorService {
                 if (status != STATUS_ROLLED_BACK) {
                     return;
                 }
-                for (Path path : escritos) {
-                    try {
-                        Files.deleteIfExists(path);
-                    } catch (IOException e) {
-                        log.warn("No se pudo borrar el documento huerfano {} tras el rollback del alta", path, e);
-                    }
+                for (String nombre : escritos) {
+                    // `borrarSiExiste` es best-effort y no lanza: despues del rollback ya no
+                    // hay a quien reportarle que quedo un archivo colgado.
+                    almacenamiento.borrarSiExiste(CarpetaArchivos.DOCUMENTOS_INSTRUCTOR, nombre);
                 }
             }
         });

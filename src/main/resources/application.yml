@@ -90,3 +90,12 @@ app:
     documentos-instructor-dir: ${DOCUMENTOS_INSTRUCTOR_DIR:./uploads/documentos-instructor}
     fotos-perfil-dir: ${FOTOS_PERFIL_DIR:./uploads/fotos-perfil}
     fotos-actividad-dir: ${FOTOS_ACTIVIDAD_DIR:./uploads/fotos-actividad}
+    # Supabase Storage. Con url y service-key cargadas, los archivos van al bucket y los
+    # directorios de arriba quedan sin uso; vacias, se sigue escribiendo en disco. No hay
+    # ningun flag de modo a proposito: ver AlmacenamientoConfig.
+    # SUPABASE_STORAGE_SERVICE_KEY es la service_role key del proyecto, que saltea RLS: va
+    # solo en el backend, nunca en el frontend ni versionada.
+    supabase:
+      url: ${SUPABASE_STORAGE_URL:}
+      service-key: ${SUPABASE_STORAGE_SERVICE_KEY:}
+      bucket: ${SUPABASE_STORAGE_BUCKET:activehub}

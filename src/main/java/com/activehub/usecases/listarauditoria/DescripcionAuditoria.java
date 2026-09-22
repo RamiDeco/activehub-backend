@@ -108,6 +108,7 @@ final class DescripcionAuditoria {
             case USUARIO_ACTUALIZADO -> actor + " editó los datos de un usuario.";
             case PERFIL_ACTUALIZADO -> actor + " actualizó sus propios datos.";
             case PASSWORD_CAMBIADA -> actor + " cambió su contraseña.";
+            case PASSWORD_RESTABLECIDA -> actor + " restableció su contraseña con un código enviado a su correo.";
             case CUENTA_DADA_DE_BAJA -> actor + " dio de baja su cuenta.";
             case INTERESES_ACTUALIZADOS -> actor + " actualizó sus intereses deportivos.";
 

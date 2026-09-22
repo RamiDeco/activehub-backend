@@ -7,12 +7,11 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import com.activehub.shared.storage.AlmacenamientoArchivos;
+import com.activehub.shared.storage.AlmacenamientoException;
+import com.activehub.shared.storage.CarpetaArchivos;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,16 +23,16 @@ public class SubirFotoActividadService {
 
     private final ActividadRepository actividadRepository;
     private final AuditService auditService;
-    private final String directorioAlmacenamiento;
+    private final AlmacenamientoArchivos almacenamiento;
 
     public SubirFotoActividadService(
             ActividadRepository actividadRepository,
             AuditService auditService,
-            @Value("${app.storage.fotos-actividad-dir}") String directorioAlmacenamiento
+            AlmacenamientoArchivos almacenamiento
     ) {
         this.actividadRepository = actividadRepository;
         this.auditService = auditService;
-        this.directorioAlmacenamiento = directorioAlmacenamiento;
+        this.almacenamiento = almacenamiento;
     }
 
     @Transactional
@@ -54,26 +53,20 @@ public class SubirFotoActividadService {
         }
 
         String nombreOriginal = archivo.getOriginalFilename() != null ? archivo.getOriginalFilename() : "foto";
-        String nombreEnDisco = UUID.randomUUID() + extension(nombreOriginal);
+        String nombreGuardado = UUID.randomUUID() + extension(nombreOriginal);
 
         try {
-            Path directorio = Path.of(directorioAlmacenamiento);
-            Files.createDirectories(directorio);
-            Files.write(directorio.resolve(nombreEnDisco), archivo.getBytes());
-        } catch (IOException e) {
+            almacenamiento.guardar(CarpetaArchivos.FOTOS_ACTIVIDAD, nombreGuardado, archivo.getBytes(), contentType);
+        } catch (java.io.IOException | AlmacenamientoException e) {
             throw new ValidacionException("No pudimos guardar la foto. Intentá de nuevo.");
         }
 
         String fotoAnterior = actividad.getFotoPath();
-        actividad.setFotoPath(nombreEnDisco);
+        actividad.setFotoPath(nombreGuardado);
         actividadRepository.save(actividad);
 
         if (fotoAnterior != null) {
-            try {
-                Files.deleteIfExists(Path.of(directorioAlmacenamiento).resolve(fotoAnterior));
-            } catch (IOException e) {
-                // no bloquea la respuesta si no se pudo borrar el archivo viejo
-            }
+            almacenamiento.borrarSiExiste(CarpetaArchivos.FOTOS_ACTIVIDAD, fotoAnterior);
         }
 
         auditService.registrar(actorId, AuditAccion.FOTO_ACTIVIDAD_SUBIDA, "Actividad", actividad.getId(), null);

@@ -40,26 +40,39 @@ public final class PlantillaEmail {
 
     /** Asunto. El código va también acá: se ve en la bandeja sin abrir el mail. */
     public static String asunto(PropositoVerificacion proposito, String codigo) {
-        return proposito == PropositoVerificacion.CAMBIO_EMAIL
-                ? codigo + " — Confirmá tu nuevo correo en ActiveHub"
-                : codigo + " — Tu código de verificación de ActiveHub";
+        return switch (proposito) {
+            case CAMBIO_EMAIL -> codigo + " — Confirmá tu nuevo correo en ActiveHub";
+            case RECUPERACION_PASSWORD -> codigo + " — Recuperá tu contraseña de ActiveHub";
+            case REGISTRO -> codigo + " — Tu código de verificación de ActiveHub";
+        };
     }
 
     public static String cuerpo(PropositoVerificacion proposito, String nombre, String codigo, int minutos) {
-        boolean cambio = proposito == PropositoVerificacion.CAMBIO_EMAIL;
-
-        String titulo = cambio ? "Confirmá tu nuevo correo" : "Confirmá tu correo";
-        String bajada = cambio
-                ? "Pediste cambiar el correo de tu cuenta de ActiveHub por esta dirección. "
-                        + "Ingresá este código en la app para confirmar el cambio."
-                : "¡Bienvenido a ActiveHub! Ingresá este código en la app para activar tu cuenta "
-                        + "y empezar a inscribirte a clases.";
-        String cierre = cambio
-                ? "Hasta que ingreses el código, tu cuenta sigue funcionando con el correo anterior. "
-                        + "Si no pediste este cambio, ignorá este mail y avisanos: alguien con acceso a tu "
-                        + "cuenta lo intentó."
-                : "Si no creaste ninguna cuenta en ActiveHub, podés ignorar este mail. "
-                        + "Sin el código, nadie queda registrado con tu correo.";
+        // El switch es exhaustivo sobre el enum, sin `default`: sumar un propósito sin darle
+        // texto propio no compila, en vez de mandar el mail de alta por error.
+        String titulo = switch (proposito) {
+            case CAMBIO_EMAIL -> "Confirmá tu nuevo correo";
+            case RECUPERACION_PASSWORD -> "Recuperá tu contraseña";
+            case REGISTRO -> "Confirmá tu correo";
+        };
+        String bajada = switch (proposito) {
+            case CAMBIO_EMAIL -> "Pediste cambiar el correo de tu cuenta de ActiveHub por esta dirección. "
+                    + "Ingresá este código en la app para confirmar el cambio.";
+            case RECUPERACION_PASSWORD -> "Pediste recuperar la contraseña de tu cuenta de ActiveHub. "
+                    + "Ingresá este código en la app y elegí una contraseña nueva.";
+            case REGISTRO -> "¡Bienvenido a ActiveHub! Ingresá este código en la app para activar tu cuenta "
+                    + "y empezar a inscribirte a clases.";
+        };
+        String cierre = switch (proposito) {
+            case CAMBIO_EMAIL -> "Hasta que ingreses el código, tu cuenta sigue funcionando con el correo anterior. "
+                    + "Si no pediste este cambio, ignorá este mail y avisanos: alguien con acceso a tu "
+                    + "cuenta lo intentó.";
+            case RECUPERACION_PASSWORD -> "Tu contraseña actual sigue funcionando hasta que ingreses el código y "
+                    + "elijas una nueva. Si no pediste recuperarla, ignorá este mail: sin el código nadie "
+                    + "puede cambiarla.";
+            case REGISTRO -> "Si no creaste ninguna cuenta en ActiveHub, podés ignorar este mail. "
+                    + "Sin el código, nadie queda registrado con tu correo.";
+        };
 
         return """
                 <!doctype html>
