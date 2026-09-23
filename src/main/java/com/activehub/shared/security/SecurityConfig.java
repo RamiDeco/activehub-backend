@@ -62,6 +62,12 @@ public class SecurityConfig {
                         // registrarse o entrar: exigirle sesión lo dejaría sin forma de avisar.
                         // El service acepta `autorId` en null y guarda el reporte como anónimo.
                         .requestMatchers(HttpMethod.POST, "/api/soporte/reportes").permitAll()
+                        // La burbuja "¿Dudas?" no vive sólo en las pantallas del alumno: también
+                        // está en /ayuda, que es pública. Mismo criterio que el reporte de arriba —
+                        // quien necesita ayuda muchas veces es quien no pudo entrar. Público no es
+                        // libre: LimiteConsultasIa cuenta las consultas por usuario o por IP, para
+                        // que nadie agote solo la cuota gratuita del modelo.
+                        .requestMatchers(HttpMethod.POST, "/api/asistente/consultas").permitAll()
                         // El catálogo público. Las tres listas de taxonomía van juntas
                         // porque el frontend las pide en un mismo Promise.all al arrancar,
                         // antes de que haya sesión: si una sola queda autenticada, la

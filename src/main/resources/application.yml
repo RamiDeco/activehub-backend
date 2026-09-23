@@ -86,6 +86,27 @@ app:
     # Client ID de la app web en Google Cloud Console. Vacío = "Continuar con Google"
     # deshabilitado (el endpoint responde 400 y el frontend no muestra el botón).
     client-id: ${GOOGLE_CLIENT_ID:}
+  ia:
+    # Groq Cloud (plan gratuito) para el asistente de ayuda y el informe de beneficios y
+    # prevenciones. Con GROQ_API_KEY vacia la aplicacion arranca igual y las dos pantallas caen a
+    # lo que hacian antes (FAQs por coincidencia de palabras, plantillas por nivel de intensidad):
+    # ver IaConfig. La clave se saca de console.groq.com y va SOLO en el backend.
+    groq:
+      api-key: ${GROQ_API_KEY:}
+      url: ${GROQ_URL:https://api.groq.com/openai/v1/chat/completions}
+      # Modelo del plan gratuito con 128k de contexto. Se cambia por variable de entorno sin
+      # recompilar, porque Groq rota los modelos disponibles cada tanto: la cuenta de este proyecto
+      # ya NO tiene llama-3.3 (devolvia 404) y los modelos de chat que ofrece hoy son la familia
+      # openai/gpt-oss y qwen. Para ver los vigentes: GET https://api.groq.com/openai/v1/models.
+      modelo: ${GROQ_MODELO:openai/gpt-oss-120b}
+      # Cuanto "piensa" antes de escribir (low | medium | high). Solo lo entienden los modelos de
+      # razonamiento como gpt-oss, y con ellos NO es opcional: el razonamiento gasta del mismo
+      # presupuesto de tokens que la respuesta, asi que con el esfuerzo por defecto la respuesta
+      # vuelve vacia. Si se cambia a un modelo que no razona, hay que dejar esta variable vacia
+      # (GROQ_REASONING_EFFORT=) o el proveedor rechaza el pedido.
+      reasoning-effort: ${GROQ_REASONING_EFFORT:low}
+      # Corto a proposito: del otro lado hay alguien esperando frente a una burbuja de chat.
+      timeout-seg: ${GROQ_TIMEOUT_SEG:25}
   storage:
     documentos-instructor-dir: ${DOCUMENTOS_INSTRUCTOR_DIR:./uploads/documentos-instructor}
     fotos-perfil-dir: ${FOTOS_PERFIL_DIR:./uploads/fotos-perfil}
