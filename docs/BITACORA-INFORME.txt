@@ -45,8 +45,11 @@ Pruebas automatizadas del backend: 187 archivos / 842 pruebas / resultado: 842 c
 (comando de ejecucion: JAVA_HOME=C:\Users\Facundo\.jdks\corretto-21.0.10 ./mvnw -o test)
 (salida literal: "Tests run: 842, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS")
 
-Pruebas automatizadas del frontend: no hay
-(comando en activehub-frontend: find src -name "*.test.*" -o -name "*.spec.*" | wc -l  ->  0)
+Pruebas automatizadas del frontend: 16 archivos / 142 pruebas / resultado: 142 correctas, 0 fallidas (ENTRADA 010)
+(comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  16)
+(comando de ejecucion: npm test; salida literal: "Test Files  16 passed (16)" - "Tests  142 passed (142)")
+Cobertura sobre los archivos alcanzados: 75.25% de sentencias, 66.86% de ramas, 69.23% de funciones, 78.17% de lineas (comando: npm run test:coverage).
+Cubren lib/ completo salvo exportPdf, nominatim, notificaciones y resaltado, mas las dos pantallas publicas (Ayuda y Manual). Las pantallas de Alumno, Instructor y Administrador todavia no tienen pruebas.
 
 Migraciones Flyway: V1 a V27 (ultima: V27__interaccion_alumno)
 (comando: ls src/main/resources/db/migration | wc -l  ->  27)
@@ -54,10 +57,11 @@ Migraciones Flyway: V1 a V27 (ultima: V27__interaccion_alumno)
 ESLint del frontend: 0 errores / 11 advertencias
 (comando: npx eslint .  en activehub-frontend; salida literal: "11 problems (0 errors, 11 warnings)")
 Cambio respecto de la linea de base: eran 12 advertencias. La que desaparecio es la del useMemo de "Recomendado para vos" del Home, que dejo de existir al mover el calculo al backend (ENTRADA 004).
-Typecheck del frontend: sin errores (comando: npx tsc -b).
+Typecheck del frontend: sin errores (comando: npx tsc -b). Desde la ENTRADA 010 los dos comandos incluyen los 16 archivos de prueba, que estan dentro de src y del mismo proyecto de TypeScript.
+Integracion continua: desde la ENTRADA 010 existe .github/workflows/ci.yml en activehub-frontend, que corre ESLint, typecheck, pruebas y compilacion de produccion en cada push y en cada Pull Request sobre integracion y main. El backend no tiene flujo equivalente: sus 842 pruebas se ejecutan solo a mano.
 
-Pantallas implementadas: 41 archivos de pantalla en activehub-frontend/src/pages (nueva respecto de la linea de base: E1A-PAN-10 Recuperar contrasenia, codigo propuesto NUEVO)
-(comando: find src/pages -name "*.tsx" | wc -l  ->  41)
+Pantallas implementadas: 42 archivos de pantalla en activehub-frontend/src/pages (nuevas respecto de la linea de base: E1A-PAN-10 Recuperar contrasenia y SYS-PAN-MAN Manual de usuario, los dos codigos propuestos NUEVOS)
+(comando: find src/pages -name "*.tsx" | wc -l  ->  42)
 Observacion: sigue sin verificarse la correspondencia entre los 45 codigos de pantalla del catalogo y los archivos de src/pages (ver ENTRADA 001).
 
 Estado por modulo (los 15):
@@ -75,7 +79,7 @@ Estado por modulo (los 15):
 12. Reportes e Informes - PROBADO.
 13. Tablero / Dashboard - PROBADO.
 14. Configuracion y Parametros - PROBADO - parametros por variables de entorno, incluidas las tres de Supabase Storage.
-15. Ayuda y Soporte al Usuario - PARCIAL - pantalla Ayuda, reportes de soporte y asistente con modelo de lenguaje (Groq) sobre el manual de usuario, los tres PROBADOS (ENTRADAS 006 y 007); el manual sigue sin estar publicado como pantalla para el usuario (PENDIENTE 9), aunque su contenido ya es la fuente con la que responde el chatbot.
+15. Ayuda y Soporte al Usuario - PARCIAL - pantalla Ayuda, reportes de soporte y asistente con modelo de lenguaje (Groq) sobre el manual de usuario, los tres PROBADOS (ENTRADAS 006 y 007); el manual de usuario ya es una pantalla de la plataforma (/manual, ENTRADA 009), IMPLEMENTADO pero todavia no probado en el navegador.
 
 Pendientes conocidos:
 1 (integracion real con Mercado Pago) - PENDIENTE - hoy MockPaymentGateway.
@@ -83,17 +87,17 @@ Pendientes conocidos:
 3 (asistente con modelo de lenguaje y chatbot con Groq) - PROBADO. PENDIENTE 3: PARCIAL -> PROBADO (ENTRADA 007: verificado contra Groq con el modelo openai/gpt-oss-120b — preguntas legitimas respondidas con el manual, siete intentos de prompt injection rechazados, informe de beneficios generado para una cuenta de alumno de demostracion, y el aviso de cuota agotada con tiempo de espera funcionando). El codigo es de la ENTRADA 006 (2 casos de uso) mas las defensas y el manejo de cuota de la 007; en total 62 pruebas automatizadas. Queda como verificacion visual pendiente probar las dos pantallas en el navegador. El motor de recomendaciones adaptativo, que era la tercera parte de este pendiente, quedo PROBADO en la ENTRADA 004.
 4 (imagenes en Supabase Storage) - PROBADO - bucket creado, 15 archivos migrados y lectura verificada contra el proyecto real (ENTRADA 003). PENDIENTE 4: PARCIAL -> PROBADO. Queda aparte la optimizacion de imagenes, que nunca se implemento.
 5 (despliegue en Render, Vercel y Supabase) - PARCIAL - la base y el almacenamiento de archivos ya corren contra Supabase; el backend en Render y el frontend en Vercel siguen sin desplegarse. PENDIENTE 5: PENDIENTE -> PARCIAL.
-6 (pruebas automatizadas del frontend) - PENDIENTE - 0 archivos de prueba.
-7 (ESLint en GitHub Actions) - PENDIENTE.
+6 (pruebas automatizadas del frontend) - PARCIAL - 16 archivos y 142 pruebas ejecutadas en verde con Vitest, jsdom y Testing Library (ENTRADA 010). PENDIENTE 6: PENDIENTE -> PARCIAL. Falta cubrir las pantallas del Alumno, del Instructor y del Administrador, los dos contextos y el flujo de inscripcion y pago (este ultimo, a proposito, hasta que este Mercado Pago).
+7 (ESLint en GitHub Actions) - IMPLEMENTADO - .github/workflows/ci.yml corre ESLint, typecheck, pruebas y build en cada push y Pull Request sobre integracion y main (ENTRADA 010). PENDIENTE 7: PENDIENTE -> IMPLEMENTADO. Pasa a PROBADO cuando se empuje la rama y el flujo corra por primera vez en GitHub.
 8 (renombrar integracion a develop y etiquetar la version en main) - PENDIENTE.
-9 (manual de usuario integrado en la plataforma) - PENDIENTE.
+9 (manual de usuario integrado en la plataforma) - IMPLEMENTADO - pantalla publica /manual con el texto completo del Anexo 8, indice navegable, buscador sin tildes y version imprimible, mas los accesos desde Ayuda y desde el pie de pagina (ENTRADA 009). PENDIENTE 9: PENDIENTE -> IMPLEMENTADO. Pasa a PROBADO cuando se verifique en el navegador.
 10 (ejecucion de PRU-01 a PRU-09) - PENDIENTE.
 
 Despliegue: backend (Render) - no desplegado; frontend (Vercel) - no desplegado; base de datos (Supabase) - en uso desde el entorno de desarrollo; Supabase Storage - bucket "activehub" creado y en uso (privado). URL publica: no desplegado.
 
 Variables de entorno del backend agregadas en las ENTRADAS 006 y 007 (solo los nombres, sin valores): GROQ_API_KEY (obligatoria para que el asistente funcione; vacia = las dos pantallas caen a su comportamiento sin modelo; el usuario ya la cargo en su entorno local), GROQ_URL, GROQ_MODELO (por defecto openai/gpt-oss-120b desde la ENTRADA 007), GROQ_REASONING_EFFORT (por defecto "low") y GROQ_TIMEOUT_SEG.
 
-Pendiente transversal que arrastra la ENTRADA 007: el manual de usuario (Anexo 8) quedo desactualizado en sus apartados 1.6 y 2.3, que describen el chat y el asistente de beneficios como eran antes de la IA. La ENTRADA 007 detalla, apartado por apartado, que hay que cambiar. Al actualizarlo hay que reemplazar tambien la copia que usa el asistente (activehub-backend/src/main/resources/manual/manual-usuario-activehub.txt), porque es la fuente con la que responde el chatbot.
+Pendiente transversal que arrastra la ENTRADA 007: el manual de usuario (Anexo 8) quedo desactualizado en sus apartados 1.6 y 2.3, que describen el chat y el asistente de beneficios como eran antes de la IA. La ENTRADA 007 detalla, apartado por apartado, que hay que cambiar. Al actualizarlo hay que reemplazar tambien la copia que usa el asistente (activehub-backend/src/main/resources/manual/manual-usuario-activehub.txt), porque es la fuente con la que responde el chatbot. Desde la ENTRADA 009 hay un TERCER lugar que se actualiza junto con los otros dos: activehub-frontend/src/lib/manual.ts, que es el texto que muestra la pantalla /manual.
 
 Modelo de ramas: rama activa integracion en los dos repositorios. Sin etiquetas. No existe la rama develop. Lo de las ENTRADAS 002 y 003 (recuperacion de contrasenia y Supabase Storage) lo commiteo el usuario el 2026-09-22 con el mensaje "Agregada la posibilidad de recuperar contrasenia olvidada. Arreglos de bugs menores.": backend 4ef25fd, frontend 8c8fd42. Lo de las ENTRADAS 004 y 005 (motor de recomendaciones, baja de la actividad de prueba y cabecera de este archivo) lo commiteo el usuario el 2026-09-22 con el mensaje "Mejoradas las recomendaciones": backend 430df40, frontend 827f835. Al 2026-09-22 los dos arboles de trabajo estan limpios y no hay nada sin commitear.
 === FIN ESTADO GENERAL ===
@@ -899,3 +903,144 @@ PENDIENTE QUE QUEDA:
  - Revisar en el navegador como queda el pie en las tres areas (publica, alumno e instructor/admin), sobre todo en pantallas angostas.
  - Commitear los cambios de esta entrada junto con los de las ENTRADAS 006 y 007.
 === FIN ENTRADA 008 ===
+
+=== ENTRADA 009 ===
+FECHA: 2026-09-23
+REPOSITORIO: activehub-frontend
+RAMA Y COMMITS: integracion - sin commit al momento de este registro - sin Pull Request
+TIPO: INTERFAZ
+TITULO: El manual de usuario (Anexo 8) ahora es una pantalla de la plataforma
+
+QUE CAMBIA PARA EL USUARIO:
+ - Nueva pantalla publica "Manual de usuario" en la ruta /manual, con la misma identidad visual que la pantalla de Ayuda. Contiene el texto completo del Anexo 8: la presentacion (sobre este manual, convenciones utilizadas y requisitos de uso), la seccion 1 "Primeros pasos" (apartados 1.1 a 1.6), la seccion 2 "Manual del Alumno" (2.1 a 2.11), la seccion 3 "Manual del Instructor" (3.1 a 3.11), la seccion 4 "Manual del Administrador" (4.1 a 4.11) y la seccion 5 "Glosario de estados".
+ - Encabezado de la pantalla: etiqueta "Manual de usuario", titulo "Como usar ActiveHub" y el texto "El recorrido completo de la plataforma, organizado por rol: primero lo que es comun a los tres y despues lo propio del Alumno, del Instructor y del Administrador.". Arriba a la derecha, los accesos "Ayuda" y "Volver a mi panel" (con sesion) o "Volver al inicio" (sin sesion).
+ - Buscador con el texto de ayuda "Buscar en el manual..." y el boton "Limpiar". Filtra por apartado, ignora mayusculas y tildes (escribir "inscripcion" encuentra "Inscripcion") y muestra el contador "N apartados" o el mensaje "No encontramos apartados que coincidan.". El indice se filtra junto con el contenido.
+ - Indice lateral fijo bajo el titulo "CONTENIDO", con cada seccion, su etiqueta de rol ("Todos", "Alumno", "Instructor", "Administrador", "Referencia") y sus apartados numerados. Al presionar un apartado la pantalla se desplaza hasta el; el apartado que se esta leyendo queda resaltado en el indice mientras se scrollea. En pantallas de hasta 820 px el indice deja de estar fijo y se apila arriba del contenido.
+ - Al pie de la pantalla, el texto "Te quedo una duda que el manual no responde? Escribinos desde la pantalla de Ayuda." y tres botones: "Contactar con soporte" (lleva a la seccion de contacto de /ayuda), "Imprimir / PDF" (abre el dialogo de impresion del navegador con solo el texto del manual, sin encabezado, buscador, indice ni botones) y "Volver arriba".
+ - Accesos nuevos al manual: en la pantalla de Ayuda, una tarjeta oscura "Manual de usuario" con el texto "Todo el uso de la plataforma paso a paso, por rol: Alumno, Instructor y Administrador, con el glosario de estados." y el boton "Abrir el manual", ubicada entre las "Guias rapidas" y las "Preguntas frecuentes"; y en el pie de pagina, el enlace "Manual de usuario" en la columna "Soporte" (version completa) y "Manual" en la version compacta de los paneles de Instructor y Administrador.
+ - Es una pantalla publica: se puede leer sin haber iniciado sesion y sin el correo verificado, porque parte del manual (crear la cuenta, confirmar el correo, iniciar sesion) es justamente lo que se necesita cuando todavia no se pudo entrar.
+ - Un apartado se puede compartir por enlace: /manual#a-2-6 abre el manual desplazado en el apartado 2.6 "Inscribirse y pagar una clase".
+
+DETALLE TECNICO:
+ - Archivos nuevos: activehub-frontend/src/lib/manual.ts (1137 lineas, el contenido) y activehub-frontend/src/pages/public/Manual.tsx (399 lineas, la pantalla). Archivos modificados: src/App.tsx (la ruta), src/pages/public/Ayuda.tsx (la tarjeta de acceso), src/components/Footer.tsx (los enlaces en las dos variantes), src/index.css (dos bloques nuevos) y CLAUDE.md.
+ - El texto NO esta escrito dentro del JSX. Vive en lib/manual.ts como datos, con el mismo criterio que lib/faqs.ts: el manual lo corrige quien redacta la documentacion, y una correccion de redaccion no tiene que obligar a tocar la pantalla ni arriesgar el layout. La pantalla solo sabe como se ve cada tipo de bloque. Los tipos son cinco: "p" (parrafo), "sub" (subtitulo dentro del apartado), "pasos" (lista numerada), "lista" (lista con vinetas) y "tabla" (con encabezado; se usa en el cuadro comparativo del apartado 2.4 y en el glosario de la seccion 5).
+ - Unico marcado admitido en el texto: el termino encerrado entre dos asteriscos a cada lado se muestra en negrita. No se renderiza HTML del texto, a proposito, para que una correccion de redaccion no pueda inyectar nada en la pantalla.
+ - El buscador usa la funcion incluye de lib/texto.ts, la misma que el resto de los filtros del sistema, asi que ignora tildes y mayusculas. Filtra apartados (no secciones) porque el apartado es la unidad que ofrece el indice y la que tiene sentido leer entera; una seccion sin apartados coincidentes desaparece.
+ - El resaltado del indice se calcula con un listener de scroll (los titulos de apartado llevan el atributo data-apartado) y no con IntersectionObserver: alcanza con saber cual fue el ultimo titulo que paso el pliegue. El listener se registra en un useEffect y nunca se ejecuta de forma sincrona dentro de el, asi que no infringe la regla react-hooks/set-state-in-effect. El estado arranca en el primer apartado.
+ - El desplazamiento a un apartado se hace a mano restando 96 px, porque el ancla nativa del navegador queda tapada por el encabezado pegajoso. Se llega por el estado de navegacion (state.apartado) o por el hash de la URL; el efecto que lo resuelve solo scrollea, no toca estado.
+ - "Imprimir / PDF" es window.print() mas la clase ah-no-print, definida en el bloque @media print nuevo de src/index.css, que oculta encabezado, buscador, indice y botones e imprime los fondos de las tarjetas (print-color-adjust: exact). Es el mismo camino sin dependencias que ya usan las exportaciones a PDF del Instructor y del Administrador.
+ - El segundo bloque nuevo de src/index.css es la regla .ah-manual-indice dentro de @media (max-width: 820px), que despega el indice cuando la grilla ah-grid-side colapsa a una sola columna: apilado y pegajoso taparia media pantalla mientras se lee.
+ - Las tablas se envuelven en un contenedor con overflow-x: auto y un ancho minimo de 520 px: en un telefono el glosario de estados no entra de ninguna manera, y es preferible desplazarlo en horizontal a romper el ancho de la pantalla.
+ - No se trasladaron las figuras del Anexo 8 (las capturas del sistema): quien lee el manual dentro de la aplicacion ya esta mirando el sistema. El texto de los 34 apartados se transcribio completo, sin resumir.
+ - No se agrego ningun endpoint ni ninguna llamada a la API: la pantalla no pide datos al backend.
+
+HISTORIAS DE USUARIO Y CRITERIOS: sin historias nuevas. La pantalla cubre el modulo "Ayuda y Soporte al Usuario" del alcance. Si la catedra pide una historia, corresponderia proponer una NUEVA de consulta del manual dentro de la plataforma.
+PANTALLAS:
+ - NUEVA: SYS-PAN-MAN "Manual de usuario" (codigo propuesto; es una pantalla publica y transversal a los tres roles, como SYS-PAN-ERR, por eso no se le asigno un codigo de epica). Archivo activehub-frontend/src/pages/public/Manual.tsx, ruta /manual.
+ - MODIFICADA: la pantalla publica de Ayuda, que suma la tarjeta de acceso al manual.
+ - MODIFICADAS indirectamente: todas, porque el pie de pagina suma el enlace al manual (ver ENTRADA 008).
+ - Retiradas: ninguna.
+REGLAS DE NEGOCIO: ninguna nueva. La pantalla no ejecuta operaciones: solo muestra texto.
+MODULOS: 15. Ayuda y Soporte al Usuario. PENDIENTE 9: PENDIENTE -> IMPLEMENTADO (falta la verificacion en el navegador para poder marcarlo PROBADO).
+CASOS DE USO: sin cambios. No se agrego ni se modifico ningun endpoint.
+ENTIDADES Y MIGRACIONES: ninguna.
+TECNOLOGIAS: sin cambios. No se agrego ninguna dependencia: el indice, el buscador y la impresion se resuelven con React, CSS y window.print().
+COSTOS: sin impacto. La pantalla es estatica y no consume ni base de datos ni modelo de lenguaje.
+RIESGOS: R05 (inconsistencias entre documentacion y sistema) - sigue vigente y ahora tiene un frente nuevo: el manual esta en TRES lugares (el Anexo 8 del informe, activehub-backend/src/main/resources/manual/manual-usuario-activehub.txt que usa el chatbot, y activehub-frontend/src/lib/manual.ts que usa esta pantalla). Los tres tienen que actualizarse juntos. R06 (pruebas insuficientes) - vigente: esta pantalla tampoco tiene pruebas automatizadas (PENDIENTE 6).
+SEGURIDAD: la pantalla es publica y no muestra ningun dato de ninguna persona: solo el texto del manual, que es el mismo para todo el mundo. El unico dato de sesion que consulta es si hay usuario y su rol, para decidir si el enlace del encabezado dice "Volver a mi panel" o "Volver al inicio". El texto se renderiza como texto, nunca como HTML.
+PRUEBAS: automatizadas: ninguna (el frontend sigue sin pruebas automatizadas, PENDIENTE 6; comando: find src -name "*.test.*" -o -name "*.spec.*" | wc -l  ->  0). Manuales: NO se probo en el navegador. En esta sesion no habia herramienta de navegador disponible, asi que quedan pendientes del lado del usuario la revision visual del indice fijo, del resaltado por scroll, del buscador, de la impresion y del comportamiento en pantallas angostas.
+ANALISIS ESTATICO: ESLint ejecutado en activehub-frontend con "npx eslint ." el 2026-09-23, despues de los cambios. Resultado: 0 errores, 11 advertencias, todas de react-hooks/exhaustive-deps y todas preexistentes. Salida literal: "11 problems (0 errors, 11 warnings)". Sin cambios respecto del estado anterior: la pantalla nueva no agrego ninguna advertencia. Typecheck sin errores (comando: npx tsc -b). Compilacion de produccion correcta (comando: npm run build; salida literal: "built in 827ms"), con la advertencia ya conocida de tamano de chunk.
+DESPLIEGUE Y CONFIGURACION: sin cambios. No hay variables de entorno nuevas.
+DECISIONES:
+ - El manual es una pantalla propia (/manual) y no una seccion mas de /ayuda. Alternativas evaluadas: (a) una pestana dentro de /ayuda, descartada porque el manual es varias veces mas largo que todo el resto de esa pantalla y la dejaria ilegible; (b) un enlace de descarga al archivo de texto o a un PDF, descartado porque no se puede buscar, no se puede enlazar un apartado y queda desactualizado apenas cambia la aplicacion; (c) generar la pantalla leyendo el .txt del Anexo 8 en tiempo de compilacion, descartado porque el texto plano no distingue pasos, listas ni tablas, que es justo lo que hace legible al manual.
+ - El contenido como datos en lib/manual.ts en lugar de JSX. Motivo: separar la redaccion del layout. Alternativa evaluada: escribir el manual directamente en el JSX de la pantalla, que habria dado un archivo de mas de mil lineas donde cada correccion de texto obliga a navegar entre estilos.
+ - No trasladar las capturas del Anexo 8. Motivo: dentro de la aplicacion son redundantes, pesan y se desactualizan con cada cambio de interfaz. En el informe impreso siguen siendo necesarias.
+ERRORES DETECTADOS: ninguno nuevo.
+CAPTURAS SUGERIDAS:
+ manual-pantalla-completa.png - la pantalla /manual con el indice lateral y el primer apartado.
+ manual-buscador.png - el buscador con un termino escrito y el contador de apartados.
+ manual-glosario.png - la tabla del glosario de estados (seccion 5).
+ ayuda-acceso-manual.png - la tarjeta "Manual de usuario" dentro de la pantalla de Ayuda.
+PENDIENTE QUE QUEDA:
+ - Probar la pantalla en el navegador (PENDIENTE 9 pasa a PROBADO recien con eso).
+ - Actualizar los apartados 1.6 y 2.3 del manual por la incorporacion de la IA (pendiente transversal que arrastra la ENTRADA 007). Ahora ese cambio hay que replicarlo en TRES lugares: el Anexo 8, la copia del backend que usa el chatbot y src/lib/manual.ts. El apartado 1.6 de la pantalla ya menciona el manual como uno de los recursos de ayuda.
+ - Commitear los cambios de esta entrada junto con los de las ENTRADAS 006, 007 y 008.
+=== FIN ENTRADA 009 ===
+
+=== ENTRADA 010 ===
+FECHA: 2026-09-23
+REPOSITORIO: activehub-frontend
+RAMA Y COMMITS: integracion - sin commit al momento de este registro - sin Pull Request
+TIPO: CALIDAD (pruebas automatizadas e integracion continua)
+TITULO: El frontend pasa a tener pruebas automatizadas y un flujo de ESLint en GitHub Actions
+
+QUE CAMBIA PARA EL USUARIO:
+ - Nada. No se modifico ninguna pantalla, ningun texto, ningun endpoint ni ninguna regla. Es un cambio de calidad interna: se agregaron pruebas automatizadas y un chequeo automatico que corre en cada cambio de la rama de integracion.
+
+QUE SE AGREGO:
+ 1) Pruebas automatizadas del frontend. Antes no habia ninguna (0 archivos). Ahora hay 16 archivos y 142 pruebas, todas ejecutadas y en verde.
+ 2) Flujo de integracion continua en GitHub Actions (.github/workflows/ci.yml) que corre ESLint, la verificacion de tipos, las pruebas y la compilacion de produccion en cada push y en cada Pull Request sobre las ramas integracion y main.
+ 3) Documento docs/PRUEBAS.md con como se corren las pruebas, que cubre cada archivo, el criterio para agregar nuevas y lo que falta cubrir.
+
+DETALLE TECNICO:
+ - Herramientas incorporadas (todas de desarrollo, ninguna llega al paquete que se despliega): vitest 5.0.1, jsdom 28.1.0, @testing-library/react 16.3.3, @testing-library/user-event 14.6.7, @testing-library/jest-dom 7.0.1 y @vitest/coverage-v8 5.0.1. Se instalaron con "npm i -D".
+ - Se eligio Vitest y no Jest porque el proyecto ya usa Vite: comparte configuracion, resolucion de modulos y transformacion de TypeScript y JSX, asi que no hay un segundo pipeline de compilacion que mantener ni que desincronizar. Alternativa evaluada: Jest con ts-jest o babel-jest, que exige su propia configuracion de transformacion y duplica la resolucion de alias.
+ - Entorno jsdom: da un DOM sin abrir un navegador. Las pruebas de pantalla NO reemplazan la verificacion visual en el navegador, que sigue pendiente donde se indica en cada entrada.
+ - Configuracion en el bloque "test" de vite.config.ts (entorno, archivo de preparacion, patron de inclusion y cobertura) y preparacion comun en src/test/setup.ts, que tiene solo lo que toda prueba necesita: la limpieza del DOM entre pruebas y los reemplazos de scrollTo, scrollIntoView, matchMedia y requestAnimationFrame, que jsdom no implementa.
+ - Sin "globals": cada archivo importa describe, it, expect y vi desde "vitest". Es una linea mas por archivo y a cambio no hay identificadores que ESLint no conozca ni tipos globales que declarar.
+ - Guiones nuevos en package.json: "test" (vitest run), "test:watch" (vitest), "test:coverage" (vitest run --coverage) y "typecheck" (tsc -b).
+ - Las pruebas viven al lado del archivo que prueban, con extension .test.ts o .test.tsx. No hay carpeta separada.
+ - Las dos pruebas de pantalla reemplazan los contextos AuthContext y DataContext por dobles (vi.mock): montar los proveedores reales arrastraria la sesion y la API, que no son el objeto de esas pruebas. Consultan por lo que ve la persona (texto del boton, texto de ayuda del campo) y nunca por clases CSS, asi que un cambio de maquetado no rompe una prueba que sigue siendo cierta.
+ - Se agrego "coverage" al .gitignore y a los ignorados de ESLint: es salida generada, igual que "dist".
+ - El flujo de CI corre cuatro pasos bloqueantes en este orden: npm run lint, npm run typecheck, npm test y npm run build. El orden es deliberado: primero lo que falla en segundos y senala la linea exacta, al final lo que tarda. Usa npm ci (no npm install), que instala exactamente lo que dice package-lock.json y falla si el lock quedo desactualizado. Node 22.x, con cache de npm. Tiene concurrency con cancel-in-progress para que un push nuevo cancele la corrida anterior, y workflow_dispatch para poder ejecutarlo a mano.
+ - Decision registrada en el propio archivo de CI: las ADVERTENCIAS de ESLint no hacen fallar el trabajo, los errores si. Hoy hay 11 advertencias, todas de react-hooks/exhaustive-deps y todas preexistentes; agregar --max-warnings 0 ahora dejaria la rama en rojo permanente y el chequeo se dejaria de mirar. Se agrega cuando esas 11 esten resueltas.
+
+QUE CUBREN LAS PRUEBAS (16 archivos, 142 pruebas):
+ - src/lib/texto.test.ts - la busqueda ignora tildes, mayusculas y la ñ. Es la promesa que cumple todo filtro del sistema.
+ - src/lib/areas.test.ts - RN-19: a que area entra cada persona y en que pantalla aterriza segun sus permisos. Incluye los casos que ya se rompieron una vez: catalogo.explorar (implicito, no abre el area de alumno), cobros.confirmar (es una accion, no abre el area de instructor), soporte.gestionar (tiene que abrir la pantalla de Gestion) y el aterrizaje del administrador parcial. Incluye ademas una prueba de invariante: todo permiso declarado en el "requiere" de un area habilita alguna de sus pantallas.
+ - src/lib/api.test.ts - el contrato con el backend: el token como Bearer, el 204 sin cuerpo, el multipart sin Content-Type y cada respuesta de error traducida a ApiError con su codigo, su mensaje, su status y sus errores por campo, incluido el backend caido como ERROR_RED con status 0.
+ - src/lib/faqs.test.ts - la busqueda de preguntas frecuentes, que es el camino SIN IA del chatbot.
+ - src/lib/ia.test.ts - la distincion entre "la IA no esta disponible" (cae al comportamiento sin IA) y "se acabo la cuota" (muestra el mensaje del backend), y el recorte del historial a 6 turnos.
+ - src/lib/exportCsv.test.ts - el BOM y el separador punto y coma, sin los cuales el CSV no abre bien en Excel en la configuracion regional argentina, mas el entrecomillado.
+ - src/lib/geo.test.ts - distancias (haversine) y su formato: metros debajo del kilometro.
+ - src/lib/style.test.ts - el parseo de las declaraciones CSS literales y su cache por cadena.
+ - src/lib/mockData.test.ts - la regla de los 4 dias (preinscripcion contra inscripcion), la disponibilidad de cupos y el formato de fecha y hora.
+ - src/lib/manual.test.ts - las invariantes del Manual de usuario de la ENTRADA 009: ids unicos, ningun apartado vacio, negritas balanceadas, nada de HTML en el texto y las filas de tabla con tantas celdas como columnas.
+ - src/lib/perfil.test.ts - "Termina tu registro" alcanza SOLO a las cuentas de Google, no a las locales (el administrador sembrado nace sin telefono y no le corresponde esa pantalla).
+ - src/lib/cargaParcial.test.ts - un 403 de un modulo secundario no tira la pantalla entera dentro de un Promise.all.
+ - src/lib/status.test.ts y src/lib/nivelStyle.test.ts - los estados del dominio escritos literalmente como los exige la especificacion, y el color neutro para los niveles de intensidad que crea el administrador.
+ - src/pages/public/Ayuda.test.tsx - los controles que alguna vez estuvieron muertos (ENTRADA de Soporte): el buscador con y sin tildes, las guias rapidas incluida la regresion de la carrera del onToggle (alternar entre dos guias tiene que dejar abierta la segunda), el reporte de soporte real con sus cuatro caminos (envio correcto con los campos recortados, error del backend mostrando SU mensaje, error inesperado con mensaje propio, y con y sin sesion iniciada), el boton "Enviar otro" y los enlaces mailto: y tel:.
+ - src/pages/public/Manual.test.tsx - el indice y el cuerpo, el buscador sin tildes con su contador, el glosario renderizado como tabla, las negritas que no se ven crudas, el desplazamiento al presionar un apartado, el ancla de la URL, "Imprimir / PDF" y "Volver arriba".
+
+HISTORIAS DE USUARIO Y CRITERIOS: sin cambios. Es calidad interna.
+PANTALLAS: sin cambios. No se modifico ninguna pantalla; se agregaron pruebas sobre dos de ellas.
+REGLAS DE NEGOCIO: ninguna nueva. Dos reglas ya existentes quedaron FIJADAS por pruebas: RN-19 (el acceso lo deciden los permisos) en areas.test.ts, y la regla de los 4 dias para preinscripcion e inscripcion en mockData.test.ts.
+MODULOS: sin cambios funcionales.
+CASOS DE USO: sin cambios. Ningun endpoint nuevo ni modificado.
+ENTIDADES Y MIGRACIONES: ninguna.
+TECNOLOGIAS: se agregan al informe seis dependencias de DESARROLLO del frontend: Vitest 5.0.1 (https://vitest.dev), jsdom 28.1.0, Testing Library para React 16.3.3 y user-event 14.6.7 (https://testing-library.com/docs/react-testing-library/intro), jest-dom 7.0.1 y @vitest/coverage-v8 5.0.1. Ninguna llega al paquete que se despliega. Se suma GitHub Actions como plataforma de integracion continua (https://docs.github.com/actions).
+COSTOS: sin impacto. GitHub Actions es gratuito para repositorios publicos; el flujo ademas cancela las corridas viejas de la misma rama para no consumir minutos de mas.
+RIESGOS: R06 (pruebas insuficientes) - de vigente a MITIGADO PARCIALMENTE: el backend tenia 842 pruebas y el frontend ninguna; ahora el frontend tiene 142 y un chequeo automatico que las corre en cada cambio. Sigue vigente en lo que falta: las pantallas del Alumno, del Instructor y del Administrador no tienen pruebas. R01 (integracion frontend-backend) - mitigado parcialmente: api.test.ts fija la traduccion de cada respuesta del backend a ApiError.
+SEGURIDAD: sin cambios. Las pruebas no usan credenciales reales: los correos y tokens que aparecen son inventados (ana@test.com, "jwt-123") y estan solo en memoria durante la corrida. El flujo de CI no necesita ningun secreto: no despliega ni accede a la base.
+PRUEBAS: automatizadas del frontend: 16 archivos / 142 pruebas / resultado: 142 correctas, 0 fallidas (comando de conteo: find src -name "*.test.*" | wc -l -> 16; comando de ejecucion: npm test; salida literal: "Test Files  16 passed (16)" y "Tests  142 passed (142)"). Cobertura sobre los archivos alcanzados: 75.25% de sentencias, 66.86% de ramas, 69.23% de funciones y 78.17% de lineas (comando: npm run test:coverage; salida literal: "Statements   : 75.25% ( 368/489 )"). Manuales: ninguna nueva. El flujo de CI todavia NO se ejecuto en GitHub: se ejecuta recien cuando se empuje la rama, asi que queda IMPLEMENTADO y no PROBADO. Los cuatro comandos que corre el flujo si se ejecutaron localmente, uno por uno, con el resultado que se indica en ANALISIS ESTATICO.
+ANALISIS ESTATICO: ESLint ejecutado en activehub-frontend con "npx eslint ." el 2026-09-23, con los 16 archivos de prueba ya incluidos. Resultado: 0 errores, 11 advertencias, todas de react-hooks/exhaustive-deps y todas preexistentes. Salida literal: "11 problems (0 errors, 11 warnings)". Los archivos de prueba no agregaron ninguna advertencia. Typecheck sin errores (comando: npx tsc -b), tambien con las pruebas incluidas: entran en el mismo proyecto de TypeScript, asi que un error de tipos en una prueba rompe el typecheck. Compilacion de produccion correcta (comando: npm run build; salida literal: "built in 639ms").
+DESPLIEGUE Y CONFIGURACION: sin variables de entorno nuevas y sin secretos en GitHub. Observacion para reproducir: la version de Node instalada en la maquina de desarrollo es la 22.12.0 y Vite 8 pide ^20.19 || ^22.13 || >=24, por lo que npm emite la advertencia EBADENGINE al instalar. No impide instalar ni ejecutar nada, pero conviene actualizar Node; el flujo de CI usa 22.x, que resuelve a una version que si cumple.
+DECISIONES:
+ - Vitest sobre Jest. Motivo: comparte la configuracion de Vite que el proyecto ya tiene. Alternativa evaluada: Jest, que habria exigido su propia cadena de transformacion de TypeScript y JSX.
+ - Las pruebas al lado del codigo y no en una carpeta tests/. Motivo: se ve de un vistazo que un archivo tiene prueba y cual, y al mover un archivo se mueve su prueba.
+ - Empezar por lib/ y por las dos pantallas publicas. Motivo: son el codigo con mas reglas por linea (permisos, busqueda sin tildes, traduccion de errores, formatos de exportacion) y el que mas caro sale equivocar; ademas no necesitan sesion, asi que la prueba no arrastra media aplicacion.
+ - NO probar todavia el flujo de inscripcion y pago. Motivo: hoy la pantalla habla con MockPaymentGateway y la prueba habria que reescribirla apenas entre la integracion real con Mercado Pago (PENDIENTE 1).
+ - Las advertencias de ESLint no bloquean el flujo de CI, los errores si. Motivo y condicion para cambiarlo: explicados arriba y en el propio archivo ci.yml.
+ERRORES DETECTADOS: ninguno en el codigo de la aplicacion. Las pruebas pasaron en verde contra el codigo tal como estaba, sin necesidad de corregir nada, lo que es un dato en si mismo para el informe: lo que esta cubierto se comporta como se documento. Dos supuestos propios de las pruebas si estaban mal y se corrigieron al escribirlas: (a) se esperaba que formatHora devolviera solo "HH:MM" y en este entorno devuelve "09:05 a. m." (lo pone toLocaleTimeString segun la version de ICU, no el codigo de la aplicacion); (b) se esperaba leer el BOM del CSV con Blob.text(), que lo descarta al decodificar, asi que la prueba pasa a leer los bytes EF BB BF.
+CAPTURAS SUGERIDAS:
+ pruebas-frontend-142-verde.png - consola con "Test Files  16 passed (16)" y "Tests  142 passed (142)".
+ pruebas-frontend-cobertura.png - la tabla de cobertura por archivo.
+ ci-github-actions-verde.png - la corrida del flujo en la pestaña Actions con los cuatro pasos en verde (sacar cuando se empuje la rama).
+PENDIENTE QUE QUEDA:
+ - Empujar la rama para que el flujo de CI corra por primera vez en GitHub. Recien ahi PENDIENTE 7 pasa a PROBADO.
+ - Cubrir con pruebas las pantallas del Alumno, del Instructor y del Administrador, y los dos contextos (AuthContext y DataContext). Es el grueso de lo que falta.
+ - Cubrir el flujo de inscripcion y pago cuando este la integracion real con Mercado Pago.
+ - Evaluar agregar un flujo equivalente para el backend (mvn test en GitHub Actions), que hoy no existe: sus 842 pruebas se ejecutan solo a mano.
+ - Actualizar Node en la maquina de desarrollo a 22.13 o superior.
+ - Commitear los cambios de esta entrada junto con los de las ENTRADAS 006, 007, 008 y 009.
+=== FIN ENTRADA 010 ===
