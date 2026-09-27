@@ -35,7 +35,7 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-09-23, despues de la ENTRADA 008) ===
+=== ESTADO GENERAL (actualizado: 2026-09-26, despues de la ENTRADA 011) ===
 Casos de uso implementados en el backend: 111
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
@@ -45,11 +45,11 @@ Pruebas automatizadas del backend: 187 archivos / 842 pruebas / resultado: 842 c
 (comando de ejecucion: JAVA_HOME=C:\Users\Facundo\.jdks\corretto-21.0.10 ./mvnw -o test)
 (salida literal: "Tests run: 842, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS")
 
-Pruebas automatizadas del frontend: 16 archivos / 142 pruebas / resultado: 142 correctas, 0 fallidas (ENTRADA 010)
-(comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  16)
-(comando de ejecucion: npm test; salida literal: "Test Files  16 passed (16)" - "Tests  142 passed (142)")
+Pruebas automatizadas del frontend: 17 archivos / 145 pruebas / resultado: 145 correctas, 0 fallidas (ENTRADA 011)
+(comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  17)
+(comando de ejecucion: npm test; salida literal: "Test Files  17 passed (17)" - "Tests  145 passed (145)")
 Cobertura sobre los archivos alcanzados: 75.25% de sentencias, 66.86% de ramas, 69.23% de funciones, 78.17% de lineas (comando: npm run test:coverage).
-Cubren lib/ completo salvo exportPdf, nominatim, notificaciones y resaltado, mas las dos pantallas publicas (Ayuda y Manual). Las pantallas de Alumno, Instructor y Administrador todavia no tienen pruebas.
+Cubren lib/ completo salvo nominatim, notificaciones y resaltado, mas las dos pantallas publicas (Ayuda y Manual). Las pantallas de Alumno, Instructor y Administrador todavia no tienen pruebas.
 
 Migraciones Flyway: V1 a V27 (ultima: V27__interaccion_alumno)
 (comando: ls src/main/resources/db/migration | wc -l  ->  27)
@@ -87,7 +87,7 @@ Pendientes conocidos:
 3 (asistente con modelo de lenguaje y chatbot con Groq) - PROBADO. PENDIENTE 3: PARCIAL -> PROBADO (ENTRADA 007: verificado contra Groq con el modelo openai/gpt-oss-120b — preguntas legitimas respondidas con el manual, siete intentos de prompt injection rechazados, informe de beneficios generado para una cuenta de alumno de demostracion, y el aviso de cuota agotada con tiempo de espera funcionando). El codigo es de la ENTRADA 006 (2 casos de uso) mas las defensas y el manejo de cuota de la 007; en total 62 pruebas automatizadas. Queda como verificacion visual pendiente probar las dos pantallas en el navegador. El motor de recomendaciones adaptativo, que era la tercera parte de este pendiente, quedo PROBADO en la ENTRADA 004.
 4 (imagenes en Supabase Storage) - PROBADO - bucket creado, 15 archivos migrados y lectura verificada contra el proyecto real (ENTRADA 003). PENDIENTE 4: PARCIAL -> PROBADO. Queda aparte la optimizacion de imagenes, que nunca se implemento.
 5 (despliegue en Render, Vercel y Supabase) - PARCIAL - la base y el almacenamiento de archivos ya corren contra Supabase; el backend en Render y el frontend en Vercel siguen sin desplegarse. PENDIENTE 5: PENDIENTE -> PARCIAL.
-6 (pruebas automatizadas del frontend) - PARCIAL - 16 archivos y 142 pruebas ejecutadas en verde con Vitest, jsdom y Testing Library (ENTRADA 010). PENDIENTE 6: PENDIENTE -> PARCIAL. Falta cubrir las pantallas del Alumno, del Instructor y del Administrador, los dos contextos y el flujo de inscripcion y pago (este ultimo, a proposito, hasta que este Mercado Pago).
+6 (pruebas automatizadas del frontend) - PARCIAL - 17 archivos y 145 pruebas ejecutadas en verde con Vitest, jsdom y Testing Library (ENTRADAS 010 y 011). PENDIENTE 6: PENDIENTE -> PARCIAL. Falta cubrir las pantallas del Alumno, del Instructor y del Administrador, los dos contextos y el flujo de inscripcion y pago (este ultimo, a proposito, hasta que este Mercado Pago).
 7 (ESLint en GitHub Actions) - IMPLEMENTADO - .github/workflows/ci.yml corre ESLint, typecheck, pruebas y build en cada push y Pull Request sobre integracion y main (ENTRADA 010). PENDIENTE 7: PENDIENTE -> IMPLEMENTADO. Pasa a PROBADO cuando se empuje la rama y el flujo corra por primera vez en GitHub.
 8 (renombrar integracion a develop y etiquetar la version en main) - PENDIENTE.
 9 (manual de usuario integrado en la plataforma) - IMPLEMENTADO - pantalla publica /manual con el texto completo del Anexo 8, indice navegable, buscador sin tildes y version imprimible, mas los accesos desde Ayuda y desde el pie de pagina (ENTRADA 009). PENDIENTE 9: PENDIENTE -> IMPLEMENTADO. Pasa a PROBADO cuando se verifique en el navegador.
@@ -1044,3 +1044,58 @@ PENDIENTE QUE QUEDA:
  - Actualizar Node en la maquina de desarrollo a 22.13 o superior.
  - Commitear los cambios de esta entrada junto con los de las ENTRADAS 006, 007, 008 y 009.
 === FIN ENTRADA 010 ===
+
+=== ENTRADA 011 ===
+FECHA: 2026-09-26
+REPOSITORIO: activehub-frontend
+RAMA Y COMMITS: integracion - sin commit al momento de este registro - sin Pull Request
+TIPO: CORRECCION DE ERRORES Y MEJORA
+TITULO: Exportacion de la trazabilidad que quedaba en blanco, exportacion por periodo y cartel de carga al crear la cuenta
+
+QUE CAMBIA PARA EL USUARIO:
+ - Registro de auditoria y trazabilidad (E4Ad): "Exportar todo" y "Exportar esta pagina" (en cualquier pagina, no solo la 1) vuelven a generar el documento. Antes abrian una pestania que quedaba en blanco.
+ - "Exportar todo" abre siempre un dialogo donde se elige el periodo: todo el registro, los ultimos 7 dias o un mes calendario (solo se listan los meses que tienen eventos con los filtros actuales). El periodo se aplica encima de los filtros de rol, accion y busqueda, y respeta el orden elegido en la tabla. El documento impreso agrega el dato "Periodo".
+ - Si no hay eventos en el periodo elegido, el boton "Exportar" del dialogo queda deshabilitado.
+ - Registro de cuenta (Alumno e Instructor): al tocar "Crear cuenta" se muestra un cartel de carga que tapa la pantalla hasta que llega la pantalla del codigo de verificacion. Antes no habia ninguna senial de que algo estuviera pasando (solo el instructor veia "Subiendo documentos…" en el boton).
+
+TEXTOS DE INTERFAZ (literales):
+ - Dialogo de exportacion, titulo: "Exportar eventos"
+ - Campo: "Período" (sin *; siempre tiene un valor). Opciones: "Todo el registro", "Últimos 7 días", y un mes por opcion con el formato "Septiembre 2026".
+ - Mensaje con eventos: "Se van a exportar N eventos, respetando los filtros y el orden de la tabla." Con mas de 500 se agrega: " Con tantos registros el documento puede tardar unos segundos en abrirse."
+ - Mensaje sin eventos: "No hay eventos en ese período con los filtros actuales."
+ - Botones: "Cancelar" / "Exportar" (sin cambios).
+ - Ayuda emergente del boton "Exportar todo (N)": "Exporta a PDF los eventos filtrados: todos, los últimos 7 días o un mes"
+ - Error nuevo si falla el armado del documento: "No pudimos generar el documento de exportación. Intentá de nuevo."
+ - Registro: boton mientras se envia: "Creando cuenta…" (antes "Subiendo documentos…", solo instructor). Cartel de carga: "Creando tu cuenta" (alumno) / "Creando tu cuenta y subiendo tus documentos" (instructor).
+
+DETALLE TECNICO:
+ - Causa de la pestania en blanco: la columna audit_log.entidad_id es nullable (V1__esquema.sql) y el tipo AuditoriaEntry.entidadId del cliente decia string. lib/exportPdf.ts abria la ventana con window.open y DESPUES armaba el HTML; al escapar un entidadId null ("null.replace") se lanzaba una excepcion, la ventana ya abierta quedaba en about:blank y no se mostraba ningun error. "Exportar esta pagina" solo fallaba en paginas con alguna fila de ese tipo; "Exportar todo" siempre las incluia.
+ - Correcciones: (a) escapar() acepta null/undefined; (b) el HTML se arma ANTES del window.open, asi un error no deja una ventana colgada (sigue siendo sincronico dentro del click, la activacion de usuario sigue vigente); (c) AuditoriaEntry.entidadId pasa a string | null y el PDF muestra "—"; (d) generarPdf de Trazabilidad.tsx atrapa la excepcion y muestra el error.
+ - Periodo: filtro client-side sobre createdAt en hora local (convencion del proyecto: sin filtrado server-side). "Ultimos 7 dias" se mide contra el momento del click (Date.now() en el handler); el contador del dialogo usa useAhora() por la regla react-hooks/purity.
+ - Registro.tsx: el estado subiendo (solo instructor) se reemplazo por enviando, que cubre los dos roles, y se agrego CargandoAccion (overlay en portal, bloquea doble click).
+ - Archivos: src/lib/exportPdf.ts, src/lib/exportPdf.test.ts (NUEVO), src/pages/admin/Trazabilidad.tsx, src/pages/auth/Registro.tsx, src/context/DataContext.tsx, CLAUDE.md.
+ESTADO: IMPLEMENTADO. Exportacion con celda null: PROBADO con prueba automatizada. Verificacion en el navegador: PENDIENTE.
+HISTORIAS DE USUARIO Y CRITERIOS: E4Ad (trazabilidad, exportacion); E1A-HU04 (registro, estado de carga).
+PANTALLAS: pantalla de Trazabilidad del administrador y pantalla de Registro (E1A). Sin pantallas nuevas.
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: 4 Auditoria y Trazabilidad; 1 Autenticacion y Control de Acceso.
+CASOS DE USO: sin cambios (backend no modificado).
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin cambios.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios. El texto del documento se sigue escapando antes de interpolarse.
+PRUEBAS: automatizadas del frontend: 17 archivos / 145 pruebas / resultado: 145 correctas, 0 fallidas (comando: npx vitest run; salida literal: "Test Files  17 passed (17)" y "Tests  145 passed (145)"). Nuevas: 3 en src/lib/exportPdf.test.ts (celda null no rompe, si el armado falla no se abre ventana, devuelve false con la ventana bloqueada). Manuales: ninguna.
+ANALISIS ESTATICO: ESLint "npx eslint ." -> "11 problems (0 errors, 11 warnings)", sin cambios. Typecheck "npx tsc -b" sin errores. Compilacion "npm run build" -> "built in 3.37s".
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES:
+ - El dialogo de "Exportar todo" se abre siempre (antes solo con mas de 15 eventos), porque ahora es donde se elige el periodo.
+ - Los meses del selector salen de los eventos filtrados: ofrecer un mes sin eventos seria ofrecer un documento vacio.
+ERRORES DETECTADOS: el descrito en DETALLE TECNICO (tipo del cliente que no reflejaba una columna nullable).
+CAPTURAS SUGERIDAS:
+ trazabilidad-exportar-periodo.png - dialogo "Exportar eventos" con el selector de periodo abierto.
+ registro-creando-cuenta.png - cartel "Creando tu cuenta" sobre el formulario de registro.
+PENDIENTE QUE QUEDA:
+ - Verificar en el navegador las dos exportaciones y el cartel del registro.
+ - Actualizar el manual de usuario (Anexo 8, backend/src/main/resources/manual y src/lib/manual.ts) con el selector de periodo.
+=== FIN ENTRADA 011 ===
