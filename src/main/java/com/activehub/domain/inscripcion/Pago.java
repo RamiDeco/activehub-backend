@@ -48,6 +48,29 @@ public class Pago {
     @Column(name = "referencia_externa", length = 100)
     private String referenciaExterna;
 
+    /** Id de la orden en Mercado Pago (Orders API, decision de MP-01). */
+    @Column(name = "mp_order_id", length = 100)
+    private String mpOrderId;
+
+    /** Detalle crudo de MP (p. ej. motivo de rechazo). */
+    @Column(name = "status_detail", length = 100)
+    private String statusDetail;
+
+    /** Comision de la plataforma. Hoy siempre 0 (MP-01: la plataforma no cobra comision). */
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal comision = BigDecimal.ZERO;
+
+    @Column(name = "monto_instructor", precision = 10, scale = 2)
+    private BigDecimal montoInstructor;
+
+    /** Vencimiento de la autorizacion mientras el pago esta {@link EstadoPago#Retenido}. */
+    @Column(name = "autorizado_hasta")
+    private Instant autorizadoHasta;
+
+    /** Header X-Idempotency-Key enviado a MP: evita crear dos ordenes por un reintento. */
+    @Column(name = "idempotency_key", length = 100, unique = true)
+    private String idempotencyKey;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

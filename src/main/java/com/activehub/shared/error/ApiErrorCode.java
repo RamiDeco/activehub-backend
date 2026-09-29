@@ -20,7 +20,10 @@ public enum ApiErrorCode {
     /** La cuenta existe pero no confirmo su correo: no puede hacer nada mas que confirmarlo. */
     EMAIL_SIN_VERIFICAR(HttpStatus.FORBIDDEN),
     INSCRIPCION_YA_EXISTE(HttpStatus.CONFLICT),
+    /** Mercado Pago no respondio, respondio mal o la operacion no se puede hacer (502). */
     ERROR_PAGO(HttpStatus.BAD_GATEWAY),
+    /** Mercado Pago proceso el pago y lo rechazo: el alumno puede reintentar con otra tarjeta. */
+    PAGO_RECHAZADO(HttpStatus.UNPROCESSABLE_ENTITY),
     /**
      * El modelo de lenguaje no esta configurado o no respondio. 503 y no 500: no hay nada roto
      * adentro, hay un servicio externo que ahora no esta, y el frontend lo usa como senal para

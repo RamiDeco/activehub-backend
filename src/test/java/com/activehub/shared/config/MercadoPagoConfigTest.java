@@ -1,51 +1,30 @@
 package com.activehub.shared.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.activehub.shared.error.PagoException;
-import com.activehub.shared.payments.MercadoPagoOrderRequest;
-import com.activehub.shared.payments.MercadoPagoPaymentGateway;
+import com.activehub.shared.payments.MercadoPagoGateway;
+import com.activehub.shared.payments.PaymentGateway;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Sin MP_ACCESS_TOKEN la app tiene que arrancar (dev local y tests no dependen de la credencial),
- * pero un pago con Mercado Pago tiene que fallar explícito, sin llamar a la API ni caer al mock.
+ * Sin credenciales la app arranca igual (dev local y tests no dependen de ellas), y la unica
+ * pasarela es la real: no hay mock al que caer (decision de MP-04).
  */
 class MercadoPagoConfigTest {
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
-            .withUserConfiguration(MercadoPagoConfig.class, MercadoPagoPaymentGateway.class);
+            .withBean(ObjectMapper.class, () -> JsonMapper.builder().build())
+            .withUserConfiguration(MercadoPagoConfig.class, MercadoPagoGateway.class);
 
     @Test
-    void sinToken_elContextoArranca() {
+    void sinCredenciales_elContextoArrancaConLaPasarelaReal() {
         runner.run(context -> {
             assertThat(context).hasNotFailed();
-            assertThat(context).hasSingleBean(MercadoPagoPaymentGateway.class);
-        });
-    }
-
-    @Test
-    void sinToken_pagarLanzaPagoException() {
-        runner.run(context -> {
-            var gateway = context.getBean(MercadoPagoPaymentGateway.class);
-            var request = new MercadoPagoOrderRequest("online", "automatic", "100", "ref", null, null);
-
-            assertThatThrownBy(() -> gateway.createOrder(request))
-                    .isInstanceOf(PagoException.class)
-                    .hasMessageContaining("no está disponible");
-        });
-    }
-
-    @Test
-    void tokenEnBlanco_seTrataComoFaltante() {
-        runner.withPropertyValues("app.mercadopago.access-token=   ").run(context -> {
-            assertThat(context).hasNotFailed();
-            var gateway = context.getBean(MercadoPagoPaymentGateway.class);
-            var request = new MercadoPagoOrderRequest("online", "automatic", "100", "ref", null, null);
-
-            assertThatThrownBy(() -> gateway.createOrder(request)).isInstanceOf(PagoException.class);
+            assertThat(context).hasSingleBean(PaymentGateway.class);
+            assertThat(context.getBean(PaymentGateway.class)).isInstanceOf(MercadoPagoGateway.class);
         });
     }
 }

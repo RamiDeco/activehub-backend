@@ -21,7 +21,7 @@ import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.SinCuposDisponiblesException;
 import com.activehub.shared.notificacion.NotificacionService;
-import com.activehub.shared.payments.MercadoPagoPaymentGateway;
+import com.activehub.domain.mercadopago.CuentaMercadoPagoInstructorRepository;
 import com.activehub.shared.payments.PaymentGateway;
 import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.math.BigDecimal;
@@ -71,7 +71,7 @@ class InscribirseConcurrenciaTest {
     private AuditService auditService;
     private NotificacionService notificacionService;
     private InstructorVerificadoGuard instructorVerificadoGuard;
-    private MercadoPagoPaymentGateway mercadoPagoPaymentGateway;
+    private CuentaMercadoPagoInstructorRepository cuentaMercadoPagoRepository;
 
     private InscribirseService service;
     private UUID claseId;
@@ -87,12 +87,12 @@ class InscribirseConcurrenciaTest {
         auditService = mock(AuditService.class);
         notificacionService = mock(NotificacionService.class);
         instructorVerificadoGuard = mock(InstructorVerificadoGuard.class);
-        mercadoPagoPaymentGateway = mock(MercadoPagoPaymentGateway.class);
+        cuentaMercadoPagoRepository = mock(CuentaMercadoPagoInstructorRepository.class);
 
         service = new InscribirseService(
                 claseRepository, inscripcionRepository, pagoRepository, usuarioRepository, paymentGateway,
-                auditService, notificacionService, instructorVerificadoGuard, Clock.fixed(AHORA, ZoneOffset.UTC),
-                mercadoPagoPaymentGateway);
+                auditService, notificacionService, instructorVerificadoGuard, cuentaMercadoPagoRepository,
+                Clock.fixed(AHORA, ZoneOffset.UTC));
 
         claseId = UUID.randomUUID();
 

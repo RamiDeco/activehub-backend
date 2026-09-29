@@ -35,12 +35,12 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-09-26, despues de la ENTRADA 011) ===
+=== ESTADO GENERAL (actualizado: 2026-09-29, despues de la ENTRADA 013) ===
 Casos de uso implementados en el backend: 111
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
 
-Pruebas automatizadas del backend: 187 archivos / 842 pruebas / resultado: 842 correctas, 0 fallidas, 0 con error, 0 omitidas
+Pruebas automatizadas del backend: 191 archivos / 869 pruebas / resultado: 867 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
 (comando de conteo de archivos: find src/test -name "*Test.java" | wc -l)
 (comando de ejecucion: JAVA_HOME=C:\Users\Facundo\.jdks\corretto-21.0.10 ./mvnw -o test)
 (salida literal: "Tests run: 842, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS")
@@ -51,8 +51,8 @@ Pruebas automatizadas del frontend: 17 archivos / 145 pruebas / resultado: 145 c
 Cobertura sobre los archivos alcanzados: 75.25% de sentencias, 66.86% de ramas, 69.23% de funciones, 78.17% de lineas (comando: npm run test:coverage).
 Cubren lib/ completo salvo nominatim, notificaciones y resaltado, mas las dos pantallas publicas (Ayuda y Manual). Las pantallas de Alumno, Instructor y Administrador todavia no tienen pruebas.
 
-Migraciones Flyway: V1 a V27 (ultima: V27__interaccion_alumno)
-(comando: ls src/main/resources/db/migration | wc -l  ->  27)
+Migraciones Flyway: V1 a V28 (ultima: V28__mercadopago_marketplace, ENTRADA 012)
+(comando: ls src/main/resources/db/migration | wc -l  ->  28)
 
 ESLint del frontend: 0 errores / 11 advertencias
 (comando: npx eslint .  en activehub-frontend; salida literal: "11 problems (0 errors, 11 warnings)")
@@ -72,7 +72,7 @@ Estado por modulo (los 15):
 5. Alumno - PROBADO.
 6. Instructor - PROBADO.
 7. Actividades - PROBADO - alta, edicion, taxonomia, niveles, fotos (ahora en Supabase Storage), geolocalizacion.
-8. Reservas y Pagos - PROBADO CON PASARELA SIMULADA - MockPaymentGateway (PENDIENTE 1).
+8. Reservas y Pagos - PARCIAL - la pasarela simulada se retiro (ENTRADA 013); la inscripcion autoriza contra Mercado Pago real, pero cancelar, reintegrar y liberar pagos reales sigue pendiente (KAN-65) (PENDIENTE 1).
 9. Historial y Calificaciones - PROBADO.
 10. Busqueda y Filtrado - PROBADO - filtrado tradicional en Explorar y, desde esta actualizacion, motor de recomendaciones con puntaje en el Home del alumno.
 11. Administracion y Soporte - PROBADO.
@@ -82,7 +82,7 @@ Estado por modulo (los 15):
 15. Ayuda y Soporte al Usuario - PARCIAL - pantalla Ayuda, reportes de soporte y asistente con modelo de lenguaje (Groq) sobre el manual de usuario, los tres PROBADOS (ENTRADAS 006 y 007); el manual de usuario ya es una pantalla de la plataforma (/manual, ENTRADA 009), IMPLEMENTADO pero todavia no probado en el navegador.
 
 Pendientes conocidos:
-1 (integracion real con Mercado Pago) - PENDIENTE - hoy MockPaymentGateway.
+1 (integracion real con Mercado Pago) - PENDIENTE - hoy MockPaymentGateway. Avance: modelo de datos del marketplace (ENTRADA 012, KAN-52 / MP-03) y pasarela real MercadoPagoGateway con autorizar/capturar/cancelar/reembolsar/consultar; la inscripcion con Mercado Pago ya autoriza de verdad con el token del instructor (ENTRADA 013, KAN-53 / MP-04). MockPaymentGateway RETIRADO. Falta: OAuth del instructor, migrar cancelaciones/liberacion/reintegros (KAN-65) y webhook.
 2 (recuperacion de contrasenia por correo) - PROBADO (ENTRADA 002).
 3 (asistente con modelo de lenguaje y chatbot con Groq) - PROBADO. PENDIENTE 3: PARCIAL -> PROBADO (ENTRADA 007: verificado contra Groq con el modelo openai/gpt-oss-120b — preguntas legitimas respondidas con el manual, siete intentos de prompt injection rechazados, informe de beneficios generado para una cuenta de alumno de demostracion, y el aviso de cuota agotada con tiempo de espera funcionando). El codigo es de la ENTRADA 006 (2 casos de uso) mas las defensas y el manejo de cuota de la 007; en total 62 pruebas automatizadas. Queda como verificacion visual pendiente probar las dos pantallas en el navegador. El motor de recomendaciones adaptativo, que era la tercera parte de este pendiente, quedo PROBADO en la ENTRADA 004.
 4 (imagenes en Supabase Storage) - PROBADO - bucket creado, 15 archivos migrados y lectura verificada contra el proyecto real (ENTRADA 003). PENDIENTE 4: PARCIAL -> PROBADO. Queda aparte la optimizacion de imagenes, que nunca se implemento.
@@ -1099,3 +1099,109 @@ PENDIENTE QUE QUEDA:
  - Verificar en el navegador las dos exportaciones y el cartel del registro.
  - Actualizar el manual de usuario (Anexo 8, backend/src/main/resources/manual y src/lib/manual.ts) con el selector de periodo.
 === FIN ENTRADA 011 ===
+
+=== ENTRADA 012 ===
+FECHA: 2026-09-29
+REPOSITORIO: activehub-backend
+RAMA Y COMMITS: sin commit al momento de este registro (el directorio de trabajo no es un repositorio git en esta maquina) - sin Pull Request
+TIPO: DATOS/MIGRACION
+TITULO: Modelo de datos del marketplace de Mercado Pago (KAN-52 / MP-03): cuenta del instructor, campos del pago y cifrado de tokens
+
+QUE CAMBIA PARA EL USUARIO: sin cambios visibles. Solo esquema y entidades, sin logica.
+TEXTOS DE INTERFAZ (literales): sin cambios.
+DETALLE TECNICO:
+ - V28__mercadopago_marketplace.sql (idempotente: IF NOT EXISTS, constraints dentro de DO $$ con chequeo en pg_constraint, DROP CONSTRAINT IF EXISTS antes de recrear el CHECK de estado).
+ - Tabla NUEVA cuenta_mercadopago_instructor: instructor_id (FK a usuario, UNIQUE uq_cuenta_mp_instructor), mp_user_id, access_token y refresh_token (TEXT, cifrados), public_key, expires_at, estado (CHECK ck_cuenta_mp_estado: VINCULADA, DESVINCULADA, TOKEN_VENCIDO), created_at, updated_at.
+ - Tabla pago, columnas nuevas: mp_order_id (con indice ix_pago_mp_order_id), status_detail, comision (NOT NULL DEFAULT 0, CHECK >= 0), monto_instructor, autorizado_hasta, idempotency_key (UNIQUE uq_pago_idempotency_key).
+ - EstadoPago suma Rechazado y Reembolsado. El CHECK sin nombre de V5 (pago_estado_check) se reemplaza por ck_pago_estado con los 6 valores. Retenido pasa a significar formalmente "autorizado en Mercado Pago, no capturado" (documentado en el enum).
+ - Entidad CuentaMercadoPagoInstructor, enum EstadoCuentaMercadoPago y CuentaMercadoPagoInstructorRepository en domain/mercadopago. Pago gana los 6 campos.
+ - shared/persistence/TokenCifradoConverter: AES-256-GCM, IV aleatorio de 12 bytes por valor, columna = base64(iv || cifrado || tag). Es un @Component: Hibernate lo obtiene de Spring con la clave inyectada.
+ESTADO: IMPLEMENTADO. Migracion y converter PROBADOS (ver PRUEBAS). Que access_token se vea cifrado en una fila real de la base: PENDIENTE (todavia no hay caso de uso que guarde una cuenta; lo cubre la prueba unitaria del converter).
+HISTORIAS DE USUARIO Y CRITERIOS: sin cambios.
+PANTALLAS: sin cambios.
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: 8 Reservas y Pagos.
+CASOS DE USO: sin cambios (111).
+ENTIDADES Y MIGRACIONES: entidad NUEVA CuentaMercadoPagoInstructor; Pago modificada; migracion NUEVA V28.
+TECNOLOGIAS: sin cambios (javax.crypto del JDK).
+COSTOS: sin cambios.
+RIESGOS: R02 Mercado Pago - avanza la preparacion.
+SEGURIDAD: los tokens OAuth de los instructores nunca se guardan en claro. Sin MP_TOKEN_ENCRYPTION_KEY la aplicacion levanta igual, pero cifrar o descifrar lanza error en lugar de guardar en claro.
+PRUEBAS:
+ - Suite completa: 189 archivos / 853 pruebas, 853 correctas, 0 fallidas, 0 con error (comando: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw -q test; conteo sumando target/surefire-reports/*.txt).
+ - NUEVA TokenCifradoConverterTest (6 pruebas): cifrar y descifrar devuelve el original y el texto guardado no empieza con APP_USR; el mismo token cifra distinto cada vez; null queda null; otra clave no descifra; sin clave no guarda en claro; clave de largo incorrecto falla.
+ - Idempotencia: V28 se aplico en Supabase al correr la suite (flyway_schema_history version 28 success=true) y se ejecuto una segunda vez completa por JDBC, dentro de una transaccion revertida, sin error. Se verifico que existen ck_pago_estado, uq_pago_idempotency_key, uq_cuenta_mp_instructor y ck_cuenta_mp_estado, y que ya no existe pago_estado_check.
+ANALISIS ESTATICO: sin cambios.
+DESPLIEGUE Y CONFIGURACION: variable de entorno NUEVA MP_TOKEN_ENCRYPTION_KEY (32 bytes en base64), leida como app.mercadopago.token-encryption-key. Todavia no esta cargada en el .env.
+DECISIONES:
+ - Se siguen las decisiones de MP-01 (KAN-50): Orders API (por eso mp_order_id y no mp_payment_id), captura diferida al pasar la clase a Finalizada con autorizacion de 5 dias (autorizado_hasta), y la plataforma no cobra comision (comision queda en 0, pero la columna existe para no migrar de nuevo). Esto reemplaza la decision anterior de docs/mercadopago-integracion.md (sin captura diferida, Retenido como concepto interno), que queda desactualizada.
+ - instructor_id referencia a usuario (el instructor es un usuario con rol), no a perfil_instructor.
+ - CuentaMercadoPagoInstructor no extiende BaseEntity: desvincular es un cambio de estado y hay una sola fila por instructor.
+ERRORES DETECTADOS: CLAUDE.md indica JAVA_HOME en $HOME/.jdks/corretto-21.0.10, que no existe en esta maquina; se uso $HOME/.jdks/ms-21.0.7.
+CAPTURAS SUGERIDAS: ninguna.
+PENDIENTE QUE QUEDA:
+ - Generar y cargar MP_TOKEN_ENCRYPTION_KEY en el .env (por ejemplo: openssl rand -base64 32).
+ - Actualizar docs/mercadopago-integracion.md con las decisiones de MP-01.
+ - Copiar esta entrada a la bitacora espejo de activehub-frontend (no existe en esta maquina).
+=== FIN ENTRADA 012 ===
+
+=== ENTRADA 013 ===
+FECHA: 2026-09-29
+REPOSITORIO: ambos
+RAMA Y COMMITS: backend sin repositorio git en esta maquina; frontend rama main (064189a) con cambios sin commitear - sin Pull Request
+TIPO: CAMBIO DE TECNOLOGIA
+TITULO: Pasarela real de Mercado Pago (KAN-53 / MP-04): autorizar, capturar, cancelar y reembolsar con el token del instructor; se retira el mock
+
+QUE CAMBIA PARA EL USUARIO:
+ - Alumno, inscripcion con "Mercado Pago": el pago se AUTORIZA en Mercado Pago (la plata queda reservada en la tarjeta, no se cobra) en la cuenta del instructor. Si Mercado Pago lo rechaza, no se crea la inscripcion ni se ocupa el cupo y se muestra el motivo.
+ - Si el instructor no tiene una cuenta de Mercado Pago vinculada, la inscripcion con Mercado Pago se rechaza y se sugiere pagar en efectivo.
+ - Inscripcion en efectivo: sin cambios.
+TEXTOS DE INTERFAZ (literales, mensajes de error nuevos que devuelve la API y muestra el modal de pago):
+ - "El instructor todavía no puede cobrar con Mercado Pago. Podés inscribirte pagando en efectivo."
+ - "Mercado Pago no confirmó la autorización del pago. Intentá nuevamente."
+ - "Mercado Pago no está respondiendo. Intentá nuevamente en unos minutos."
+ - "No se pudo conectar con Mercado Pago. Intentá nuevamente."
+ - "El pago con Mercado Pago no está disponible en este momento."
+ - Rechazos: "La tarjeta no tiene fondos suficientes." / "Revisá los datos de la tarjeta." / "Revisá el código de seguridad de la tarjeta." / "Revisá la fecha de vencimiento de la tarjeta." / "Tenés que autorizar el pago con el banco emisor de tu tarjeta." / "La tarjeta no está habilitada. Comunicate con tu banco." / "Mercado Pago rechazó el pago. Probá con otra tarjeta." / "Superaste el límite de intentos. Probá con otra tarjeta." / "Ya hiciste un pago por este mismo monto." / por defecto "Mercado Pago rechazó el pago. Probá con otra tarjeta o medio de pago."
+ - Sin cambios en botones ni pantallas.
+DETALLE TECNICO:
+ - PaymentGateway (shared/payments) rediseniada: autorizar(sellerToken, tarjeta, monto, comision, externalReference, idempotencyKey), capturar, cancelarAutorizacion, reembolsar (los tres con su idempotencyKey) y consultar. confirmarPago/cancelarPago quedan @Deprecated para la transicion (KAN-65).
+ - MercadoPagoGateway (NUEVA, unica implementacion) contra la Orders API con RestClient propio: POST /v1/orders con capture_mode "manual", POST /v1/orders/{id}/capture|cancel|refund, GET /v1/orders/{id}. Authorization con el token del instructor en cada llamada; el RestClient ya no tiene el token de la plataforma por defecto. Comision como marketplace_fee (hoy 0, no se envia).
+ - Errores: el rechazo de MP (orden con status "failed", en respuesta de error o en 200) lanza PagoRechazadoException, codigo NUEVO PAGO_RECHAZADO (422); 5xx, 4xx sin orden, timeout o respuesta vacia lanzan PagoException (ERROR_PAGO, 502). Los dos salen por el handler generico de ApiException.
+ - Metodos legacy en MercadoPagoGateway: una referencia sin prefijo "ORD" (pago simulado anterior) no hace nada; una orden real lanza PagoException y revierte la operacion.
+ - Retirados: MockPaymentGateway y MercadoPagoPaymentGateway.
+ - inscribirse: InscribirseRequest.datosPago pasa de MercadoPagoOrderRequest (DTO de shared, con monto y referencia elegidos por el cliente) a DatosPagoRequest propio del slice (token, paymentMethodId, paymentMethodType, cuotas). El servicio valida datos y cuenta del instructor ANTES de ocupar el cupo; autoriza con el precio de la clase, referencia = id de la inscripcion, pagador = correo del alumno; idempotencyKey = UUID derivado de inscripcion + token de tarjeta; guarda mp_order_id, referencia_externa (= order id, para los caminos legacy), status_detail, idempotency_key, comision 0, monto_instructor y autorizado_hasta = ahora + 5 dias (VentanaPagos.VIGENCIA_AUTORIZACION). En efectivo se completa monto_instructor = monto.
+ - Frontend: ModalPagoMercadoPago manda solo {token, paymentMethodId, paymentMethodType, cuotas}; tipo DatosPagoMercadoPago en lib/types.ts reemplaza a MercadoPagoOrderRequest y demas payloads; se borro un DatosPagoMercadoPago previo sin uso.
+ESTADO: IMPLEMENTADO. Pasarela PROBADA con respuestas HTTP simuladas. Prueba contra el sandbox real: PENDIENTE (preparada, ver PRUEBAS). Flujo de inscripcion con pago real en el navegador: PENDIENTE (requiere el OAuth del instructor).
+HISTORIAS DE USUARIO Y CRITERIOS: E3A (inscripcion y pago).
+PANTALLAS: sin pantallas nuevas; cambia el comportamiento del modal de pago de Mercado Pago de la pantalla de Inscripcion.
+REGLAS DE NEGOCIO: RN-04 (retencion): Retenido pasa a ser una autorizacion real sin capturar, con vencimiento a los 5 dias.
+MODULOS: 8 Reservas y Pagos.
+CASOS DE USO: sin casos de uso nuevos (111). Modificado: inscribirse.
+ENTIDADES Y MIGRACIONES: sin migraciones; se empiezan a usar las columnas de V28.
+TECNOLOGIAS: se retira la pasarela simulada; Mercado Pago Orders API con RestClient (sin SDK).
+COSTOS: sin cambios (la plataforma no cobra comision).
+RIESGOS: R02 Mercado Pago - avanza; queda el hueco transitorio descripto en PENDIENTE QUE QUEDA.
+SEGURIDAD: el cliente ya no elige monto ni referencia del pago. Cada orden va con el token del instructor; el token de la plataforma no se usa por defecto.
+PRUEBAS:
+ - Suite backend: 191 archivos / 869 pruebas: 867 correctas, 0 fallidas, 0 con error, 2 omitidas (comando: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw -q test; conteo sumando target/surefire-reports/*.txt).
+ - NUEVA MercadoPagoGatewayTest (12, MockRestServiceServer): autorizado (captura manual, token del vendedor, idempotency key recibida), comision como marketplace_fee, rechazado en 402 y en 200, error 5xx, 4xx sin orden, timeout, sin token del vendedor, capture/cancel/refund, consultar, y los dos caminos legacy.
+ - InscribirseServiceTest reescrita en la parte de Mercado Pago (7 pruebas nuevas): autoriza con el token del instructor y deja Retenido con todos los campos; mismo pedido reintentado = misma idempotency key; sin datos o sin cuenta no ocupa cupo; cuenta vencida o desvinculada; rechazo; autorizacion no confirmada.
+ - MercadoPagoConfigTest reescrita (el contexto arranca sin credenciales con la pasarela real).
+ - NUEVA MercadoPagoGatewaySandboxTest (@Disabled, 2 pruebas manuales: autorizar-capturar y autorizar-cancelar contra el sandbox). NO ejecutada: requiere MP_SANDBOX_SELLER_ACCESS_TOKEN, MP_SANDBOX_SELLER_PUBLIC_KEY y MP_SANDBOX_BUYER_EMAIL.
+ - Frontend: sin pruebas automatizadas en este checkout (find src -name "*.test.*" -> 0).
+ANALISIS ESTATICO: frontend "npx tsc -b" sin errores; "npm run build" -> "built in 1.10s"; "npx eslint ." -> "21 problems (12 errors, 9 warnings)", IDENTICO con y sin estos cambios (verificado con git stash); los 12 errores estan en archivos no tocados. Discrepa de la ENTRADA 011 (0 errores): este checkout del frontend es la rama main (064189a), no integracion.
+DESPLIEGUE Y CONFIGURACION: propiedad NUEVA app.mercadopago.base-url (por defecto la API publica de MP). Variables solo para la prueba manual: MP_SANDBOX_SELLER_ACCESS_TOKEN, MP_SANDBOX_SELLER_PUBLIC_KEY, MP_SANDBOX_BUYER_EMAIL.
+DECISIONES:
+ - Nunca se usa un mock: la pasarela real es la unica implementacion, tambien en desarrollo (sandbox). Los tests usan mocks de Mockito o MockRestServiceServer.
+ - Transicion (opcion A): solo inscribirse usa el contrato nuevo; el resto de los casos de uso se migra en KAN-65 (creada en Jira).
+ - La idempotency key se deriva de la inscripcion y del token de tarjeta (de un solo uso): reintentar el mismo pedido no reserva dos veces, y reintentar con otra tarjeta no choca con idempotency_key_already_used.
+ - La autorizacion corre dentro de la transaccion con el cupo tomado (timeouts 5 s conexion / 10 s lectura); si la base falla despues de autorizar, la autorizacion vence sola a los 5 dias.
+ERRORES DETECTADOS: InscribirseRequest usaba un DTO de shared con monto y referencia elegidos por el cliente (el frontend mandaba total_amount).
+CAPTURAS SUGERIDAS: modal de pago mostrando un rechazo ("La tarjeta no tiene fondos suficientes.").
+PENDIENTE QUE QUEDA:
+ - KAN-65: con ordenes reales, cancelar clase/inscripcion, penalizar, resolver denuncia con REINTEGRAR y liberar pagos FALLAN (PagoException) hasta migrarlos.
+ - En marketplace la tarjeta se tokeniza con la public key del VENDEDOR: el frontend hoy usa VITE_MERCADOPAGO_PUBLIC_KEY (de la plataforma). Hay que exponer la public_key del instructor y usarla en el Brick.
+ - OAuth del instructor (sin eso ninguna cuenta queda VINCULADA y el pago con Mercado Pago siempre se rechaza).
+ - Ejecutar la prueba de sandbox. Copiar esta entrada a la bitacora espejo del frontend (no existe en este checkout).
+=== FIN ENTRADA 013 ===

@@ -19,6 +19,12 @@ public final class VentanaPagos {
 
     public static final Duration PERIODO_DENUNCIAS = Duration.ofHours(24);
 
+    /**
+     * Cuanto dura una autorizacion de Mercado Pago sin capturar en Argentina (MP-01). Pasado
+     * ese plazo MP la cancela sola y la plata vuelve al alumno.
+     */
+    public static final Duration VIGENCIA_AUTORIZACION = Duration.ofDays(5);
+
     private VentanaPagos() {
     }
 }
