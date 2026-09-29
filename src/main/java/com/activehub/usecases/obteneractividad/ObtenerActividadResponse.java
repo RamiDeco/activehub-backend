@@ -33,7 +33,12 @@ public record ObtenerActividadResponse(
     public record Categoria(UUID id, String nombre) {
     }
 
-    public record Instructor(UUID id, String nombre, String apellido) {
+    /**
+     * @param aceptaMercadoPago false = la clase solo acepta Efectivo (KAN-57)
+     * @param mpPublicKey       public key de Mercado Pago del instructor para el Brick; null si
+     *                          no acepta. Nunca viaja un access token.
+     */
+    public record Instructor(UUID id, String nombre, String apellido, boolean aceptaMercadoPago, String mpPublicKey) {
     }
 
     public record Clase(

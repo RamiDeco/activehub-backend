@@ -11,6 +11,7 @@ import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.shared.error.NoEncontradoException;
 import java.util.List;
 import java.util.UUID;
+import com.activehub.shared.payments.CuentaMercadoPagoGuard;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,17 +24,20 @@ public class ObtenerActividadService {
     private final ClaseRepository claseRepository;
     private final InscripcionRepository inscripcionRepository;
     private final ActividadImagenRepository actividadImagenRepository;
+    private final CuentaMercadoPagoGuard cuentaMercadoPagoGuard;
 
     public ObtenerActividadService(
             ActividadRepository actividadRepository,
             ClaseRepository claseRepository,
             InscripcionRepository inscripcionRepository,
-            ActividadImagenRepository actividadImagenRepository
+            ActividadImagenRepository actividadImagenRepository,
+            CuentaMercadoPagoGuard cuentaMercadoPagoGuard
     ) {
         this.actividadRepository = actividadRepository;
         this.claseRepository = claseRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.actividadImagenRepository = actividadImagenRepository;
+        this.cuentaMercadoPagoGuard = cuentaMercadoPagoGuard;
     }
 
     @Transactional(readOnly = true)
@@ -64,7 +68,7 @@ public class ObtenerActividadService {
                 new ObtenerActividadResponse.Categoria(categoria.getId(), categoria.getNombre()),
                 new ObtenerActividadResponse.NivelIntensidad(
                         actividad.getNivelIntensidad().getId(), actividad.getNivelIntensidad().getNombre()),
-                new ObtenerActividadResponse.Instructor(instructor.getId(), instructor.getNombre(), instructor.getApellido()),
+                instructorConMercadoPago(instructor.getId(), instructor.getNombre(), instructor.getApellido()),
                 actividad.getPrecio(),
                 actividad.getUbicacion(),
                 actividad.getPhotoTint(),
@@ -75,5 +79,15 @@ public class ObtenerActividadService {
                 actividad.getLatitud(),
                 actividad.getLongitud()
         );
+    }
+
+    /**
+     * KAN-57: el frontend decide con esto si ofrecer "Mercado Pago" y con que public key
+     * inicializar el Brick (en marketplace la tarjeta se tokeniza con la del VENDEDOR). Solo la
+     * public key, que es publica por diseno; los tokens nunca salen de la base.
+     */
+    private ObtenerActividadResponse.Instructor instructorConMercadoPago(UUID id, String nombre, String apellido) {
+        var publicKey = cuentaMercadoPagoGuard.publicKeySiAceptaMercadoPago(id);
+        return new ObtenerActividadResponse.Instructor(id, nombre, apellido, publicKey.isPresent(), publicKey.orElse(null));
     }
 }

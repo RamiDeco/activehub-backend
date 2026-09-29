@@ -40,6 +40,7 @@ class ObtenerCuentaMercadoPagoServiceTest {
             public EstadoCuentaMercadoPago getEstado() { return estado; }
             public Instant getActualizadaEl() { return AHORA.minus(Duration.ofDays(1)); }
             public Instant getExpiraEl() { return expira; }
+            public String getPublicKey() { return "TEST-pk"; }
         };
     }
 

@@ -28,9 +28,8 @@ import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
-import com.activehub.domain.mercadopago.CuentaMercadoPagoInstructor;
-import com.activehub.domain.mercadopago.CuentaMercadoPagoInstructorRepository;
-import com.activehub.domain.mercadopago.EstadoCuentaMercadoPago;
+import com.activehub.shared.error.CuentaMercadoPagoNoVinculadaException;
+import com.activehub.shared.payments.CuentaMercadoPagoGuard;
 import com.activehub.shared.error.PagoException;
 import com.activehub.shared.error.PagoRechazadoException;
 import org.mockito.ArgumentCaptor;
@@ -71,7 +70,7 @@ class InscribirseServiceTest {
     @Mock
     private InstructorVerificadoGuard instructorVerificadoGuard;
     @Mock
-    private CuentaMercadoPagoInstructorRepository cuentaMercadoPagoRepository;
+    private CuentaMercadoPagoGuard cuentaMercadoPagoGuard;
 
     private InscribirseService service;
     private UUID claseId;
@@ -84,7 +83,7 @@ class InscribirseServiceTest {
         Clock clock = Clock.fixed(AHORA, ZoneOffset.UTC);
         service = new InscribirseService(
                 claseRepository, inscripcionRepository, pagoRepository, usuarioRepository, paymentGateway, auditService,
-                notificacionService, instructorVerificadoGuard, cuentaMercadoPagoRepository, clock);
+                notificacionService, instructorVerificadoGuard, cuentaMercadoPagoGuard, clock);
 
         claseId = UUID.randomUUID();
         alumnoId = UUID.randomUUID();
@@ -132,11 +131,7 @@ class InscribirseServiceTest {
     private static final DatosPagoRequest DATOS_PAGO = new DatosPagoRequest("card-tok-1", "master", "credit_card", 1);
 
     private void stubCuentaVinculada() {
-        CuentaMercadoPagoInstructor cuenta = new CuentaMercadoPagoInstructor();
-        cuenta.setEstado(EstadoCuentaMercadoPago.VINCULADA);
-        cuenta.setAccessToken("TEST-seller-token");
-        cuenta.setExpiresAt(AHORA.plus(Duration.ofDays(90)));
-        when(cuentaMercadoPagoRepository.findByInstructorId(instructorId)).thenReturn(Optional.of(cuenta));
+        when(cuentaMercadoPagoGuard.exigirCuentaVinculada(instructorId)).thenReturn("TEST-seller-token");
     }
 
     private void stubAutorizado() {
@@ -222,33 +217,14 @@ class InscribirseServiceTest {
     }
 
     @Test
-    void inscribirse_mercadoPago_instructorSinCuentaVinculada_lanzaPagoExceptionSinOcuparCupo() {
+    void inscribirse_mercadoPago_instructorSinCuentaVinculada_lanza409SinOcuparCupo() {
         stubInscripcionNueva();
-        when(cuentaMercadoPagoRepository.findByInstructorId(instructorId)).thenReturn(Optional.empty());
+        when(cuentaMercadoPagoGuard.exigirCuentaVinculada(instructorId)).thenThrow(new CuentaMercadoPagoNoVinculadaException());
 
         assertThatThrownBy(() -> service.inscribirse(claseId, new InscribirseRequest("Mercado Pago", DATOS_PAGO), alumnoId))
-                .isInstanceOf(PagoException.class)
-                .hasMessageContaining("todavía no puede cobrar con Mercado Pago");
+                .isInstanceOf(CuentaMercadoPagoNoVinculadaException.class)
+                .hasMessageContaining("solo acepta pago en efectivo");
         verify(claseRepository, never()).ocuparCupo(any());
-        verify(paymentGateway, never()).autorizar(any(), any(), any(), any(), any(), any());
-    }
-
-    @Test
-    void inscribirse_mercadoPago_cuentaDesvinculadaOTokenVencido_lanzaPagoException() {
-        stubInscripcionNueva();
-        CuentaMercadoPagoInstructor vencida = new CuentaMercadoPagoInstructor();
-        vencida.setEstado(EstadoCuentaMercadoPago.VINCULADA);
-        vencida.setAccessToken("TEST-viejo");
-        vencida.setExpiresAt(AHORA.minus(Duration.ofMinutes(1)));
-        when(cuentaMercadoPagoRepository.findByInstructorId(instructorId)).thenReturn(Optional.of(vencida));
-
-        assertThatThrownBy(() -> service.inscribirse(claseId, new InscribirseRequest("Mercado Pago", DATOS_PAGO), alumnoId))
-                .isInstanceOf(PagoException.class);
-
-        vencida.setExpiresAt(null);
-        vencida.setEstado(EstadoCuentaMercadoPago.DESVINCULADA);
-        assertThatThrownBy(() -> service.inscribirse(claseId, new InscribirseRequest("Mercado Pago", DATOS_PAGO), alumnoId))
-                .isInstanceOf(PagoException.class);
         verify(paymentGateway, never()).autorizar(any(), any(), any(), any(), any(), any());
     }
 
@@ -298,7 +274,8 @@ class InscribirseServiceTest {
 
         assertThat(response.estado()).isEqualTo("PagoPendiente");
         verify(paymentGateway, never()).autorizar(any(), any(), any(), any(), any(), any());
-        verify(cuentaMercadoPagoRepository, never()).findByInstructorId(any());
+        // KAN-57: el efectivo no depende de que el instructor tenga Mercado Pago.
+        verify(cuentaMercadoPagoGuard, never()).exigirCuentaVinculada(any());
         verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), any(), any(), any());
     }
 

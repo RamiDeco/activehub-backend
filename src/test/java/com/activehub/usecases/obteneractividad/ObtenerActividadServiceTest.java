@@ -27,6 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.activehub.shared.payments.CuentaMercadoPagoGuard;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -43,6 +44,8 @@ class ObtenerActividadServiceTest {
     private InscripcionRepository inscripcionRepository;
     @Mock
     private ActividadImagenRepository actividadImagenRepository;
+    @Mock
+    private CuentaMercadoPagoGuard cuentaMercadoPagoGuard;
 
     private ObtenerActividadService service;
     private UUID actividadId;
@@ -51,7 +54,8 @@ class ObtenerActividadServiceTest {
     @BeforeEach
     void setUp() {
         service = new ObtenerActividadService(
-                actividadRepository, claseRepository, inscripcionRepository, actividadImagenRepository);
+                actividadRepository, claseRepository, inscripcionRepository, actividadImagenRepository,
+                cuentaMercadoPagoGuard);
 
         Categoria categoria = new Categoria();
         categoria.setNombre("Bienestar");
@@ -106,6 +110,9 @@ class ObtenerActividadServiceTest {
         assertThat(response.tipoActividad().nombre()).isEqualTo("Yoga");
         assertThat(response.categoria().nombre()).isEqualTo("Bienestar");
         assertThat(response.instructor().nombre()).isEqualTo("Carla");
+        // Sin cuenta de Mercado Pago vigente: la clase solo acepta Efectivo (KAN-57).
+        assertThat(response.instructor().aceptaMercadoPago()).isFalse();
+        assertThat(response.instructor().mpPublicKey()).isNull();
         assertThat(response.duracionMin()).isEqualTo(60);
         assertThat(response.clases()).hasSize(1);
         assertThat(response.clases().get(0).cuposOcupados()).isEqualTo(2);
@@ -124,6 +131,20 @@ class ObtenerActividadServiceTest {
         when(actividadImagenRepository.findByActividadIdOrderByOrdenAsc(actividadId)).thenReturn(List.of(imagen));
 
         assertThat(service.obtener(actividadId).imagenes()).containsExactly(imagenId);
+    }
+
+    @Test
+    void obtener_instructorConCuentaVinculada_aceptaMercadoPagoYExponeSoloLaPublicKey() {
+        when(actividadRepository.findById(actividadId)).thenReturn(Optional.of(actividad));
+        when(claseRepository.findByActividadIdAndEstadoNotInOrderByFechaHoraAsc(any(), any())).thenReturn(List.of());
+        when(actividadImagenRepository.findByActividadIdOrderByOrdenAsc(actividadId)).thenReturn(List.of());
+        when(cuentaMercadoPagoGuard.publicKeySiAceptaMercadoPago(actividad.getInstructor().getId()))
+                .thenReturn(Optional.of("TEST-pk-del-instructor"));
+
+        ObtenerActividadResponse response = service.obtener(actividadId);
+
+        assertThat(response.instructor().aceptaMercadoPago()).isTrue();
+        assertThat(response.instructor().mpPublicKey()).isEqualTo("TEST-pk-del-instructor");
     }
 
     @Test

@@ -35,12 +35,12 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-09-29, despues de la ENTRADA 014) ===
+=== ESTADO GENERAL (actualizado: 2026-09-29, despues de la ENTRADA 015) ===
 Casos de uso implementados en el backend: 114
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
 
-Pruebas automatizadas del backend: 199 archivos / 900 pruebas / resultado: 898 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
+Pruebas automatizadas del backend: 200 archivos / 906 pruebas / resultado: 904 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
 (comando de conteo de archivos: find src/test -name "*Test.java" | wc -l)
 (comando de ejecucion: JAVA_HOME=C:\Users\Facundo\.jdks\corretto-21.0.10 ./mvnw -o test)
 (salida literal: "Tests run: 842, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS")
@@ -1264,3 +1264,46 @@ PENDIENTE QUE QUEDA:
  - Renovar el token con refresh_token antes de que venza (180 dias) y desvincular.
  - Exponer la public_key del instructor al Brick de pago (ver ENTRADA 013).
 === FIN ENTRADA 014 ===
+
+=== ENTRADA 015 ===
+FECHA: 2026-09-29
+REPOSITORIO: ambos
+RAMA Y COMMITS: backend feat/mp-integration, frontend integracion - sin commit al momento de este registro - sin Pull Request
+TIPO: NUEVA FUNCIONALIDAD
+TITULO: Sin cuenta de Mercado Pago vinculada no se cobra por Mercado Pago (KAN-57 / MP-08)
+
+QUE CAMBIA PARA EL USUARIO:
+ - Alumno, pantalla "Inscripción y pago": si el instructor de la clase no tiene Mercado Pago vinculado (o su autorizacion vencio), la opcion "MercadoPago" no se muestra, queda elegido Efectivo y aparece un aviso.
+ - Si el instructor si lo tiene, el formulario de tarjeta se inicializa con la public key del INSTRUCTOR (antes, con la de la plataforma).
+ - Si igual llega un pedido con Mercado Pago a una clase sin vinculacion, el backend responde 409 con un mensaje claro.
+TEXTOS DE INTERFAZ (literales):
+ - Aviso nuevo en "Elegí tu método de pago": "Esta clase solo acepta pago en efectivo: el instructor todavía no habilitó los pagos con Mercado Pago."
+ - Error de la API (409 MERCADOPAGO_NO_VINCULADO): "Esta clase solo acepta pago en efectivo: el instructor todavía no vinculó su cuenta de Mercado Pago."
+DETALLE TECNICO:
+ - shared/payments/CuentaMercadoPagoGuard (NUEVA): publicKeySiAceptaMercadoPago(instructorId) lee una proyeccion sin tokens; exigirCuentaVinculada(instructorId) devuelve el token o lanza CuentaMercadoPagoNoVinculadaException (NUEVA, codigo NUEVO MERCADOPAGO_NO_VINCULADO, 409; antes era PagoException 502).
+ - Regla unica "vigente" = VINCULADA y expires_at futuro o nulo (ResumenCuenta.vigente), usada por la guarda y por obtenercuentamercadopago. Sin public key tampoco se ofrece Mercado Pago.
+ - inscribirse usa la guarda (la logica se movio desde el servicio). El efectivo no la consulta.
+ - obteneractividad: instructor suma aceptaMercadoPago y mpPublicKey (solo en el detalle; el listado no, para no sumar una consulta por actividad). Nunca viaja un token.
+ - Frontend: Actividad suma aceptaMercadoPago y mpPublicKey (desde el detalle); Inscripcion.tsx deriva el metodo efectivo sin effect; ModalPagoMercadoPago recibe publicKey; lib/mercadopago.ts cachea una instancia del SDK por public key (antes una sola para siempre, que con dos instructores tokenizaba con la key del primero). VITE_MERCADOPAGO_PUBLIC_KEY ya no se usa.
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas. Verificacion en el navegador (opcion oculta y respuesta del detalle en DevTools): PENDIENTE.
+HISTORIAS DE USUARIO Y CRITERIOS: E3A (inscripcion y pago).
+PANTALLAS: pantalla de Inscripcion y pago del alumno (cambia).
+REGLAS DE NEGOCIO: NUEVA (propuesta RN-21): una clase solo acepta Mercado Pago si su instructor tiene la cuenta vinculada y vigente; si no, solo Efectivo.
+MODULOS: 8 Reservas y Pagos.
+CASOS DE USO: sin nuevos. Modificados: inscribirse, obteneractividad, obtenercuentamercadopago.
+ENTIDADES Y MIGRACIONES: sin migraciones.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin cambios.
+RIESGOS: R02 Mercado Pago - avanza (el Brick ya tokeniza con la key del vendedor).
+SEGURIDAD: la respuesta publica del detalle expone solo la public key (publica por diseno); se lee sin cargar ni descifrar tokens.
+PRUEBAS:
+ - Suite backend: 200 archivos / 906 pruebas: 904 correctas, 0 fallidas, 0 con error, 2 omitidas (comando: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw -q test).
+ - NUEVA CuentaMercadoPagoGuardTest (6). ObtenerActividadServiceTest +1 (con cuenta: acepta y expone solo la public key; sin cuenta: no acepta). InscribirseServiceTest: sin cuenta -> 409 sin ocupar cupo; efectivo no consulta la guarda.
+ - Frontend: 17 archivos / 145 pruebas en verde (npx vitest run); "npx tsc -b" sin errores; "npm run build" ok; "npx eslint ." -> "11 problems (0 errors, 11 warnings)", sin cambios.
+ANALISIS ESTATICO: ver PRUEBAS.
+DESPLIEGUE Y CONFIGURACION: VITE_MERCADOPAGO_PUBLIC_KEY del frontend deja de usarse.
+DECISIONES: los datos van en el detalle de la actividad y no en el listado; 409 y no 400 porque el pedido esta bien formado pero la clase no admite ese metodo.
+ERRORES DETECTADOS: el SDK de Mercado Pago se cacheaba con una sola public key para toda la sesion.
+CAPTURAS SUGERIDAS: pantalla de inscripcion con el aviso "Esta clase solo acepta pago en efectivo...".
+PENDIENTE QUE QUEDA: verificar en el navegador con un instructor vinculado y otro sin vincular.
+=== FIN ENTRADA 015 ===

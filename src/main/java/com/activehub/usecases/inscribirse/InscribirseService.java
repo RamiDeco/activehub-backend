@@ -12,9 +12,6 @@ import com.activehub.domain.inscripcion.Pago;
 import com.activehub.domain.inscripcion.PagoRepository;
 import com.activehub.domain.inscripcion.VentanaInscripcion;
 import com.activehub.domain.inscripcion.VentanaPagos;
-import com.activehub.domain.mercadopago.CuentaMercadoPagoInstructor;
-import com.activehub.domain.mercadopago.CuentaMercadoPagoInstructorRepository;
-import com.activehub.domain.mercadopago.EstadoCuentaMercadoPago;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
@@ -27,6 +24,7 @@ import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
+import com.activehub.shared.payments.CuentaMercadoPagoGuard;
 import com.activehub.shared.payments.PaymentGateway;
 import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.math.BigDecimal;
@@ -40,8 +38,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class InscribirseService {
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(InscribirseService.class);
-
     private final ClaseRepository claseRepository;
     private final InscripcionRepository inscripcionRepository;
     private final PagoRepository pagoRepository;
@@ -50,7 +46,7 @@ public class InscribirseService {
     private final AuditService auditService;
     private final NotificacionService notificacionService;
     private final InstructorVerificadoGuard instructorVerificadoGuard;
-    private final CuentaMercadoPagoInstructorRepository cuentaMercadoPagoRepository;
+    private final CuentaMercadoPagoGuard cuentaMercadoPagoGuard;
     private final Clock clock;
 
     public InscribirseService(
@@ -62,7 +58,7 @@ public class InscribirseService {
             AuditService auditService,
             NotificacionService notificacionService,
             InstructorVerificadoGuard instructorVerificadoGuard,
-            CuentaMercadoPagoInstructorRepository cuentaMercadoPagoRepository,
+            CuentaMercadoPagoGuard cuentaMercadoPagoGuard,
             Clock clock
     ) {
         this.claseRepository = claseRepository;
@@ -73,7 +69,7 @@ public class InscribirseService {
         this.auditService = auditService;
         this.notificacionService = notificacionService;
         this.instructorVerificadoGuard = instructorVerificadoGuard;
-        this.cuentaMercadoPagoRepository = cuentaMercadoPagoRepository;
+        this.cuentaMercadoPagoGuard = cuentaMercadoPagoGuard;
         this.clock = clock;
     }
 
@@ -124,7 +120,8 @@ public class InscribirseService {
             if (request.datosPago() == null) {
                 throw new ValidacionException("Los datos de pago son obligatorios para Mercado Pago.");
             }
-            sellerToken = tokenDelInstructor(instructorId, ahora);
+            // KAN-57: sin cuenta vinculada la clase solo acepta Efectivo (409).
+            sellerToken = cuentaMercadoPagoGuard.exigirCuentaVinculada(instructorId);
         }
 
         if (claseRepository.ocuparCupo(claseId) == 0) {
@@ -174,28 +171,6 @@ public class InscribirseService {
         return new InscribirseResponse(
                 inscripcion.getId(), claseId, alumnoId, inscripcion.getEstado().getEtiqueta(),
                 inscripcion.getCreatedAt(), pago.getId());
-    }
-
-    /**
-     * El token OAuth del instructor dueno de la clase: la orden se crea en SU cuenta de MP.
-     * Un token vencido no se intenta usar (el refresh es parte del OAuth, no de este caso de uso).
-     */
-    private String tokenDelInstructor(UUID instructorId, Instant ahora) {
-        java.util.Optional<CuentaMercadoPagoInstructor> encontrada;
-        try {
-            encontrada = cuentaMercadoPagoRepository.findByInstructorId(instructorId);
-        } catch (RuntimeException e) {
-            // El token no se pudo descifrar (falta MP_TOKEN_ENCRYPTION_KEY o cambio la clave).
-            // Hibernate puede envolver la excepcion del converter, por eso no se filtra por tipo.
-            log.error("No se pudo leer la cuenta de Mercado Pago del instructor {}", instructorId, e);
-            throw new PagoException("El pago con Mercado Pago no está disponible en este momento.");
-        }
-        CuentaMercadoPagoInstructor cuenta = encontrada
-                .filter(c -> c.getEstado() == EstadoCuentaMercadoPago.VINCULADA)
-                .filter(c -> c.getExpiresAt() == null || c.getExpiresAt().isAfter(ahora))
-                .orElseThrow(() -> new PagoException(
-                        "El instructor todavía no puede cobrar con Mercado Pago. Podés inscribirte pagando en efectivo."));
-        return cuenta.getAccessToken();
     }
 
     /**

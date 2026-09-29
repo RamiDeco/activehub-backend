@@ -22,10 +22,9 @@ public class ObtenerCuentaMercadoPagoService {
     public ObtenerCuentaMercadoPagoResponse obtener(UUID instructorId) {
         return cuentaRepository.findResumenByInstructorId(instructorId)
                 .map(c -> {
-                    // Mismo criterio que inscribirse para decidir si puede cobrar.
-                    boolean vigente = c.getExpiraEl() == null || c.getExpiraEl().isAfter(clock.instant());
-                    boolean vinculada = c.getEstado() == EstadoCuentaMercadoPago.VINCULADA && vigente;
-                    String estado = c.getEstado() == EstadoCuentaMercadoPago.VINCULADA && !vigente
+                    // Misma regla que CuentaMercadoPagoGuard para decidir si puede cobrar.
+                    boolean vinculada = c.vigente(clock.instant());
+                    String estado = c.getEstado() == EstadoCuentaMercadoPago.VINCULADA && !vinculada
                             ? EstadoCuentaMercadoPago.TOKEN_VENCIDO.name()
                             : c.getEstado().name();
                     return new ObtenerCuentaMercadoPagoResponse(

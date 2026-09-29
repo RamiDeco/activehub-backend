@@ -24,6 +24,8 @@ public enum ApiErrorCode {
     ERROR_PAGO(HttpStatus.BAD_GATEWAY),
     /** Mercado Pago proceso el pago y lo rechazo: el alumno puede reintentar con otra tarjeta. */
     PAGO_RECHAZADO(HttpStatus.UNPROCESSABLE_ENTITY),
+    /** El instructor no tiene cuenta de Mercado Pago vigente: su clase solo acepta efectivo. */
+    MERCADOPAGO_NO_VINCULADO(HttpStatus.CONFLICT),
     /**
      * El modelo de lenguaje no esta configurado o no respondio. 503 y no 500: no hay nada roto
      * adentro, hay un servicio externo que ahora no esta, y el frontend lo usa como senal para

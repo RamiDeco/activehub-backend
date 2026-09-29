@@ -16,7 +16,7 @@ public interface CuentaMercadoPagoInstructorRepository
      * {@code MP_TOKEN_ENCRYPTION_KEY} falla): para mostrar "vinculada si/no" no hace falta.
      */
     @Query("SELECT c.mpUserId AS mpUserId, c.estado AS estado, c.updatedAt AS actualizadaEl, "
-            + "c.expiresAt AS expiraEl FROM CuentaMercadoPagoInstructor c WHERE c.instructor.id = :instructorId")
+            + "c.expiresAt AS expiraEl, c.publicKey AS publicKey FROM CuentaMercadoPagoInstructor c WHERE c.instructor.id = :instructorId")
     Optional<ResumenCuenta> findResumenByInstructorId(UUID instructorId);
 
     interface ResumenCuenta {
@@ -27,5 +27,14 @@ public interface CuentaMercadoPagoInstructorRepository
         Instant getActualizadaEl();
 
         Instant getExpiraEl();
+
+        /** Publica por diseno (va al navegador para tokenizar la tarjeta). No es un secreto. */
+        String getPublicKey();
+
+        /** Lo unico que decide si el instructor puede cobrar con Mercado Pago hoy. */
+        default boolean vigente(Instant ahora) {
+            return getEstado() == EstadoCuentaMercadoPago.VINCULADA
+                    && (getExpiraEl() == null || getExpiraEl().isAfter(ahora));
+        }
     }
 }
