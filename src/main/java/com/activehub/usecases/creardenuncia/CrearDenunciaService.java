@@ -6,12 +6,14 @@ import com.activehub.domain.actividad.EstadoClase;
 import com.activehub.domain.denuncia.Denuncia;
 import com.activehub.domain.denuncia.DenunciaRepository;
 import com.activehub.domain.inscripcion.EstadoInscripcion;
+import com.activehub.domain.inscripcion.VentanaPagos;
 import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
@@ -66,8 +68,19 @@ public class CrearDenunciaService {
         if (clase.getEstado() != EstadoClase.Finalizada) {
             throw new ValidacionException("Solo podés denunciar clases que ya finalizaron.");
         }
-        if (Duration.between(clase.getFechaHora(), clock.instant()).compareTo(UMBRAL_DENUNCIA) < 0) {
+        Duration desdeElInicio = Duration.between(clase.getFechaHora(), clock.instant());
+        if (desdeElInicio.compareTo(UMBRAL_DENUNCIA) < 0) {
             throw new ValidacionException("Todavía no pasó 1 hora desde el inicio de la clase.");
+        }
+        // La denuncia tambien tiene FECHA LIMITE, y es la misma ventana que retiene el pago
+        // (RN-04): pasado el periodo de denuncias, LiberarPagosScheduler acredita la plata al
+        // instructor, asi que una denuncia posterior ya no tiene nada que reintegrar ni pago
+        // que frenar. Antes no habia tope y se podia denunciar una clase de hace meses: el
+        // caso se aceptaba, quedaba Pendiente y el admin no tenia ninguna accion util.
+        if (desdeElInicio.compareTo(VentanaPagos.PERIODO_DENUNCIAS) > 0) {
+            throw new ValidacionException(
+                    "El plazo para denunciar esta clase venció: se puede reportar hasta "
+                            + VentanaPagos.PERIODO_DENUNCIAS.toHours() + " horas después de su inicio.");
         }
         if (denunciaRepository.existsByClaseIdAndAlumnoId(claseId, alumnoId)) {
             throw new ValidacionException("Ya denunciaste esta clase.");
@@ -87,7 +100,8 @@ public class CrearDenunciaService {
                 TipoNotificacion.DENUNCIA_RECIBIDA,
                 "Recibiste una denuncia por inasistencia a la clase de \"" + clase.getActividad().getNombre()
                         + "\" del " + NotificacionMensajes.formatFechaHora(clase.getFechaHora()) + ".",
-                denuncia.getId());
+                // El instructor no tiene bandeja de denuncias: el contexto del reclamo es la clase.
+                denuncia.getId(), Destino.clase(clase.getId()));
 
         auditService.registrar(alumnoId, AuditAccion.DENUNCIA_CREADA, "Denuncia", denuncia.getId(), null);
 

@@ -5,11 +5,10 @@ import com.activehub.domain.usuario.DocumentoInstructorRepository;
 import com.activehub.domain.usuario.PerfilInstructor;
 import com.activehub.domain.usuario.PerfilInstructorRepository;
 import com.activehub.shared.error.NoEncontradoException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import com.activehub.shared.storage.AlmacenamientoArchivos;
+import com.activehub.shared.storage.AlmacenamientoException;
+import com.activehub.shared.storage.CarpetaArchivos;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,16 +17,16 @@ public class DescargarDocumentoInstructorService {
 
     private final PerfilInstructorRepository perfilInstructorRepository;
     private final DocumentoInstructorRepository documentoInstructorRepository;
-    private final String directorioAlmacenamiento;
+    private final AlmacenamientoArchivos almacenamiento;
 
     public DescargarDocumentoInstructorService(
             PerfilInstructorRepository perfilInstructorRepository,
             DocumentoInstructorRepository documentoInstructorRepository,
-            @Value("${app.storage.documentos-instructor-dir}") String directorioAlmacenamiento
+            AlmacenamientoArchivos almacenamiento
     ) {
         this.perfilInstructorRepository = perfilInstructorRepository;
         this.documentoInstructorRepository = documentoInstructorRepository;
-        this.directorioAlmacenamiento = directorioAlmacenamiento;
+        this.almacenamiento = almacenamiento;
     }
 
     @Transactional(readOnly = true)
@@ -40,9 +39,10 @@ public class DescargarDocumentoInstructorService {
                 .orElseThrow(() -> new NoEncontradoException("Documento no encontrado."));
 
         try {
-            byte[] contenido = Files.readAllBytes(Path.of(directorioAlmacenamiento).resolve(documento.getRutaArchivo()));
+            byte[] contenido = almacenamiento.leer(
+                    CarpetaArchivos.DOCUMENTOS_INSTRUCTOR, documento.getRutaArchivo());
             return new DocumentoDescarga(documento.getNombreArchivo(), documento.getTipoDocumento(), contenido);
-        } catch (IOException e) {
+        } catch (AlmacenamientoException e) {
             throw new NoEncontradoException("No pudimos leer el archivo.");
         }
     }

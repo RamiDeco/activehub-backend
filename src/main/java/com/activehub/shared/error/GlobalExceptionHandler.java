@@ -8,7 +8,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.activehub.shared.audit.AuditAccion;
+import com.activehub.shared.audit.AuditService;
+import org.springframework.beans.factory.ObjectProvider;
+import java.util.UUID;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -23,6 +29,18 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /**
+     * Por ObjectProvider y no por constructor directo: este advice se importa en ~50
+     * {@code @WebMvcTest} de slice, que levantan un contexto minimo sin AuditService. Exigirlo
+     * como dependencia obligatoria haria fallar todos esos tests por un bean que no tiene nada
+     * que ver con lo que prueban. Si no esta, no se audita y el 403 se devuelve igual.
+     */
+    private final ObjectProvider<AuditService> auditService;
+
+    public GlobalExceptionHandler(ObjectProvider<AuditService> auditService) {
+        this.auditService = auditService;
+    }
+
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> handleApiException(ApiException ex, HttpServletRequest request) {
         ApiError body = new ApiError(
@@ -36,11 +54,25 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getCode().getStatus()).body(body);
     }
 
+    /**
+     * <b>Un intento de acceso denegado tambien se audita</b> (RN-14): que alguien pida algo para
+     * lo que no tiene permiso es informacion de seguridad, no ruido. Un alumno pegandole a
+     * /api/admin/roles es exactamente lo que una auditoria quiere poder ver, y antes no dejaba
+     * rastro en ningun lado — el 403 se devolvia y ahi moria.
+     *
+     * <p>Se registra aca y no en un filtro porque {@code @PreAuthorize} deniega dentro del
+     * DispatcherServlet (via AOP sobre el metodo del controller), asi que la excepcion llega
+     * hasta este handler antes de poder alcanzar el {@code AccessDeniedHandler} de Spring
+     * Security a nivel de filtro. Es el unico punto por el que pasan todas.
+     *
+     * <p>La auditoria va en su propia transaccion (la de {@code AuditService}), asi que no la
+     * arrastra el rollback del request fallido. El metodo y la ruta pedidos van en la metadata:
+     * sin eso, "acceso denegado" no dice a que.
+     */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
-        // @PreAuthorize deniega dentro del DispatcherServlet (via AOP sobre el metodo del
-        // controller), asi que la excepcion llega hasta aca antes de poder alcanzar el
-        // AccessDeniedHandler de Spring Security a nivel de filtro.
+        auditarIntento(request);
+
         ApiError body = new ApiError(
                 Instant.now(),
                 ApiErrorCode.SIN_PERMISO.getStatus().value(),
@@ -50,6 +82,32 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(ApiErrorCode.SIN_PERMISO.getStatus()).body(body);
+    }
+
+    /**
+     * El actor sale del contexto de seguridad, no del request: en un 403 hay sesion valida (el
+     * token se verifico), lo que falta es el permiso. Si no hubiera sesion el rechazo seria 401
+     * y ni siquiera llegaria hasta aca.
+     */
+    private void auditarIntento(HttpServletRequest request) {
+        UUID actorId = null;
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UUID id) {
+            actorId = id;
+        }
+        AuditService servicio = auditService.getIfAvailable();
+        if (servicio == null) {
+            return;
+        }
+        try {
+            servicio.registrar(
+                    actorId, AuditAccion.ACCESO_DENEGADO, "Acceso", null,
+                    request.getMethod() + " " + request.getRequestURI());
+        } catch (RuntimeException e) {
+            // Auditar no puede convertir un 403 en un 500: si la escritura falla, se loguea y
+            // el cliente igual recibe su respuesta.
+            log.warn("No se pudo auditar un acceso denegado a {}", request.getRequestURI(), e);
+        }
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)

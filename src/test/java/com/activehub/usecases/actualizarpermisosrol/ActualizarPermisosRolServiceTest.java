@@ -51,6 +51,8 @@ class ActualizarPermisosRolServiceTest {
     private UUID rolId;
     private UUID actorId;
     private Rol rolInstructor;
+    /** Implicito (Permiso.IMPLICITOS): el Service lo enciende venga o no en el payload. */
+    private Permiso explorar;
     private Permiso publicar;
     private Permiso cobros;
     private Permiso gestionarUsuarios;
@@ -64,12 +66,14 @@ class ActualizarPermisosRolServiceTest {
         actorId = UUID.randomUUID();
 
         rolInstructor = rol(RolNombre.INSTRUCTOR.name(), rolId);
+        explorar = permiso("catalogo.explorar", false, 10);
         publicar = permiso("actividades.publicar", false, 50);
         cobros = permiso("cobros.confirmar", false, 70);
         gestionarUsuarios = permiso("usuarios.gestionar", true, 80);
 
         when(rolRepository.findById(rolId)).thenReturn(Optional.of(rolInstructor));
-        when(permisoRepository.findAllByOrderByOrdenAsc()).thenReturn(List.of(publicar, cobros, gestionarUsuarios));
+        when(permisoRepository.findAllByOrderByOrdenAsc())
+                .thenReturn(List.of(explorar, publicar, cobros, gestionarUsuarios));
         when(configuracionRolRepository.findByRolId(rolId)).thenReturn(new ArrayList<>());
     }
 
@@ -106,9 +110,10 @@ class ActualizarPermisosRolServiceTest {
         var response = service.actualizar(
                 rolId, new ActualizarPermisosRolRequest(List.of("actividades.publicar")), actorId);
 
-        assertThat(response.permisos()).containsExactly("actividades.publicar");
-        // Tres filas: la habilitada y las dos apagadas, para que la matriz no tenga huecos.
-        verify(configuracionRolRepository, org.mockito.Mockito.times(3)).save(any(ConfiguracionRol.class));
+        assertThat(response.permisos()).containsExactly("catalogo.explorar", "actividades.publicar");
+        // Cuatro filas: las dos habilitadas (la pedida y el implicito) y las dos apagadas,
+        // para que la matriz no tenga huecos.
+        verify(configuracionRolRepository, org.mockito.Mockito.times(4)).save(any(ConfiguracionRol.class));
     }
 
     @Test
@@ -129,8 +134,8 @@ class ActualizarPermisosRolServiceTest {
         service.actualizar(
                 rolId, new ActualizarPermisosRolRequest(List.of("actividades.publicar")), actorId);
 
-        // Solo se guardan las dos filas que faltaban; la que ya estaba en true no se toca.
-        verify(configuracionRolRepository, org.mockito.Mockito.times(2)).save(any(ConfiguracionRol.class));
+        // Solo se guardan las tres filas que faltaban; la que ya estaba en true no se toca.
+        verify(configuracionRolRepository, org.mockito.Mockito.times(3)).save(any(ConfiguracionRol.class));
     }
 
     @Test
@@ -139,7 +144,8 @@ class ActualizarPermisosRolServiceTest {
 
         // Criterio 7: autor, fecha y detalle del permiso modificado.
         verify(auditService).registrar(
-                eq(actorId), eq(AuditAccion.PERMISOS_ACTUALIZADOS), eq("Rol"), eq(rolId), eq("+cobros.confirmar"));
+                eq(actorId), eq(AuditAccion.PERMISOS_ACTUALIZADOS), eq("Rol"), eq(rolId),
+                eq("+catalogo.explorar, +cobros.confirmar"));
     }
 
     @Test
@@ -167,7 +173,7 @@ class ActualizarPermisosRolServiceTest {
         var response = service.actualizar(
                 adminId, new ActualizarPermisosRolRequest(List.of("usuarios.gestionar")), actorId);
 
-        assertThat(response.permisos()).containsExactly("usuarios.gestionar");
+        assertThat(response.permisos()).containsExactly("catalogo.explorar", "usuarios.gestionar");
     }
 
     @Test
@@ -175,7 +181,18 @@ class ActualizarPermisosRolServiceTest {
         // La guarda es solo para el Administrador: un rol nuevo puede no tener ninguno.
         var response = service.actualizar(rolId, new ActualizarPermisosRolRequest(List.of()), actorId);
 
-        assertThat(response.permisos()).isEmpty();
+        assertThat(response.permisos()).containsExactly("catalogo.explorar");
+    }
+
+    @Test
+    void actualizar_permisoImplicito_quedaEncendidoAunqueNoVengaEnElPayload() {
+        // `catalogo.explorar` no es una decision del administrador: lo tiene todo rol y la
+        // pantalla ya no lo ofrece como checkbox (V22). Si dependiera del payload, un rol
+        // nuevo se quedaria sin favoritos solo porque el frontend dejo de mandarlo.
+        var response = service.actualizar(
+                rolId, new ActualizarPermisosRolRequest(List.of("cobros.confirmar")), actorId);
+
+        assertThat(response.permisos()).contains("catalogo.explorar");
     }
 
     @Test

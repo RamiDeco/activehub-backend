@@ -34,14 +34,23 @@ public class ActualizarUsuarioAdminService {
                 .orElseThrow(() -> new NoEncontradoException("Usuario no encontrado."));
 
         String emailNuevo = request.email().trim().toLowerCase();
-        if (!emailNuevo.equalsIgnoreCase(usuario.getEmail())
-                && usuarioRepository.existsByEmailIgnoreCaseAndDeletedFalse(emailNuevo)) {
+        boolean cambiaElEmail = !emailNuevo.equalsIgnoreCase(usuario.getEmail());
+        // Lo que bloquea es el correo CONFIRMADO por otra cuenta, no el tipeado (V26).
+        if (cambiaElEmail && usuarioRepository.existsVerificadoConEmail(emailNuevo, usuarioId)) {
             throw new EmailEnUsoException();
         }
 
         usuario.setNombre(request.nombre().trim());
         usuario.setApellido(request.apellido().trim());
         usuario.setEmail(emailNuevo);
+        if (cambiaElEmail) {
+            // El correo puesto por un administrador **no queda verificado**: nadie demostró
+            // ser dueño de esa casilla. Si quedara en true, un admin podría reservar la
+            // dirección de cualquiera con un PUT — justo lo que el código de 6 dígitos evita.
+            // El dueño de la cuenta lo confirma después, con el código.
+            usuario.setEmailVerificado(false);
+            usuario.setEmailVerificadoAt(null);
+        }
         usuario.setTelefono(request.telefono() != null ? request.telefono().trim() : null);
         usuario.setFechaNacimiento(request.fechaNacimiento());
         usuarioRepository.save(usuario);

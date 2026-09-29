@@ -15,6 +15,7 @@ import com.activehub.domain.resenia.ReseniaRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import java.time.Instant;
@@ -77,7 +78,7 @@ class RechazarReseniaServiceTest {
 
         assertThat(resenia.isDeleted()).isTrue();
         verify(actividadRepository).recalcularRating(actividadId);
-        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.RESENIA_RECHAZADA), any(), eq(reseniaId));
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.RESENIA_RECHAZADA), any(), eq(reseniaId), eq(Destino.actividad(actividadId)));
     }
 
     @Test

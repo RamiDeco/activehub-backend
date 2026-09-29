@@ -3,11 +3,10 @@ package com.activehub.usecases.verfotoperfil;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.error.NoEncontradoException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import com.activehub.shared.storage.AlmacenamientoArchivos;
+import com.activehub.shared.storage.AlmacenamientoException;
+import com.activehub.shared.storage.CarpetaArchivos;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,14 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class VerFotoPerfilService {
 
     private final UsuarioRepository usuarioRepository;
-    private final String directorioAlmacenamiento;
+    private final AlmacenamientoArchivos almacenamiento;
 
-    public VerFotoPerfilService(
-            UsuarioRepository usuarioRepository,
-            @Value("${app.storage.fotos-perfil-dir}") String directorioAlmacenamiento
-    ) {
+    public VerFotoPerfilService(UsuarioRepository usuarioRepository, AlmacenamientoArchivos almacenamiento) {
         this.usuarioRepository = usuarioRepository;
-        this.directorioAlmacenamiento = directorioAlmacenamiento;
+        this.almacenamiento = almacenamiento;
     }
 
     @Transactional(readOnly = true)
@@ -35,9 +31,9 @@ public class VerFotoPerfilService {
         }
 
         try {
-            byte[] contenido = Files.readAllBytes(Path.of(directorioAlmacenamiento).resolve(usuario.getFotoPath()));
+            byte[] contenido = almacenamiento.leer(CarpetaArchivos.FOTOS_PERFIL, usuario.getFotoPath());
             return new FotoDescarga(tipoContenido(usuario.getFotoPath()), contenido);
-        } catch (IOException e) {
+        } catch (AlmacenamientoException e) {
             throw new NoEncontradoException("No pudimos leer la foto.");
         }
     }

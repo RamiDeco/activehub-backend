@@ -4,7 +4,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
-public record RegistrarInstructorResponse(String token, Usuario usuario) {
+/** `mailEnviado`: ver `RegistrarAlumnoResponse`. */
+public record RegistrarInstructorResponse(String token, boolean mailEnviado, Usuario usuario) {
 
     public record Usuario(
             UUID id,
@@ -16,7 +17,10 @@ public record RegistrarInstructorResponse(String token, Usuario usuario) {
             String rol,
             String estado,
             int cantidadPenalizaciones,
-            Instant createdAt
+            Instant createdAt,
+            /** Ver `ObtenerUsuarioActualResponse.emailVerificado`. */
+            boolean emailVerificado,
+            String authProveedor
     ) {
     }
 }

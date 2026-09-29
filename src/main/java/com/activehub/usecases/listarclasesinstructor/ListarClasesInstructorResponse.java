@@ -1,5 +1,6 @@
 package com.activehub.usecases.listarclasesinstructor;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -11,6 +12,8 @@ public record ListarClasesInstructorResponse(
         Instant horaFin,
         String estado,
         int cuposMax,
-        int cuposOcupados
+        int cuposOcupados,
+        /** Precio congelado de esta clase (V23), no el actual de la actividad. */
+        BigDecimal precio
 ) {
 }

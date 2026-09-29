@@ -101,7 +101,7 @@ class CrearReseniaServiceTest {
 
         assertThat(response.puntaje()).isEqualTo(5);
         assertThat(response.enModeracion()).isTrue();
-        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.NUEVA_RESENIA), any(), any());
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.NUEVA_RESENIA), any(), any(), any());
     }
 
     @Test

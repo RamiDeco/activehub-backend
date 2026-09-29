@@ -3,6 +3,7 @@ package com.activehub.usecases.registraralumno;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -50,6 +51,8 @@ class RegistrarAlumnoServiceTest {
     private JwtService jwtService;
     @Mock
     private AuditService auditService;
+    @Mock
+    private com.activehub.shared.email.VerificacionEmailService verificacionEmailService;
 
     @Mock
     private com.activehub.domain.actividad.TipoActividadRepository tipoActividadRepository;
@@ -63,7 +66,7 @@ class RegistrarAlumnoServiceTest {
     void setUp() {
         service = new RegistrarAlumnoService(
                 usuarioRepository, rolRepository, perfilAlumnoRepository, tipoActividadRepository,
-                passwordEncoder, jwtService, auditService);
+                passwordEncoder, jwtService, auditService, verificacionEmailService);
     }
 
     private RegistrarAlumnoRequest requestValido() {
@@ -77,7 +80,7 @@ class RegistrarAlumnoServiceTest {
         Rol rolAlumno = new Rol();
         rolAlumno.setNombre(RolNombre.ALUMNO.name());
 
-        when(usuarioRepository.existsByEmailIgnoreCaseAndDeletedFalse("martina@email.com")).thenReturn(false);
+        when(usuarioRepository.existsVerificadoConEmail("martina@email.com", null)).thenReturn(false);
         when(rolRepository.findByNombre(RolNombre.ALUMNO)).thenReturn(Optional.of(rolAlumno));
         when(passwordEncoder.encode("Password1")).thenReturn("hash-bcrypt");
         when(usuarioRepository.saveAndFlush(any(Usuario.class))).thenAnswer(invocation -> {
@@ -86,7 +89,7 @@ class RegistrarAlumnoServiceTest {
             ReflectionTestUtils.setField(u, "createdAt", Instant.now());
             return u;
         });
-        when(jwtService.emitir(any(UUID.class), anyString(), eq(RolNombre.ALUMNO.name()))).thenReturn("token-jwt");
+        when(jwtService.emitir(any(UUID.class), anyString(), eq(RolNombre.ALUMNO.name()), anyBoolean())).thenReturn("token-jwt");
 
         RegistrarAlumnoResponse response = service.registrar(requestValido());
 
@@ -105,7 +108,7 @@ class RegistrarAlumnoServiceTest {
         Rol rolAlumno = new Rol();
         rolAlumno.setNombre(RolNombre.ALUMNO.name());
 
-        when(usuarioRepository.existsByEmailIgnoreCaseAndDeletedFalse("martina@email.com")).thenReturn(false);
+        when(usuarioRepository.existsVerificadoConEmail("martina@email.com", null)).thenReturn(false);
         when(rolRepository.findByNombre(RolNombre.ALUMNO)).thenReturn(Optional.of(rolAlumno));
         when(passwordEncoder.encode("Password1")).thenReturn("hash-bcrypt");
         when(usuarioRepository.saveAndFlush(any(Usuario.class))).thenAnswer(invocation -> {
@@ -114,7 +117,7 @@ class RegistrarAlumnoServiceTest {
             ReflectionTestUtils.setField(u, "createdAt", Instant.now());
             return u;
         });
-        when(jwtService.emitir(any(UUID.class), anyString(), eq(RolNombre.ALUMNO.name()))).thenReturn("token-jwt");
+        when(jwtService.emitir(any(UUID.class), anyString(), eq(RolNombre.ALUMNO.name()), anyBoolean())).thenReturn("token-jwt");
 
         RegistrarAlumnoRequest request = new RegistrarAlumnoRequest(
                 "Martina", "Gómez", "martina@email.com", "2611234567", null, "Password1",
@@ -129,7 +132,7 @@ class RegistrarAlumnoServiceTest {
 
     @Test
     void registrarAlumno_emailYaRegistrado_lanzaEmailEnUsoException() {
-        when(usuarioRepository.existsByEmailIgnoreCaseAndDeletedFalse("martina@email.com")).thenReturn(true);
+        when(usuarioRepository.existsVerificadoConEmail("martina@email.com", null)).thenReturn(true);
 
         assertThatThrownBy(() -> service.registrar(requestValido()))
                 .isInstanceOf(EmailEnUsoException.class);

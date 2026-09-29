@@ -8,12 +8,10 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import com.activehub.shared.storage.AlmacenamientoArchivos;
+import com.activehub.shared.storage.CarpetaArchivos;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,18 +21,18 @@ public class EliminarImagenActividadService {
     private final ActividadRepository actividadRepository;
     private final ActividadImagenRepository actividadImagenRepository;
     private final AuditService auditService;
-    private final String directorioAlmacenamiento;
+    private final AlmacenamientoArchivos almacenamiento;
 
     public EliminarImagenActividadService(
             ActividadRepository actividadRepository,
             ActividadImagenRepository actividadImagenRepository,
             AuditService auditService,
-            @Value("${app.storage.fotos-actividad-dir}") String directorioAlmacenamiento
+            AlmacenamientoArchivos almacenamiento
     ) {
         this.actividadRepository = actividadRepository;
         this.actividadImagenRepository = actividadImagenRepository;
         this.auditService = auditService;
-        this.directorioAlmacenamiento = directorioAlmacenamiento;
+        this.almacenamiento = almacenamiento;
     }
 
     @Transactional
@@ -65,11 +63,9 @@ public class EliminarImagenActividadService {
             actividadRepository.save(actividad);
         }
 
-        try {
-            Files.deleteIfExists(Path.of(directorioAlmacenamiento).resolve(imagen.getPath()));
-        } catch (IOException e) {
-            // La fila ya no está; un archivo huérfano no justifica fallar la operación.
-        }
+        // La fila ya no está; un archivo huérfano no justifica fallar la operación, y por eso
+        // `borrarSiExiste` no lanza.
+        almacenamiento.borrarSiExiste(CarpetaArchivos.FOTOS_ACTIVIDAD, imagen.getPath());
 
         auditService.registrar(
                 actorId, AuditAccion.IMAGEN_ACTIVIDAD_ELIMINADA, "Actividad", actividadId, imagenId.toString());

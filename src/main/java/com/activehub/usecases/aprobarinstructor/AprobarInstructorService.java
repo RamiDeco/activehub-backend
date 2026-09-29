@@ -5,6 +5,7 @@ import com.activehub.domain.usuario.PerfilInstructorRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import java.util.UUID;
@@ -37,7 +38,8 @@ public class AprobarInstructorService {
 
         notificacionService.notificar(
                 usuarioId, TipoNotificacion.INSTRUCTOR_APROBADO,
-                "Tu perfil de instructor fue aprobado. Ya podés crear actividades y clases.", usuarioId);
+                "Tu perfil de instructor fue aprobado. Ya podés crear actividades y clases.",
+                usuarioId, Destino.perfilInstructor(usuarioId));
 
         auditService.registrar(actorId, AuditAccion.INSTRUCTOR_VALIDADO, "PerfilInstructor", usuarioId, null);
 

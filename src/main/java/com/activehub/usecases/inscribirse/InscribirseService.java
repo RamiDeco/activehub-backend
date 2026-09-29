@@ -18,6 +18,7 @@ import com.activehub.shared.error.InscripcionYaExisteException;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinCuposDisponiblesException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
@@ -114,7 +115,9 @@ public class InscribirseService {
         // Leer el precio y los datos de la actividad ANTES del UPDATE atomico: ocuparCupo usa
         // clearAutomatically=true, que limpia todo el persistence context (no solo Clase) y
         // dejaria el proxy lazy de Actividad huerfano si se accede despues.
-        var precio = clase.getActividad().getPrecio();
+        // El precio sale de la CLASE, no de la actividad (V23): la actividad puede haber
+        // cambiado de precio despues de que esta clase se publicara.
+        var precio = clase.getPrecio();
         var actividadNombre = clase.getActividad().getNombre();
         var instructorId = clase.getActividad().getInstructor().getId();
         var fechaHoraClase = clase.getFechaHora();
@@ -161,9 +164,13 @@ public class InscribirseService {
         String mensajeAlumno = inscripcion.getEstado() == EstadoInscripcion.INSCRIPTO
                 ? "Se confirmó tu inscripción a " + contexto + "."
                 : "Tu inscripción a " + contexto + " quedó pendiente hasta que el instructor confirme el pago en efectivo.";
-        notificacionService.notificar(alumnoId, TipoNotificacion.INSCRIPCION_CONFIRMADA, mensajeAlumno, inscripcion.getId());
         notificacionService.notificar(
-                instructorId, TipoNotificacion.NUEVA_INSCRIPCION, "Nueva inscripción en " + contexto + ".", inscripcion.getId());
+                alumnoId, TipoNotificacion.INSCRIPCION_CONFIRMADA, mensajeAlumno, inscripcion.getId(),
+                Destino.inscripcion(inscripcion.getId()));
+        notificacionService.notificar(
+                instructorId, TipoNotificacion.NUEVA_INSCRIPCION, "Nueva inscripción en " + contexto + ".", inscripcion.getId(),
+                // Al roster de la clase: es donde ve quien se anoto y donde confirma el cobro.
+                Destino.clase(claseId));
 
         auditService.registrar(
                 alumnoId,

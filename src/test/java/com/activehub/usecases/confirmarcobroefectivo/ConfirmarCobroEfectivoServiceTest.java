@@ -17,6 +17,7 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.security.InstructorVerificadoGuard;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import java.time.Instant;
@@ -83,7 +84,7 @@ class ConfirmarCobroEfectivoServiceTest {
         ConfirmarCobroEfectivoResponse response = service.confirmar(inscripcionId, instructorId);
 
         assertThat(response.estado()).isEqualTo("Inscripto");
-        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.COBRO_EFECTIVO_CONFIRMADO), any(), eq(inscripcionId));
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.COBRO_EFECTIVO_CONFIRMADO), any(), eq(inscripcionId), eq(Destino.inscripcion(inscripcionId)));
     }
 
     @Test

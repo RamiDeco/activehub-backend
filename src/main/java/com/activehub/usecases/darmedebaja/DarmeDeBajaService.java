@@ -1,5 +1,6 @@
 package com.activehub.usecases.darmedebaja;
 
+import com.activehub.domain.usuario.RolNombre;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditAccion;
@@ -20,6 +21,14 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>No se cancelan las inscripciones vigentes: eso afectaria cupos y pagos de terceros sin
  * que nadie lo decida. En cambio se bloquea la baja si quedan compromisos activos, para que
  * el usuario los cancele primero y el instructor no se entere tarde.
+ *
+ * <p><b>El ultimo ADMIN no puede darse de baja.</b> Es el mismo agujero que ya tapaban
+ * {@code asignarrolusuario} ("no se puede dejar la plataforma sin su ultimo ADMIN") y la
+ * guarda anti-auto-suspension de {@code actualizarestadousuario}, y era el unico camino que
+ * quedaba abierto para dejar el sistema sin gobierno: una vez borrada esa cuenta no hay
+ * ninguna pantalla desde la cual devolverle el rol ADMIN a nadie, y la unica salida es tocar
+ * la base a mano. Se cuentan las cuentas VIVAS del rol, no las activas: un admin suspendido
+ * sigue pudiendo volver (la suspension se levanta), uno borrado no.
  */
 @Service
 public class DarmeDeBajaService {
@@ -39,6 +48,13 @@ public class DarmeDeBajaService {
 
         if (usuario.isDeleted()) {
             throw new ValidacionException("Tu cuenta ya está dada de baja.");
+        }
+
+        if (RolNombre.ADMIN.name().equals(usuario.getRol().getNombre())
+                && usuarioRepository.countByRolIdAndDeletedFalse(usuario.getRol().getId()) <= 1) {
+            throw new ValidacionException(
+                    "Sos el único administrador de la plataforma: asigná el rol Administrador a otra cuenta "
+                            + "antes de darte de baja.");
         }
 
         usuario.marcarBorrado();

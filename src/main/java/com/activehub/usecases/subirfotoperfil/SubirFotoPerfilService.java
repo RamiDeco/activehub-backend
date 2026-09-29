@@ -6,12 +6,11 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import com.activehub.shared.storage.AlmacenamientoArchivos;
+import com.activehub.shared.storage.AlmacenamientoException;
+import com.activehub.shared.storage.CarpetaArchivos;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,16 +22,16 @@ public class SubirFotoPerfilService {
 
     private final UsuarioRepository usuarioRepository;
     private final AuditService auditService;
-    private final String directorioAlmacenamiento;
+    private final AlmacenamientoArchivos almacenamiento;
 
     public SubirFotoPerfilService(
             UsuarioRepository usuarioRepository,
             AuditService auditService,
-            @Value("${app.storage.fotos-perfil-dir}") String directorioAlmacenamiento
+            AlmacenamientoArchivos almacenamiento
     ) {
         this.usuarioRepository = usuarioRepository;
         this.auditService = auditService;
-        this.directorioAlmacenamiento = directorioAlmacenamiento;
+        this.almacenamiento = almacenamiento;
     }
 
     @Transactional
@@ -49,26 +48,22 @@ public class SubirFotoPerfilService {
                 .orElseThrow(() -> new NoEncontradoException("Usuario no encontrado."));
 
         String nombreOriginal = archivo.getOriginalFilename() != null ? archivo.getOriginalFilename() : "foto";
-        String nombreEnDisco = UUID.randomUUID() + extension(nombreOriginal);
+        String nombreGuardado = UUID.randomUUID() + extension(nombreOriginal);
 
         try {
-            Path directorio = Path.of(directorioAlmacenamiento);
-            Files.createDirectories(directorio);
-            Files.write(directorio.resolve(nombreEnDisco), archivo.getBytes());
-        } catch (IOException e) {
+            almacenamiento.guardar(CarpetaArchivos.FOTOS_PERFIL, nombreGuardado, archivo.getBytes(), contentType);
+        } catch (java.io.IOException | AlmacenamientoException e) {
             throw new ValidacionException("No pudimos guardar la foto. Intentá de nuevo.");
         }
 
         String fotoAnterior = usuario.getFotoPath();
-        usuario.setFotoPath(nombreEnDisco);
+        usuario.setFotoPath(nombreGuardado);
         usuarioRepository.save(usuario);
 
         if (fotoAnterior != null) {
-            try {
-                Files.deleteIfExists(Path.of(directorioAlmacenamiento).resolve(fotoAnterior));
-            } catch (IOException e) {
-                // no bloquea la respuesta si no se pudo borrar el archivo viejo
-            }
+            // No bloquea la respuesta si no se pudo borrar la anterior: el contrato de
+            // `borrarSiExiste` es best-effort justamente para esto.
+            almacenamiento.borrarSiExiste(CarpetaArchivos.FOTOS_PERFIL, fotoAnterior);
         }
 
         auditService.registrar(actorId, AuditAccion.FOTO_PERFIL_SUBIDA, "Usuario", usuario.getId(), null);

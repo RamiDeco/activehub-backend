@@ -61,6 +61,7 @@ public class ListarRosterClaseService {
 
         return new ListarRosterClaseResponse(
                 clase.getId(),
+                clase.getPrecio(),
                 clase.getCuposMax(),
                 clase.getCuposOcupados(),
                 clase.getCuposMax() - clase.getCuposOcupados(),

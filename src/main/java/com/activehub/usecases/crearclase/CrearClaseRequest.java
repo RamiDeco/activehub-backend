@@ -9,8 +9,9 @@ import java.time.LocalDate;
 public record CrearClaseRequest(
         @NotNull(message = "La fecha y hora son obligatorias")
         @Future(message = "La fecha y hora deben ser futuras") Instant fechaHora,
-        // E2I-HU06 criterio 1: "Hora fin*" es obligatoria, igual que el inicio.
-        @NotNull(message = "La hora de fin es obligatoria") Instant horaFin,
+        // Sin horaFin: la calcula el Service sumandole `actividad.duracionMin` al inicio.
+        // Pedirla aparte era pedir dos veces el mismo dato y dejaba que una clase durara algo
+        // distinto de lo que promete su actividad. Ver CrearClaseService.
         // Obligatorio a proposito. Antes era opcional y caia a `actividad.cuposMax`, un campo
         // fantasma que el formulario llenaba con 20 fijo: ese 20 terminaba siendo el cupo real.
         @NotNull(message = "El cupo máximo es obligatorio")

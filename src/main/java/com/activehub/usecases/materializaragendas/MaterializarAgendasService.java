@@ -8,6 +8,7 @@ import com.activehub.domain.actividad.EstadoClase;
 import com.activehub.domain.favorito.FavoritoRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
@@ -108,6 +109,10 @@ public class MaterializarAgendasService {
         clase.setCuposMax(agenda.getCuposMax());
         clase.setEstado(EstadoClase.Programada);
         clase.setCuposOcupados(0);
+        // El precio se fija cuando la clase se materializa, no cuando se creo la agenda: es el
+        // precio vigente de la actividad en el momento en que la clase empieza a existir y a
+        // poder venderse (V23).
+        clase.setPrecio(agenda.getActividad().getPrecio());
         clase = claseRepository.save(clase);
 
         auditService.registrar(null, AuditAccion.CLASE_CREADA, "Clase", clase.getId(), "AGENDA");
@@ -116,7 +121,9 @@ public class MaterializarAgendasService {
                 + "\" (uno de tus favoritos): " + NotificacionMensajes.formatFechaHora(inicio) + ".";
         for (var favorito : favoritoRepository.findByActividadId(agenda.getActividad().getId())) {
             notificacionService.notificar(
-                    favorito.getUsuario().getId(), TipoNotificacion.NUEVO_HORARIO_FAVORITO, mensaje, clase.getId());
+                    favorito.getUsuario().getId(), TipoNotificacion.NUEVO_HORARIO_FAVORITO, mensaje, clase.getId(),
+                    // Al detalle de la actividad, que es donde puede anotarse al horario nuevo.
+                    Destino.actividad(agenda.getActividad().getId()));
         }
         return true;
     }

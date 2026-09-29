@@ -38,7 +38,7 @@ class IniciarSesionControllerTest {
     void login_credencialesValidas_devuelve200ConTokenYUsuario() {
         var usuarioDto = new IniciarSesionResponse.Usuario(
                 UUID.randomUUID(), "Martina", "Gómez", "martina@email.com", "2611234567",
-                LocalDate.of(2000, 5, 10), "ALUMNO", "ACTIVO", 0, Instant.now());
+                LocalDate.of(2000, 5, 10), "ALUMNO", "ACTIVO", 0, Instant.now(), false, "LOCAL");
         when(iniciarSesionService.login(any())).thenReturn(new IniciarSesionResponse("token-jwt", usuarioDto));
 
         assertThat(mvc.post().uri("/api/auth/login")

@@ -32,6 +32,9 @@ public class ListarMisResenasService {
                             r.getPuntaje(),
                             r.getComentario(),
                             r.isEnModeracion(),
+                            r.isOculta(),
+                            r.getRespuestaInstructor(),
+                            r.getRespuestaInstructorAt(),
                             r.getCreatedAt());
                 })
                 .toList();

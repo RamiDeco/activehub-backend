@@ -11,6 +11,7 @@ import com.activehub.domain.usuario.PerfilInstructorRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditAccion;
+import com.activehub.shared.security.PenalizacionVigenteGuard;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
@@ -29,6 +30,7 @@ public class CrearActividadService {
     private final UsuarioRepository usuarioRepository;
     private final PerfilInstructorRepository perfilInstructorRepository;
     private final AuditService auditService;
+    private final PenalizacionVigenteGuard penalizacionVigenteGuard;
 
     public CrearActividadService(
             ActividadRepository actividadRepository,
@@ -36,7 +38,8 @@ public class CrearActividadService {
             NivelIntensidadRepository nivelIntensidadRepository,
             UsuarioRepository usuarioRepository,
             PerfilInstructorRepository perfilInstructorRepository,
-            AuditService auditService
+            AuditService auditService,
+            PenalizacionVigenteGuard penalizacionVigenteGuard
     ) {
         this.actividadRepository = actividadRepository;
         this.tipoActividadRepository = tipoActividadRepository;
@@ -44,6 +47,7 @@ public class CrearActividadService {
         this.usuarioRepository = usuarioRepository;
         this.perfilInstructorRepository = perfilInstructorRepository;
         this.auditService = auditService;
+        this.penalizacionVigenteGuard = penalizacionVigenteGuard;
     }
 
     @Transactional
@@ -55,6 +59,10 @@ public class CrearActividadService {
             throw new SinPermisoException(
                     "Tu perfil de instructor todavía no fue aprobado. No podés crear actividades hasta que un administrador lo valide.");
         }
+
+        // Una suspension vigente corta la operacion, no la sesion: el penalizado entra y ve
+        // lo suyo, pero no publica ni modifica oferta mientras dure la sancion.
+        penalizacionVigenteGuard.exigirSinSuspensionVigente(instructorId, "publicar actividades");
 
         TipoActividad tipo = tipoActividadRepository.findById(request.tipoActividadId())
                 .orElseThrow(() -> new NoEncontradoException("Tipo de actividad no encontrado."));

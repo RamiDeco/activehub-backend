@@ -21,9 +21,11 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.ActividadConInscriptosException;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.security.InstructorVerificadoGuard;
+import com.activehub.shared.security.PenalizacionVigenteGuard;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -50,6 +52,8 @@ class EliminarActividadServiceTest {
     private NotificacionService notificacionService;
     @Mock
     private InstructorVerificadoGuard instructorVerificadoGuard;
+    @Mock
+    private PenalizacionVigenteGuard penalizacionVigenteGuard;
 
     private EliminarActividadService service;
     private UUID actividadId;
@@ -60,7 +64,7 @@ class EliminarActividadServiceTest {
     void setUp() {
         service = new EliminarActividadService(
                 actividadRepository, claseRepository, inscripcionRepository, auditService,
-                notificacionService, instructorVerificadoGuard);
+                penalizacionVigenteGuard, notificacionService, instructorVerificadoGuard);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();
@@ -91,7 +95,7 @@ class EliminarActividadServiceTest {
 
         assertThat(actividad.isDeleted()).isTrue();
         verify(actividadRepository).save(actividad);
-        verify(notificacionService, never()).notificar(eq(instructorId), any(), any(), any());
+        verify(notificacionService, never()).notificar(eq(instructorId), any(), any(), any(), any());
     }
 
     @Test
@@ -103,7 +107,7 @@ class EliminarActividadServiceTest {
 
         assertThat(actividad.isDeleted()).isTrue();
         verify(actividadRepository).save(actividad);
-        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.ACTIVIDAD_ELIMINADA), any(), eq(actividadId));
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.ACTIVIDAD_ELIMINADA), any(), eq(actividadId), eq(Destino.ninguno()));
     }
 
     @Test
@@ -127,7 +131,7 @@ class EliminarActividadServiceTest {
         assertThat(clase.getEstado()).isEqualTo(EstadoClase.Programada);
         verify(actividadRepository, never()).save(any());
         verify(claseRepository, never()).save(any());
-        verify(notificacionService, never()).notificar(any(), any(), any(), any());
+        verify(notificacionService, never()).notificar(any(), any(), any(), any(), any());
     }
 
     @Test

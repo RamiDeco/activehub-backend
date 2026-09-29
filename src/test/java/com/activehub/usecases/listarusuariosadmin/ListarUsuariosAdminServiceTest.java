@@ -23,6 +23,7 @@ class ListarUsuariosAdminServiceTest {
 
     @Mock
     private UsuarioRepository usuarioRepository;
+
     @Mock
     private ConfiguracionRolRepository configuracionRolRepository;
 
@@ -33,10 +34,16 @@ class ListarUsuariosAdminServiceTest {
         service = new ListarUsuariosAdminService(usuarioRepository, configuracionRolRepository);
     }
 
+    private Rol rol(String nombre) {
+        Rol rol = new Rol();
+        rol.setNombre(nombre);
+        ReflectionTestUtils.setField(rol, "id", UUID.randomUUID());
+        return rol;
+    }
+
     @Test
     void listar_devuelveUsuariosMapeados() {
-        Rol rolAlumno = new Rol();
-        rolAlumno.setNombre(RolNombre.ALUMNO.name());
+        Rol rolAlumno = rol(RolNombre.ALUMNO.name());
 
         Usuario usuario = new Usuario();
         usuario.setNombre("Ana");
@@ -48,8 +55,8 @@ class ListarUsuariosAdminServiceTest {
         usuario.setCantidadPenalizaciones(2);
         ReflectionTestUtils.setField(usuario, "id", UUID.randomUUID());
 
-        when(configuracionRolRepository.rolesConPermiso("clases.gestionar")).thenReturn(List.of());
         when(usuarioRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(usuario));
+        when(configuracionRolRepository.rolesConPermiso("clases.gestionar")).thenReturn(List.of());
 
         List<ListarUsuariosAdminResponse> resultado = service.listar();
 
@@ -58,5 +65,28 @@ class ListarUsuariosAdminServiceTest {
         assertThat(resultado.get(0).rol()).isEqualTo("ALUMNO");
         assertThat(resultado.get(0).estado()).isEqualTo("ACTIVO");
         assertThat(resultado.get(0).cantidadPenalizaciones()).isEqualTo(2);
+        assertThat(resultado.get(0).puedeDarClases()).isFalse();
+    }
+
+    @Test
+    void listar_marcaPuedeDarClasesSegunElPermisoDelRol() {
+        // Solo a un instructor se le puede aplicar una penalizacion (E4Ad-HU06 / RN-13), y
+        // "es instructor" se decide por el permiso `clases.gestionar`, no por el nombre del
+        // rol (RN-19): un rol nuevo que dicte clases tambien es penalizable.
+        Rol rolInstructor = rol(RolNombre.INSTRUCTOR.name());
+
+        Usuario usuario = new Usuario();
+        usuario.setNombre("Beto");
+        usuario.setApellido("Diaz");
+        usuario.setEmail("beto@example.com");
+        usuario.setRol(rolInstructor);
+        usuario.setEstado(EstadoUsuario.ACTIVO);
+        ReflectionTestUtils.setField(usuario, "id", UUID.randomUUID());
+
+        when(usuarioRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(usuario));
+        when(configuracionRolRepository.rolesConPermiso("clases.gestionar"))
+                .thenReturn(List.of(rolInstructor.getId()));
+
+        assertThat(service.listar().get(0).puedeDarClases()).isTrue();
     }
 }

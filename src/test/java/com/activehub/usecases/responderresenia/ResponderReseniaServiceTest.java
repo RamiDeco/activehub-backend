@@ -17,6 +17,7 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.security.InstructorVerificadoGuard;
@@ -93,7 +94,7 @@ class ResponderReseniaServiceTest {
         assertThat(resenia.getRespuestaInstructor()).isEqualTo("¡Gracias!");
         verify(reseniaRepository).save(resenia);
         verify(notificacionService).notificar(
-                eq(alumnoId), eq(TipoNotificacion.RESENIA_RESPONDIDA), any(), eq(reseniaId));
+                eq(alumnoId), eq(TipoNotificacion.RESENIA_RESPONDIDA), any(), eq(reseniaId), eq(Destino.resenia(reseniaId)));
     }
 
     @Test

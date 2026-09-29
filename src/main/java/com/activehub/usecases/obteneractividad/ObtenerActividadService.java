@@ -48,7 +48,8 @@ public class ObtenerActividadService {
         var clases = claseRepository.findByActividadIdAndEstadoNotInOrderByFechaHoraAsc(id, ESTADOS_EXCLUIDOS).stream()
                 .map(c -> new ObtenerActividadResponse.Clase(
                         c.getId(), c.getFechaHora(), c.getHoraFin(), c.getEstado().name(), c.getCuposMax(), c.getCuposOcupados(),
-                        (int) inscripcionRepository.countByClaseIdAndEstado(c.getId(), EstadoInscripcion.PRE_INSCRIPCION)))
+                        (int) inscripcionRepository.countByClaseIdAndEstado(c.getId(), EstadoInscripcion.PRE_INSCRIPCION),
+                        c.getPrecio()))
                 .toList();
 
         var imagenes = actividadImagenRepository.findByActividadIdOrderByOrdenAsc(id).stream()

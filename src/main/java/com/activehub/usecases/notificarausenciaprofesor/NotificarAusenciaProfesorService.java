@@ -14,6 +14,7 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
@@ -82,7 +83,8 @@ public class NotificarAusenciaProfesorService {
             inscripcionRepository.save(inscripcion);
 
             notificacionService.notificar(
-                    inscripcion.getAlumno().getId(), TipoNotificacion.AUSENCIA_PROFESOR, request.mensaje(), claseId);
+                    inscripcion.getAlumno().getId(), TipoNotificacion.AUSENCIA_PROFESOR, request.mensaje(), claseId,
+                    Destino.clase(claseId));
             notificados++;
         }
 

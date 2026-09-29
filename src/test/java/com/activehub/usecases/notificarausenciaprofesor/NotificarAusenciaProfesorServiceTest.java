@@ -25,6 +25,7 @@ import com.activehub.shared.security.InstructorVerificadoGuard;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.PaymentGateway;
@@ -122,7 +123,7 @@ class NotificarAusenciaProfesorServiceTest {
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         verify(paymentGateway).cancelarPago("ref-abc");
         verify(notificacionService).notificar(
-                eq(alumnoId), eq(TipoNotificacion.AUSENCIA_PROFESOR), eq(request.mensaje()), eq(claseId));
+                eq(alumnoId), eq(TipoNotificacion.AUSENCIA_PROFESOR), eq(request.mensaje()), eq(claseId), eq(Destino.clase(claseId)));
     }
 
     @Test
@@ -134,7 +135,7 @@ class NotificarAusenciaProfesorServiceTest {
         NotificarAusenciaProfesorResponse response = service.notificar(claseId, instructorId, request);
 
         assertThat(response.alumnosNotificados()).isEqualTo(0);
-        verify(notificacionService, never()).notificar(any(), any(), any(), any());
+        verify(notificacionService, never()).notificar(any(), any(), any(), any(), any());
     }
 
     @Test

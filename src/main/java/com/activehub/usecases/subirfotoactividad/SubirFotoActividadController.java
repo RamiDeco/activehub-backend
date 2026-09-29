@@ -27,7 +27,11 @@ public class SubirFotoActividadController {
     }
 
     @PostMapping("/{id}/foto")
-    @PreAuthorize("@permisos.puede('actividades.publicar')")
+    // El actor entra si publica lo suyo O si modera lo ajeno; el Service decide despues el
+    // alcance con `puedeModerar`. Pedir solo `actividades.publicar` dejaba a
+    // `actividades.moderar` muerto: desde V22 el ADMIN modera pero no publica, asi que la
+    // guarda lo frenaba antes de llegar a la linea que pregunta si puede moderar.
+    @PreAuthorize("@permisos.puede('actividades.publicar') or @permisos.puede('actividades.moderar')")
     public ResponseEntity<SubirFotoActividadResponse> subir(
             @PathVariable UUID id, @RequestParam("archivo") MultipartFile archivo, Authentication authentication) {
         UUID actorId = (UUID) authentication.getPrincipal();

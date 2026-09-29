@@ -38,6 +38,13 @@ public record ObtenerActividadResponse(
 
     public record Clase(
             UUID id, Instant fechaHora, Instant horaFin, String estado, int cuposMax, int cuposOcupados,
-            int cantidadPreInscripcion) {
+            int cantidadPreInscripcion,
+            /**
+             * Precio de ESTA clase (V23), que es el que va a pagar quien se anote — no el de la
+             * actividad, que pudo haber cambiado después de que la clase se congelara. El panel
+             * de inscripción del alumno mostraba el de la actividad y prometía un importe
+             * distinto del que después cobraba {@code inscribirse}.
+             */
+            BigDecimal precio) {
     }
 }

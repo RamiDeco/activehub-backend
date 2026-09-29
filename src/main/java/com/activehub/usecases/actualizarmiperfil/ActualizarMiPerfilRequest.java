@@ -14,6 +14,12 @@ public record ActualizarMiPerfilRequest(
         // E3A-HU12 criterio 4: "El teléfono debe contener solo números".
         @NotBlank(message = "El teléfono es obligatorio")
         @Pattern(regexp = "\\+?[0-9 ]+", message = "El teléfono debe contener solo números") String telefono,
-        LocalDate fechaNacimiento
+        LocalDate fechaNacimiento,
+        /**
+         * Opcional, y es la unica forma de cargarlo despues del alta: quien se registro con
+         * Google nunca paso por un formulario que lo pidiera. Cuando viene, es clave de
+         * unicidad de la cuenta igual que el correo.
+         */
+        @Pattern(regexp = "^$|^[0-9]{7,8}$", message = "El DNI debe tener 7 u 8 dígitos") String dni
 ) {
 }

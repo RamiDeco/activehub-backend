@@ -23,6 +23,7 @@ import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.security.PenalizacionVigenteGuard;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
@@ -51,6 +52,8 @@ class CrearActividadServiceTest {
     private PerfilInstructorRepository perfilInstructorRepository;
     @Mock
     private AuditService auditService;
+    @Mock
+    private PenalizacionVigenteGuard penalizacionVigenteGuard;
 
     private CrearActividadService service;
     private UUID instructorId;
@@ -62,7 +65,7 @@ class CrearActividadServiceTest {
     void setUp() {
         service = new CrearActividadService(
                 actividadRepository, tipoActividadRepository, nivelIntensidadRepository, usuarioRepository,
-                perfilInstructorRepository, auditService);
+                perfilInstructorRepository, auditService, penalizacionVigenteGuard);
 
         instructorId = UUID.randomUUID();
         instructor = new Usuario();

@@ -8,12 +8,11 @@ import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import com.activehub.shared.storage.AlmacenamientoArchivos;
+import com.activehub.shared.storage.AlmacenamientoException;
+import com.activehub.shared.storage.CarpetaArchivos;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,18 +25,18 @@ public class SubirDocumentoService {
     private final PerfilInstructorRepository perfilInstructorRepository;
     private final DocumentoInstructorRepository documentoInstructorRepository;
     private final AuditService auditService;
-    private final String directorioAlmacenamiento;
+    private final AlmacenamientoArchivos almacenamiento;
 
     public SubirDocumentoService(
             PerfilInstructorRepository perfilInstructorRepository,
             DocumentoInstructorRepository documentoInstructorRepository,
             AuditService auditService,
-            @Value("${app.storage.documentos-instructor-dir}") String directorioAlmacenamiento
+            AlmacenamientoArchivos almacenamiento
     ) {
         this.perfilInstructorRepository = perfilInstructorRepository;
         this.documentoInstructorRepository = documentoInstructorRepository;
         this.auditService = auditService;
-        this.directorioAlmacenamiento = directorioAlmacenamiento;
+        this.almacenamiento = almacenamiento;
     }
 
     @Transactional
@@ -54,20 +53,19 @@ public class SubirDocumentoService {
                 .orElseThrow(() -> new NoEncontradoException("No encontramos tu perfil de instructor."));
 
         String nombreOriginal = archivo.getOriginalFilename() != null ? archivo.getOriginalFilename() : "documento";
-        String nombreEnDisco = UUID.randomUUID() + extension(nombreOriginal);
+        String nombreGuardado = UUID.randomUUID() + extension(nombreOriginal);
 
         try {
-            Path directorio = Path.of(directorioAlmacenamiento);
-            Files.createDirectories(directorio);
-            Files.write(directorio.resolve(nombreEnDisco), archivo.getBytes());
-        } catch (IOException e) {
+            almacenamiento.guardar(
+                    CarpetaArchivos.DOCUMENTOS_INSTRUCTOR, nombreGuardado, archivo.getBytes(), contentType);
+        } catch (java.io.IOException | AlmacenamientoException e) {
             throw new ValidacionException("No pudimos guardar el archivo. Intentá de nuevo.");
         }
 
         DocumentoInstructor documento = new DocumentoInstructor();
         documento.setPerfilInstructor(perfil);
         documento.setTipoDocumento(contentType);
-        documento.setRutaArchivo(nombreEnDisco);
+        documento.setRutaArchivo(nombreGuardado);
         documento.setNombreArchivo(nombreOriginal);
         documento.setTamanioBytes(archivo.getSize());
         documento = documentoInstructorRepository.save(documento);

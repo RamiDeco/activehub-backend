@@ -3,11 +3,10 @@ package com.activehub.usecases.verimagenactividad;
 import com.activehub.domain.actividad.ActividadImagen;
 import com.activehub.domain.actividad.ActividadImagenRepository;
 import com.activehub.shared.error.NoEncontradoException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import com.activehub.shared.storage.AlmacenamientoArchivos;
+import com.activehub.shared.storage.AlmacenamientoException;
+import com.activehub.shared.storage.CarpetaArchivos;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,14 +14,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class VerImagenActividadService {
 
     private final ActividadImagenRepository actividadImagenRepository;
-    private final String directorioAlmacenamiento;
+    private final AlmacenamientoArchivos almacenamiento;
 
     public VerImagenActividadService(
-            ActividadImagenRepository actividadImagenRepository,
-            @Value("${app.storage.fotos-actividad-dir}") String directorioAlmacenamiento
-    ) {
+            ActividadImagenRepository actividadImagenRepository, AlmacenamientoArchivos almacenamiento) {
         this.actividadImagenRepository = actividadImagenRepository;
-        this.directorioAlmacenamiento = directorioAlmacenamiento;
+        this.almacenamiento = almacenamiento;
     }
 
     @Transactional(readOnly = true)
@@ -31,9 +28,9 @@ public class VerImagenActividadService {
                 .orElseThrow(() -> new NoEncontradoException("Imagen no encontrada."));
 
         try {
-            byte[] contenido = Files.readAllBytes(Path.of(directorioAlmacenamiento).resolve(imagen.getPath()));
+            byte[] contenido = almacenamiento.leer(CarpetaArchivos.FOTOS_ACTIVIDAD, imagen.getPath());
             return new ImagenDescarga(tipoContenido(imagen.getPath()), contenido);
-        } catch (IOException e) {
+        } catch (AlmacenamientoException e) {
             throw new NoEncontradoException("No pudimos leer la imagen.");
         }
     }

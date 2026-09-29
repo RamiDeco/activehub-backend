@@ -3,9 +3,23 @@ package com.activehub.shared.audit;
 public enum AuditAccion {
     REGISTRO_ALUMNO,
     REGISTRO_INSTRUCTOR,
+    /** Alta creada con "Continuar con Google": nace con el correo ya verificado. */
+    REGISTRO_GOOGLE,
+    /** Ingresó el código de 6 dígitos del alta: a partir de acá el correo le queda reservado. */
+    EMAIL_VERIFICADO,
+    /** Confirmó un correo NUEVO desde su perfil. La metadata es la dirección nueva. */
+    EMAIL_CAMBIADO,
     LOGIN_OK,
     LOGIN_FALLIDO,
     LOGIN_BLOQUEADO,
+    /**
+     * Alguien pidio algo para lo que no tiene permiso y el backend lo rechazo con 403.
+     * Es una operacion que NO ocurrio, y justamente por eso interesa: un alumno probando
+     * /api/admin/roles es la señal que una auditoria quiere ver. Lo registra
+     * {@code GlobalExceptionHandler}, que es por donde pasan las denegaciones de
+     * {@code @PreAuthorize}.
+     */
+    ACCESO_DENEGADO,
     ADMIN_CREADO,
     ACTIVIDAD_CREADA,
     ACTIVIDAD_ACTUALIZADA,
@@ -40,10 +54,18 @@ public enum AuditAccion {
     USUARIO_ACTUALIZADO,
     PERFIL_ACTUALIZADO,
     PASSWORD_CAMBIADA,
+    /**
+     * Restableció su contraseña desde "¿Olvidaste tu contraseña?": sin sesión previa y con el
+     * código de 6 dígitos que le llegó al correo. Se distingue de PASSWORD_CAMBIADA a propósito,
+     * que la hace alguien que ya estaba adentro y sabía la contraseña anterior.
+     */
+    PASSWORD_RESTABLECIDA,
     CUENTA_DADA_DE_BAJA,
     RESENIA_ACTUALIZADA,
     RESENIA_RESPONDIDA,
     RESENIA_DENUNCIADA,
+    /** Un admin bajo del listado publico una resenia ya publicada, sin denuncia de por medio. */
+    RESENIA_OCULTADA,
     IMAGEN_ACTIVIDAD_AGREGADA,
     IMAGEN_ACTIVIDAD_ELIMINADA,
     SOLICITUD_INSTRUCTOR_REABIERTA,
@@ -62,5 +84,8 @@ public enum AuditAccion {
     ROL_ASIGNADO,
     NIVEL_INTENSIDAD_CREADO,
     NIVEL_INTENSIDAD_ACTUALIZADO,
-    NIVEL_INTENSIDAD_ELIMINADO
+    NIVEL_INTENSIDAD_ELIMINADO,
+    /** Alguien mando el formulario "Reportar un problema" de /ayuda. El actor es null si no tenia cuenta. */
+    REPORTE_SOPORTE_CREADO,
+    REPORTE_SOPORTE_CERRADO
 }

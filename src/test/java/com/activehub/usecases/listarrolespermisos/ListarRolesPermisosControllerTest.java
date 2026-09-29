@@ -57,4 +57,22 @@ class ListarRolesPermisosControllerTest {
                 .bodyJson()
                 .extractingPath("$.permisos[0].critico").isEqualTo(true);
     }
+
+    @Test
+    void listar_marcaLosPermisosImplicitosComoNoConfigurables() {
+        // `catalogo.explorar` sigue en el catalogo y sigue gateando los favoritos, pero la
+        // pantalla no lo puede apagar: viaja con configurable = false para que el frontend lo
+        // saque de la lista de seleccion (ver Permiso.IMPLICITOS y V22).
+        var permiso = new ListarRolesPermisosResponse.Permiso(
+                UUID.randomUUID(), "catalogo.explorar", "Catálogo", "Explorar actividades y ver detalle", false, false);
+        when(listarRolesPermisosService.listar())
+                .thenReturn(new ListarRolesPermisosResponse(List.of(), List.of(permiso)));
+
+        assertThat(mvc.get().uri("/api/admin/roles")
+                .principal(new UsernamePasswordAuthenticationToken(UUID.randomUUID(), null, List.of()))
+                .exchange())
+                .hasStatus(200)
+                .bodyJson()
+                .extractingPath("$.permisos[0].configurable").isEqualTo(false);
+    }
 }

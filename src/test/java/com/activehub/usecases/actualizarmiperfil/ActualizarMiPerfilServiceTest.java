@@ -10,8 +10,8 @@ import static org.mockito.Mockito.when;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditService;
-import com.activehub.shared.error.EmailEnUsoException;
 import com.activehub.shared.error.NoEncontradoException;
+import com.activehub.shared.error.ValidacionException;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,7 +46,8 @@ class ActualizarMiPerfilServiceTest {
     }
 
     private ActualizarMiPerfilRequest req(String email) {
-        return new ActualizarMiPerfilRequest("Martina", "Gimenez", email, "2617654321", LocalDate.of(1995, 5, 1));
+        return new ActualizarMiPerfilRequest(
+                "Martina", "Gimenez", email, "2617654321", LocalDate.of(1995, 5, 1), null);
     }
 
     @Test
@@ -61,24 +62,21 @@ class ActualizarMiPerfilServiceTest {
         verify(auditService).registrar(any(), any(), any(), any(), any());
     }
 
+    /**
+     * Antes este endpoint cambiaba el correo directamente, y desde V26 eso es un agujero: el
+     * correo es la credencial verificada y lo que <b>reserva</b> la dirección, así que
+     * cambiarlo sin confirmar dejaría tomar la casilla de cualquiera con un PUT. El cambio
+     * real vive en {@code solicitarcambioemail} + {@code verificaremail}.
+     */
     @Test
-    void actualizar_emailNuevoLibre_loCambia() {
+    void actualizar_conOtroEmail_loRECHAZA_porqueElCorreoSeCambiaConCodigo() {
         when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
-        when(usuarioRepository.existsByEmailIgnoreCaseAndDeletedFalse("nuevo@email.com")).thenReturn(false);
 
-        service.actualizar(usuarioId, req("Nuevo@Email.com"));
+        assertThatThrownBy(() -> service.actualizar(usuarioId, req("Nuevo@Email.com")))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessageContaining("código");
 
-        assertThat(usuario.getEmail()).isEqualTo("nuevo@email.com");
-    }
-
-    @Test
-    void actualizar_emailDeOtraCuenta_lanzaEmailEnUso() {
-        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
-        when(usuarioRepository.existsByEmailIgnoreCaseAndDeletedFalse("ocupado@email.com")).thenReturn(true);
-
-        assertThatThrownBy(() -> service.actualizar(usuarioId, req("ocupado@email.com")))
-                .isInstanceOf(EmailEnUsoException.class);
-
+        assertThat(usuario.getEmail()).isEqualTo("martina@email.com");
         verify(usuarioRepository, never()).save(any());
     }
 
@@ -89,8 +87,34 @@ class ActualizarMiPerfilServiceTest {
 
         service.actualizar(usuarioId, req("MARTINA@email.com"));
 
-        verify(usuarioRepository, never()).existsByEmailIgnoreCaseAndDeletedFalse(any());
         verify(usuarioRepository).save(usuario);
+    }
+
+    /**
+     * El DNI es la unica forma de cargarlo despues del alta: quien se registro con Google
+     * nunca paso por un formulario que lo pidiera.
+     */
+    @Test
+    void actualizar_conDniLibre_loGuarda() {
+        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.existsByDniAndIdNotAndDeletedFalse("30123456", usuarioId)).thenReturn(false);
+
+        service.actualizar(usuarioId, new ActualizarMiPerfilRequest(
+                "Martina", "Gimenez", "martina@email.com", "2617654321", LocalDate.of(1995, 5, 1), "30123456"));
+
+        assertThat(usuario.getDni()).isEqualTo("30123456");
+    }
+
+    @Test
+    void actualizar_conDniDeOtraCuenta_lanzaDniEnUso() {
+        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.existsByDniAndIdNotAndDeletedFalse("30123456", usuarioId)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.actualizar(usuarioId, new ActualizarMiPerfilRequest(
+                "Martina", "Gimenez", "martina@email.com", "2617654321", LocalDate.of(1995, 5, 1), "30123456")))
+                .isInstanceOf(com.activehub.shared.error.DniEnUsoException.class);
+
+        verify(usuarioRepository, never()).save(any());
     }
 
     @Test

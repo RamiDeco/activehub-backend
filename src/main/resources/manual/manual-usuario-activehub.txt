@@ -1,0 +1,499 @@
+Anexo 8 – Manual de usuario
+El presente manual describe el uso de ActiveHub desde la perspectiva de cada uno de sus usuarios. Se organiza por rol, replicando el recorrido real que cada persona realiza dentro de la plataforma: primero se presentan las funciones comunes a los tres roles y luego las específicas del Alumno, del Instructor y del Administrador. Para cada tarea se indica su propósito, los pasos a seguir, los campos que se solicitan y los mensajes más frecuentes que el sistema puede mostrar.
+
+Convenciones utilizadas
+
+Los nombres de botones, pestañas, campos y mensajes del sistema se transcriben entre comillas, tal como aparecen en pantalla (por ejemplo, "Crear cuenta").
+Los campos obligatorios se identifican en los formularios con un asterisco (*). Mientras un campo obligatorio esté vacío o tenga un formato inválido, el botón que confirma la operación permanece deshabilitado y el sistema indica el error debajo del campo correspondiente.
+Las acciones que no deben ejecutarse dos veces (inscribirse, pagar, cancelar, confirmar un cobro, enviar una reseña o una denuncia) bloquean la pantalla con un indicador de proceso hasta que finalizan.
+Ante una falla de conexión, las pantallas muestran un mensaje de error con el botón "Reintentar", que vuelve a ejecutar la consulta sin necesidad de recargar la página.
+Todas las búsquedas del sistema ignoran mayúsculas y tildes: escribir "natacion" encuentra "Natación".
+Requisitos de uso
+
+ActiveHub es una aplicación web: no requiere instalación y puede utilizarse desde cualquier navegador actualizado, tanto en computadoras como en dispositivos móviles, con conexión a Internet. Las capturas incluidas en este manual corresponden al sistema desarrollado.
+
+1. Primeros pasos (común a los tres roles)
+1.1 Crear una cuenta
+Cualquier persona puede crear una cuenta de Alumno o de Instructor desde la página de inicio. Las cuentas de Administrador no se crean desde este formulario: las da de alta un administrador de la plataforma.
+
+Cuenta de Alumno
+
+En la página de inicio, presionar "Registrarse".
+En la pantalla "Crear tu cuenta", mantener seleccionada la opción "Soy Alumno" (es la opción por defecto).
+Completar los datos personales: Nombre*, Apellido*, Correo electrónico*, Teléfono* (solo números), DNI (opcional, de 7 u 8 dígitos), Contraseña* y Fecha de nacimiento (opcional). La contraseña debe tener al menos 8 caracteres, una mayúscula y un número; debajo del campo se muestra un indicador de fortaleza.
+En la sección "Intereses deportivos", seleccionar los tipos de actividad de interés. Los intereses se utilizan para armar las recomendaciones de la pantalla de inicio.
+Marcar la casilla "Acepto los términos y condiciones y la política de privacidad.".
+Presionar "Crear cuenta". El sistema envía un código de verificación de seis dígitos al correo informado y dirige a la pantalla de verificación (ver el apartado 1.2).
+[IMAGEN: Pantalla de registro de una cuenta de Alumno (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.1: Pantalla de registro de una cuenta de Alumno
+
+Cuenta de Instructor
+
+En la pantalla "Crear tu cuenta", seleccionar "Soy Instructor".
+Completar los datos personales, igual que en la cuenta de Alumno.
+Completar la sección "Datos profesionales": Especialidad*, Años de experiencia (número entero igual o mayor a 0) y Descripción breve.
+Adjuntar la documentación que respalda la formación o las certificaciones, arrastrando los archivos a la zona de carga o presionando "buscá en tu equipo". Se admiten archivos PDF, JPG o PNG de hasta 5 MB cada uno. La documentación es obligatoria.
+Aceptar los términos y condiciones y presionar "Crear cuenta". Luego de verificar el correo, la cuenta queda en estado "En revisión" hasta que un administrador valide la documentación (ver el apartado 3.1).
+Registro con Google
+
+Alumno: con la opción "Soy Alumno" seleccionada, presionar "Continuar con Google" y elegir la cuenta de Google. La cuenta se crea con el correo ya verificado y el sistema dirige a la pantalla "Terminá tu registro", donde deben completarse el teléfono y la fecha de nacimiento (obligatorios), el DNI (opcional) y los intereses deportivos. Esta pantalla no puede omitirse.
+Instructor: con la opción "Soy Instructor" seleccionada, "Continuar con Google" no crea la cuenta de forma inmediata, porque el alta de un instructor requiere documentación que Google no provee. El formulario se completa automáticamente con el nombre, el apellido y el correo de la cuenta de Google, y el instructor debe completar el resto de los datos y adjuntar su documentación.
+Mensajes frecuentes
+
+"Ingresá un correo electrónico válido": el correo no tiene un formato correcto.
+"El teléfono debe contener solo números": el teléfono incluye letras o símbolos.
+"Ya existe una cuenta con este correo electrónico": el correo pertenece a una cuenta ya verificada. Una dirección que otra persona ingresó por error pero nunca confirmó no impide el registro.
+"Formato no admitido. Usá PDF, JPG o PNG" o "El archivo supera el tamaño máximo permitido.": el archivo adjunto no cumple las condiciones de la documentación.
+1.2 Confirmar la dirección de correo
+Toda cuenta creada con contraseña debe confirmar su dirección de correo antes de poder operar. Hasta que se ingresa el código, la cuenta existe pero no puede realizar ninguna operación en la plataforma.
+
+Abrir el correo enviado por ActiveHub y copiar el código de seis dígitos.
+En la pantalla de verificación, ingresar el código en las seis casillas. Es posible pegar el código completo: el foco avanza automáticamente al tipear y retrocede con la tecla de borrado.
+Al completar el sexto dígito, el código se envía sin necesidad de presionar ningún botón. Si es correcto, el sistema dirige al Alumno a su pantalla de inicio y al Instructor a la pantalla de estado de su solicitud.
+[IMAGEN: Pantalla de verificación del correo por código (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.2: Pantalla de verificación del correo por código
+
+Si el correo no llega
+
+Revisar la carpeta de correo no deseado.
+Utilizar la opción de reenvío del código disponible en la misma pantalla. Por seguridad, existe una espera mínima entre reenvíos y cada nuevo envío invalida el código anterior.
+Si se superan los intentos permitidos, el código queda invalidado y debe solicitarse uno nuevo.
+1.3 Iniciar y cerrar sesión
+En la página de inicio, presionar "Iniciar sesión".
+Ingresar el correo electrónico o el DNI en el campo "Correo electrónico o DNI" y la contraseña en el campo "Contraseña".
+Presionar "Ingresar". El sistema dirige a cada usuario a su área: el Alumno a su pantalla de inicio, el Instructor a su panel y el Administrador al panel administrador.
+También es posible ingresar con "Continuar con Google" cuando el correo de la cuenta de Google corresponde a una cuenta existente y verificada. Si no existe ninguna cuenta con ese correo, el sistema no crea una nueva: indica que primero debe realizarse el registro eligiendo si se trata de un alumno o de un instructor.
+
+[IMAGEN: Pantalla de inicio de sesión (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.3: Pantalla de inicio de sesión
+
+Mensajes frecuentes
+
+"Correo o contraseña incorrectos. Verificá tus datos e intentá de nuevo.": el identificador o la contraseña no son correctos. Por seguridad, el mensaje no indica cuál de los dos datos es el erróneo.
+"Demasiados intentos fallidos. Esperá unos minutos antes de volver a intentarlo.": tras cinco intentos fallidos consecutivos dentro de quince minutos, el acceso se bloquea durante quince minutos.
+"Tu cuenta fue dada de baja. Contactá al soporte si creés que es un error.": la cuenta fue dada de baja o suspendida administrativamente.
+Duración de la sesión y cierre
+
+La sesión se mantiene activa mientras el usuario opera y expira después de 30 minutos de inactividad; en ese caso es necesario volver a iniciar sesión. La opción "Cerrar sesión" finaliza la sesión de forma inmediata en los tres roles; en el área del alumno se encuentra en el menú que despliega el chip con su nombre, en la esquina superior derecha.
+
+1.4 Gestionar el perfil, la contraseña y el correo
+Los tres roles cuentan con una pantalla de perfil propia. El Alumno accede desde el chip de usuario ("Mi perfil"); el Instructor y el Administrador, desde "Mi perfil" en el panel lateral.
+
+Editar los datos personales
+
+Presionar "Editar perfil".
+Modificar los datos necesarios: nombre, apellido, teléfono, DNI y fecha de nacimiento. En modo edición también es posible cambiar la foto de perfil.
+Guardar los cambios. El sistema confirma con el mensaje "Tus datos fueron actualizados correctamente".
+El DNI puede cargarse desde el perfil aunque no se haya informado en el registro, por ejemplo en las cuentas creadas con Google; una vez guardado, habilita el ingreso con DNI.
+
+Cambiar la contraseña
+
+En la tarjeta "Seguridad de la cuenta", presionar "Cambiar contraseña".
+Completar "Contraseña actual", "Nueva contraseña" y "Repetir nueva contraseña". La nueva contraseña debe cumplir la misma política del registro.
+Confirmar el cambio.
+Cambiar el correo electrónico
+
+El correo se modifica desde su tarjeta específica y no desde el formulario de datos personales, porque es la credencial de acceso. El sistema solicita la contraseña actual, envía un código a la nueva dirección y solo reemplaza el correo cuando ese código se confirma. Hasta ese momento, la cuenta conserva el correo anterior.
+
+Intereses deportivos y baja de la cuenta (Alumno)
+
+Intereses: se eligen de la lista de tipos de actividad del catálogo, agrupados por categoría. Cada ficha muestra el tipo y su categoría (por ejemplo, "Trekking · Aventura").
+Baja de la cuenta: presionar "Dar de baja mi cuenta" y confirmar en el diálogo "¿Estás seguro? Esta acción desactivará tu cuenta". La baja es lógica: la cuenta se desactiva y la sesión se cierra, pero el historial se conserva para auditoría.
+[IMAGEN: Pantalla de perfil del Alumno (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.4: Pantalla de perfil del Alumno
+
+1.5 Notificaciones
+El ícono de campana, ubicado en la parte superior de la pantalla, reúne los avisos dirigidos al usuario: por ejemplo, la cancelación de una clase, la publicación de una nueva clase de una actividad favorita, una inscripción nueva en una clase del instructor o la resolución de una denuncia. Cada notificación es accionable: al presionarla, el sistema conduce directamente al asunto que la originó y resalta la fila correspondiente.
+
+[IMAGEN: Centro de notificaciones (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.5: Centro de notificaciones
+
+1.6 Ayuda y soporte
+La pantalla pública de Ayuda está disponible incluso sin haber iniciado sesión y ofrece:
+
+Preguntas frecuentes: un buscador que ignora tildes y un listado de preguntas y respuestas sobre el uso de la plataforma.
+Guías rápidas: accesos que despliegan y resaltan la respuesta correspondiente a las dudas más comunes.
+Reportar un problema: un formulario con asunto, detalle y correo de contacto. Puede enviarse sin sesión iniciada, pensando en quienes no pudieron registrarse o ingresar; en ese caso el reporte se registra como anónimo.
+Chat de asistencia: el botón flotante "¿Dudas?", ubicado en la esquina inferior derecha de las pantallas del alumno y de la pantalla de Ayuda, responde consultas frecuentes a partir de la misma base de preguntas.
+[IMAGEN: Pantalla de Ayuda y soporte (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.6: Pantalla de Ayuda y soporte
+
+2. Manual del Alumno
+2.1 Pantalla de inicio y navegación
+Al iniciar sesión, el alumno accede a su pantalla de inicio. La barra superior permite navegar entre "Inicio", "Explorar", "Calendario", "Favoritos" y "Mis clases". El chip con el nombre del usuario, en la esquina superior derecha, despliega el acceso a "Mi perfil", "Mis reseñas" y "Cerrar sesión"; desde el perfil se accede además a "Mis pagos" y "Mis denuncias".
+
+La pantalla de inicio incluye:
+
+Buscador: muestra los resultados debajo del campo a medida que se escribe; al presionar un resultado se abre el detalle de la actividad. Se requieren al menos 2 caracteres.
+Filtros rápidos: conducen a la pantalla "Explorar" con el filtro ya aplicado.
+"Recomendado para vos": actividades sugeridas a partir de los intereses deportivos declarados en el perfil.
+Actividades cercanas: si el usuario autoriza el acceso a su ubicación, el sistema muestra la distancia a cada actividad.
+[IMAGEN: Pantalla de inicio del Alumno (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.7: Pantalla de inicio del Alumno
+
+2.2 Buscar y filtrar actividades
+La pantalla "Explorar" reúne el catálogo completo de actividades con un panel de filtros a la izquierda.
+
+Ingresar a "Explorar" desde la barra superior.
+Aplicar los filtros deseados: texto, categoría, tipo de actividad (se actualiza según la categoría elegida), nivel de intensidad, precio máximo, disponibilidad de cupos, fecha, franja horaria, radio de cercanía e instructor.
+Elegir el orden de los resultados: por precio, calificación, cupos disponibles o cercanía.
+Presionar una tarjeta para abrir el detalle de la actividad.
+El sistema muestra las actividades que cumplen todos los criterios a la vez. El enlace "Limpiar" restablece los filtros. El filtro por radio de cercanía (menos de 2 km, 2, 5, 8 y 10 km, o más de 10 km) requiere autorizar el acceso a la ubicación del navegador; las actividades cuya distancia no puede calcularse quedan fuera de ese filtro. Si ninguna actividad cumple los criterios, se muestra el mensaje "No se encontraron actividades con esos criterios".
+
+[IMAGEN: Pantalla Explorar con el panel de filtros (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.8: Pantalla Explorar con el panel de filtros
+
+2.3 Consultar el detalle de una actividad
+El detalle presenta la galería de imágenes, la categoría, la calificación, la ubicación sobre un mapa, la duración, el nivel de intensidad, la tarjeta del instructor, la descripción y las fechas disponibles. Cada clase muestra su fecha y hora de inicio y fin, su disponibilidad de cupos ("Disponible", "Últimos cupos" o "Sin cupos") y el botón de acción que corresponde según la fecha:
+
+"Preinscribirme": para las clases que se dictan dentro de más de 4 días.
+"Inscribirme y pagar": para las clases que se dictan dentro de 4 días o menos y tienen cupos disponibles, hasta 1 hora antes del inicio.
+"Sin cupos": botón deshabilitado cuando la clase está completa.
+Las clases canceladas se muestran con la etiqueta "Cancelada" y sin acciones.
+El importe que se muestra corresponde al precio de la clase seleccionada. Al pie de la pantalla se encuentran las reseñas de la actividad, con la calificación promedio, los comentarios y las respuestas del instructor. La sección "Asistente de beneficios y prevenciones" permite generar, con el botón "Generar beneficios y prevenciones", un texto informativo sobre la actividad en relación con el perfil del alumno; su función es exclusivamente orientativa y nunca impide la inscripción.
+
+[IMAGEN: Pantalla de detalle de una actividad (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.9: Pantalla de detalle de una actividad
+
+2.4 Favorito, preinscripción e inscripción: diferencias
+ActiveHub ofrece tres mecanismos distintos, que no deben confundirse:
+
+Mecanismo	Sobre qué se aplica	Cuándo está disponible	Qué produce
+Favorito	Sobre una actividad	Siempre	Registra interés y notifica cuando la actividad publica una clase nueva. No ocupa cupo ni genera pago.
+Preinscripción	Sobre una clase concreta	Cuando faltan más de 4 días para la clase	Registra interés en esa fecha y habilita un recordatorio cuando se abre la inscripción. No ocupa cupo ni genera pago.
+Inscripción	Sobre una clase concreta	Cuando faltan 4 días o menos, hasta 1 hora antes del inicio	Ocupa el cupo en el momento de confirmar y genera el pago correspondiente.
+2.5 Preinscribirse a una clase
+En el detalle de la actividad, presionar "Preinscribirme" en una clase que se dicte dentro de más de 4 días.
+Revisar el resumen de la clase, identificado con la etiqueta "Preinscripción · sin pago".
+Confirmar la preinscripción.
+El sistema muestra "¡Preinscripción registrada!" con el interruptor "Avisame cuando abra la inscripción", activado por defecto, y el botón "Ir a Mis clases".
+Cuando la clase pase a estar dentro de los 4 días previos, la inscripción definitiva se habilita desde "Mis clases". Si la clase se cancela, la preinscripción pasa a estado Cancelada y el sistema lo notifica.
+
+[IMAGEN: Pantalla de preinscripción a una clase (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.10: Pantalla de preinscripción a una clase
+
+2.6 Inscribirse y pagar una clase
+Presionar "Inscribirme y pagar" en una clase que se dicte dentro de 4 días o menos, o desde la preinscripción correspondiente en "Mis clases".
+En la pantalla "Inscripción y pago", seleccionar el método de pago:
+Mercado Pago [29]: el pago se procesa a través de la pasarela. Al aprobarse, la inscripción queda en estado Inscripto y el pago en estado Retenido.
+Efectivo: el pago se abona directamente al instructor. La inscripción queda en estado PagoPendiente hasta que el instructor confirma el cobro, momento en que pasa a Inscripto.
+Confirmar la operación. Mientras se procesa, la pantalla muestra "Procesando tu pago" y se bloquea para evitar inscripciones duplicadas.
+Al finalizar, el sistema muestra la confirmación y la clase aparece en "Mis clases".
+El cupo se ocupa en el mismo instante en que se confirma la inscripción: si otra persona confirma el último lugar simultáneamente, solo una de las dos inscripciones prospera y la otra recibe el aviso "La clase ya no tiene cupos disponibles". Si falta menos de 1 hora para el inicio, el sistema informa "El período de inscripción para esta clase ya finalizó". Si se abandona el proceso antes de confirmar, no se genera ninguna inscripción ni se reserva el cupo.
+
+Los fondos abonados mediante Mercado Pago no se transfieren de inmediato al instructor: permanecen retenidos hasta que la clase finaliza y vence el período de denuncias. La integración con la pasarela de Mercado Pago se encuentra en etapa de implementación, por lo que actualmente el flujo se completa mediante una implementación simulada de los pagos.
+
+[IMAGEN: Pantalla de inscripción y pago (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.11: Pantalla de inscripción y pago
+
+2.7 Mis clases
+La pantalla "Mis clases" reúne todas las inscripciones del alumno, organizadas en las pestañas "Todas", "Preinscripto", "Pago pendiente", "Inscripto", "Finalizadas" y "Canceladas", cada una con su contador. Desde cada tarjeta es posible:
+
+Inscribirse y pagar una preinscripción cuya clase ya se encuentra dentro de los 4 días previos.
+Cancelar una inscripción: presionar la acción de cancelación y confirmar en el diálogo "¿Cancelar esta inscripción? Esta acción no se puede deshacer". La inscripción pasa a Cancelada, no puede reactivarse y libera el cupo. La cancelación por decisión del alumno no genera un reintegro automático del pago.
+Dejar una reseña o reportar una inasistencia en las clases finalizadas en las que el alumno estuvo inscripto (ver los apartados 2.10 y 2.11).
+Cuando es el instructor quien cancela una clase, la tarjeta muestra la etiqueta "Cancelada" y, si se había realizado un pago, el texto correspondiente al reintegro. Si el pago fue en efectivo, el aviso indica coordinar la devolución con el instructor.
+
+[IMAGEN: Pantalla Mis clases (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.12: Pantalla Mis clases
+
+2.8 Mis pagos
+La pantalla "Mis pagos", a la que se accede desde el perfil, presenta tarjetas de resumen (incluido el importe reintegrado), filtros por estado y por rango de fechas, y el listado de pagos con la actividad, la fecha de la clase, el método, el importe y el estado. Los estados posibles son:
+
+Retenido: pago con Mercado Pago aprobado; los fondos permanecen retenidos hasta que la clase finaliza y vence el período de denuncias.
+Liberado: el pago fue acreditado al instructor. El cambio se produce de forma automática, sin intervención del instructor ni del administrador.
+Cancelado: el pago fue reintegrado, por ejemplo por la cancelación de la clase.
+Efectivo: pago en efectivo, abonado directamente al instructor.
+[IMAGEN: Pantalla Mis pagos (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.13: Pantalla Mis pagos
+
+2.9 Calendario de clases
+El calendario muestra las clases del alumno en vista mensual (por defecto) o semanal, seleccionable con el alternador "Mensual / Semanal". Las flechas permiten avanzar o retroceder de período, y el panel "Día seleccionado" detalla las clases del día elegido. Cada entrada muestra el nombre de la actividad, el horario y el importe efectivamente pagado; en el caso de una preinscripción, que todavía no generó pago, se muestra el precio de lista. Las clases que se superponen en horario se destacan de forma diferenciada, las canceladas se muestran con su estado y al presionar una clase se abre el detalle de la actividad.
+
+[IMAGEN: Calendario de clases del Alumno (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.14: Calendario de clases del Alumno
+
+2.10 Reseñas
+Solo puede reseñar una clase el alumno que estuvo inscripto en ella, una vez que la clase finalizó. La pantalla "Mis reseñas" presenta dos secciones: "Pendientes de reseñar" y "Reseñas que hiciste".
+
+En "Pendientes de reseñar" (o desde la tarjeta de la clase en "Mis clases"), presionar "Dejar reseña".
+Seleccionar una calificación de 1 a 5 estrellas (obligatoria) y, si se desea, escribir un comentario en "Tu comentario (opcional)".
+Presionar "Enviar reseña". El sistema muestra "¡Gracias por tu reseña!".
+Toda reseña pasa por una instancia de moderación: no se publica ni se suma al promedio de la actividad hasta que un administrador la aprueba. Una reseña propia puede editarse (al hacerlo vuelve a moderación, porque su contenido cambió) o eliminarse, previa confirmación. Si el administrador la rechaza o la oculta, el listado lo refleja con la etiqueta correspondiente.
+
+[IMAGEN: Pantalla Mis reseñas (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.15: Pantalla Mis reseñas
+
+2.11 Reportar la inasistencia de un instructor
+Si el instructor no se presentó o la clase no se dictó según lo acordado, el alumno inscripto puede reportarlo desde "Mis clases":
+
+En la tarjeta de la clase finalizada, presionar "Inasistencia".
+En el cuadro "Reportar inasistencia", indicar qué ocurrió eligiendo una de las opciones: "El instructor no se presentó", "Llegó tarde y no dio la clase" o "La clase se dio en otro lugar u horario", y completar la información solicitada.
+Enviar la denuncia. El sistema confirma con "Denuncia registrada" y la etiqueta "Denuncia · Pendiente".
+La denuncia puede realizarse desde 1 hora después del inicio de la clase y hasta 24 horas después de su inicio. Mientras la denuncia esté abierta, el pago asociado no se acredita al instructor. El seguimiento se realiza desde "Mis denuncias", donde el estado avanza de "Pendiente" a "En Auditoría" y, finalmente, a "Resuelta"; la resolución puede consistir en un reintegro, una sanción o la desestimación del caso, y se notifica al alumno.
+
+[IMAGEN: Cuadro para reportar la inasistencia de un instructor (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.16: Cuadro para reportar la inasistencia de un instructor
+
+3. Manual del Instructor
+3.1 Proceso de validación de la cuenta
+Luego de registrarse y verificar su correo, el instructor debe esperar la validación de su documentación por parte de un administrador. Mientras tanto, al iniciar sesión se muestra la pantalla de estado de la solicitud y solo es posible acceder a "Mis datos", donde se pueden actualizar los datos personales y la documentación.
+
+En revisión: la solicitud está pendiente de validación.
+Rechazada: se muestra el motivo informado por el administrador y el botón "Volver a postularme", que reabre la solicitud y la devuelve al estado "En revisión".
+Verificado: en el siguiente ingreso se habilita el panel completo del instructor.
+Si un instructor previamente aprobado es rechazado, sus actividades dejan de mostrarse en el catálogo y sus clases dejan de aceptar inscripciones.
+
+[IMAGEN: Pantalla de estado de la solicitud del Instructor (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.17: Pantalla de estado de la solicitud del Instructor
+
+3.2 Panel del instructor
+El panel lateral permite acceder a "Panel", "Mis actividades", "Próximas clases", "Historial", "Métricas", "Reseñas" y "Mi perfil". La pantalla principal resume las inscripciones recientes, las próximas clases y las alertas de pagos en efectivo pendientes de confirmación; al presionar una alerta, el sistema abre la gestión de la clase correspondiente con el alumno resaltado. El botón "Nueva actividad" inicia la publicación de una actividad.
+
+[IMAGEN: Panel del Instructor (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.18: Panel del Instructor
+
+3.3 Publicar y editar una actividad
+Presionar "Crear actividad" desde "Mis actividades" (o "Nueva actividad" desde el panel).
+Completar la "Información general": Nombre*, Categoría* y Tipo de actividad* (el listado de tipos se actualiza según la categoría elegida), Descripción, Duración, Precio por clase y Nivel de intensidad.
+Cargar las imágenes de la actividad: se admiten hasta seis, y la primera se utiliza como portada.
+Indicar la ubicación: escribir la dirección, presionar "Buscar" y seleccionar el resultado correcto; el mapa se centra en ese punto y el sistema guarda sus coordenadas.
+Guardar la actividad. El sistema la publica en "Mis actividades" y en el catálogo.
+El cupo máximo no se define en la actividad sino en cada clase. Si el nombre ya existe entre las actividades propias, el sistema lo advierte y permite confirmar la creación o cambiar el nombre.
+
+Editar o eliminar una actividad
+
+Editar: presionar "Editar" desde el listado o el detalle, modificar los datos y presionar "Guardar cambios". Un cambio de precio se aplica únicamente a las clases que todavía no están congeladas (ver el apartado 3.5).
+Eliminar: presionar "Eliminar" y confirmar en el diálogo "¿Eliminar la actividad [nombre]? Esta acción no se puede deshacer.". Si alguna clase vigente tiene inscriptos, la eliminación se rechaza con el mensaje "No podés eliminar esta actividad porque tiene clases con inscriptos o pagos pendientes. Primero cancelá las clases correspondientes."; en ese caso, primero deben cancelarse esas clases.
+[IMAGEN: Formulario de publicación de una actividad (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.19: Formulario de publicación de una actividad
+
+3.4 Crear clases y agendas recurrentes
+En el detalle de la actividad, presionar "Crear clase".
+En el calendario, seleccionar la fecha; el sistema muestra el día de la semana como confirmación (por ejemplo, "Lunes · 23 jun 2026").
+Completar Hora de inicio* y Cupo máximo* (número entero mayor a 0). La hora de fin no se solicita: se calcula a partir de la duración de la actividad. El precio y la ubicación se toman de la actividad.
+Para repetir la clase todas las semanas, marcar "Repetir cada semana"; el sistema muestra las próximas fechas que se generarán.
+Presionar "Generar clases". La clase se crea en estado Programada.
+En las agendas recurrentes, cada clase se crea automáticamente una semana antes de su dictado, lo que permite dar de baja una fecha puntual con anticipación. El sistema no permite crear clases en fechas u horarios pasados ("La fecha y hora deben ser futuras") ni superpuestas con otra clase de la misma actividad ("Ya existe una clase en ese horario. Modificá la fecha o el horario antes de continuar.").
+
+[IMAGEN: Modal de creación de clases (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.20: Modal de creación de clases
+
+3.5 Clases congeladas
+Una clase que tiene al menos un inscripto y se dicta dentro de 4 días o menos queda congelada: no admite cambios en sus datos ni se ve afectada por un cambio de precio de la actividad, dado que los alumnos inscriptos abonaron por unas condiciones concretas. En la grilla de clases, la acción "Editar" se reemplaza por la etiqueta "Congelada" y el precio se resalta cuando difiere del precio actual de la actividad. Si una clase congelada no va a dictarse, el camino es cancelarla (ver el apartado 3.7).
+
+3.6 Gestionar una clase y confirmar cobros en efectivo
+Al presionar una clase desde el detalle de la actividad, desde "Próximas clases" o desde una alerta del panel, se abre la gestión de la clase con su información y el listado de inscriptos.
+
+Los alumnos que pagaron con Mercado Pago [29] figuran con las etiquetas "Inscripto" y "Retenido", sin acciones adicionales.
+Los alumnos que eligieron pagar en efectivo figuran en estado PagoPendiente con el botón "Confirmar cobro". Una vez recibido el dinero, presionar "Confirmar cobro" y aceptar en el diálogo "¿Confirmar cobro en efectivo de [nombre]?". La inscripción pasa a Inscripto y el botón desaparece de esa fila.
+Una vez finalizada la clase, el listado queda en modo de solo lectura. La acreditación de los pagos retenidos se realiza de forma automática al finalizar la clase y vencer el período de denuncias.
+
+[IMAGEN: Pantalla de gestión de una clase (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.21: Pantalla de gestión de una clase
+
+3.7 Cancelar una clase
+En la gestión de la clase, presionar "Cancelar clase".
+Confirmar en el diálogo "¿Cancelar esta clase? Se notificará a todos los alumnos inscriptos y se ejecutarán los reintegros correspondientes." con el botón "Sí, cancelar clase".
+El sistema cancela la clase y todas sus inscripciones, reintegra los pagos retenidos y en efectivo, y notifica a cada alumno con el nombre de la actividad y la fecha y hora de la clase. En el caso de los pagos en efectivo, la notificación indica al alumno coordinar la devolución con el instructor. La operación es transaccional: si algún paso falla, no se aplica ningún cambio. Las clases finalizadas no pueden cancelarse.
+
+3.8 Próximas clases e historial
+Próximas clases: listado cronológico de las clases futuras, agrupadas por día, con su horario, sus inscriptos y su disponibilidad. Al presionar una clase se abre su gestión.
+Historial: clases finalizadas y canceladas, ordenadas de la más reciente a la más antigua y filtrables por estado, con la ganancia calculada sobre el precio de cada clase.
+[IMAGEN: Pantalla Próximas clases del Instructor (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.22: Pantalla Próximas clases del Instructor
+
+3.9 Métricas
+La pantalla "Métricas" presenta los indicadores "Clases publicadas", "Inscripciones activas", "Inscriptos" e "Ingresos acreditados" para el período elegido en el selector, junto con gráficos de evolución y la calificación promedio de las clases.
+
+Los ingresos consideran únicamente los pagos liberados y los pagos en efectivo confirmados; el importe todavía retenido se informa por separado.
+La calificación promedio se calcula sobre las reseñas visibles, excluyendo las ocultas por moderación.
+El período visualizado puede exportarse en formato PDF (a través del diálogo de impresión del navegador, con el gráfico incluido) o en formato CSV, compatible con Excel en la configuración regional argentina.
+[IMAGEN: Pantalla de métricas del Instructor (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.23: Pantalla de métricas del Instructor
+
+3.10 Reseñas recibidas
+La pantalla "Reseñas" muestra a la izquierda las actividades del instructor, con su cantidad de reseñas y su calificación promedio, y a la derecha las reseñas de la actividad seleccionada. Cada reseña puede tener una de las siguientes etiquetas: "Pendiente de moderación", "Denunciada · en revisión", "Oculta" o "Respondida".
+
+Responder: presionar "Responder" en una reseña publicada, escribir la respuesta y enviarla. La respuesta es pública y el alumno la ve en el detalle de la actividad y en "Mis reseñas". No es posible responder reseñas en moderación u ocultas.
+Denunciar una reseña inapropiada: presionar "Denunciar reseña", completar el campo obligatorio "Motivo del reporte" y presionar "Enviar reporte". La denuncia se envía a la bandeja del administrador, y una misma reseña no puede denunciarse dos veces.
+[IMAGEN: Pantalla de reseñas recibidas por el Instructor (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.24: Pantalla de reseñas recibidas por el Instructor
+
+3.11 Penalizaciones y suspensión temporal
+Ante incumplimientos, el administrador puede aplicar al instructor una penalización económica, una suspensión temporal o ambas. La suspensión tiene una duración mínima de 15 días y no impide el ingreso a la plataforma, para que el instructor pueda consultar su sanción y sus datos, pero durante su vigencia no es posible crear ni editar actividades o clases. Siguen habilitadas la confirmación de cobros, la consulta de inscriptos, la respuesta a reseñas y la cancelación de clases. Las clases programadas dentro del período de suspensión se cancelan automáticamente, con el reintegro correspondiente a sus inscriptos. Al vencer la suspensión, la cuenta recupera su operatoria habitual de forma automática.
+
+4. Manual del Administrador
+4.1 Panel administrador
+El panel lateral permite acceder a "Dashboard", "Gestión", "Tipos y niveles", "Roles y permisos", "Penalizaciones", "Auditoría", "Trazabilidad", "Reportes" y "Mi perfil". Cada usuario ve únicamente las secciones que sus permisos habilitan.
+
+El dashboard presenta las tarjetas "Usuarios activos", "Instructores" (con la cantidad en revisión), "Actividades publicadas", "Inscripciones del período" y "Reclamos pendientes". Cada tarjeta es presionable y conduce a la sección que permite resolver el caso. El selector de período recorta los flujos, como las inscripciones y las altas, pero no los indicadores que reflejan el estado actual, como los usuarios activos o las actividades publicadas.
+
+[IMAGEN: Panel administrador (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.25: Panel administrador
+
+4.2 Validar instructores
+Ingresar a "Gestión" y seleccionar la pestaña "Instructores". El listado puede filtrarse por estado de validación.
+Presionar "Ver información" en la solicitud a revisar.
+Revisar los datos personales, la especialidad y la documentación adjunta; cada archivo puede descargarse desde su enlace.
+Resolver la solicitud:
+Aprobar: el perfil pasa a "Verificado" y el instructor queda habilitado para publicar actividades y gestionar clases.
+Rechazar: completar el campo obligatorio "Motivo del rechazo" y presionar "Confirmar rechazo". El instructor verá el motivo en su pantalla de estado y podrá volver a postularse.
+Rechazar a un instructor previamente aprobado retira su oferta del catálogo público y bloquea las inscripciones a sus clases. Todas las decisiones quedan registradas en auditoría.
+
+[IMAGEN: Pantalla de validación de un instructor (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.26: Pantalla de validación de un instructor
+
+4.3 Gestionar usuarios
+En "Gestión", pestaña "Usuarios", el administrador puede buscar y filtrar cuentas por nombre, correo o rol, y ejecutar las siguientes acciones:
+
+Editar: abre un formulario con nombre, apellido, correo, teléfono y rol. Al guardar, el sistema confirma con "Datos actualizados correctamente".
+Suspender o reactivar: requiere confirmación. La suspensión administrativa impide el ingreso a la plataforma y no debe confundirse con la penalización de suspensión temporal, que sí permite ingresar.
+Dar de baja: la baja es siempre lógica y conserva el historial para auditoría.
+Por seguridad, el sistema no permite que un administrador se suspenda a sí mismo, cambie su propio rol ni modifique el rol de la última cuenta administradora, de modo que la plataforma nunca quede sin administración.
+
+[IMAGEN: Pantalla de gestión de usuarios (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.27: Pantalla de gestión de usuarios
+
+4.4 Administrar categorías, tipos de actividad y niveles de intensidad
+La sección "Tipos y niveles" cuenta con dos pestañas.
+
+Tipos de actividad y categorías
+
+Crear o editar una categoría: completar el campo "Nombre*" y guardar.
+Crear o editar un tipo de actividad: completar Nombre* y seleccionar la Categoría* a la que pertenece.
+El sistema impide duplicar nombres: la comparación ignora mayúsculas y minúsculas y se realiza contra los registros vigentes.
+Eliminar un tipo: no es posible si tiene actividades asociadas ("No podés eliminar este Tipo porque tiene actividades asociadas. Primero reasigná o eliminá esas actividades.").
+Eliminar una categoría: si alguno de sus tipos tiene actividades publicadas, la operación se rechaza y el mensaje indica qué tipos lo impiden. Si ninguno las tiene, la categoría se elimina junto con sus tipos, previa confirmación que indica cuántos tipos se darán de baja.
+Niveles de intensidad
+
+Crear o editar un nivel: completar Nombre* y Descripción* y guardar. El nuevo nivel queda disponible de inmediato para los instructores.
+Eliminar un nivel: no es posible si tiene actividades asociadas. En caso contrario, se confirma en el diálogo "¿Eliminar el nivel [nombre]?".
+Todas las bajas son lógicas y quedan registradas en auditoría.
+
+[IMAGEN: Pantalla de administración de tipos y niveles (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.28: Pantalla de administración de tipos y niveles
+
+4.5 Moderar reseñas
+En "Gestión", pestaña "Reseñas", el administrador dispone de la cola de reseñas pendientes de moderación y del listado de reseñas publicadas. Una reseña puede salir de circulación por tres vías distintas:
+
+El alumno autor la elimina en cualquier momento desde "Mis reseñas".
+El administrador la rechaza mientras se encuentra en la cola de moderación, antes de publicarse.
+El administrador la oculta una vez publicada, indicando obligatoriamente el motivo. La reseña deja de mostrarse y de computar en el promedio, pero no se borra: se conservan su autor, su texto y su fecha como evidencia.
+Aprobar una reseña la publica en el detalle de la actividad y la suma al promedio de calificación.
+
+4.6 Resolver denuncias
+La sección "Auditoría" (y la pestaña "Reclamos" de "Gestión") lista las denuncias con su identificador, su denunciante, su motivo, el objeto denunciado (una clase o una reseña) y su estado.
+
+Presionar una denuncia para abrir su detalle. Al abrir una denuncia Pendiente, su estado pasa a "En Auditoría".
+Revisar quién realizó el reporte, sobre qué y el motivo.
+Elegir una de las acciones de resolución:
+Reintegrar el pago: cancela las inscripciones y reintegra el pago de todos los inscriptos de la clase, no solo de quien denunció, y notifica a cada alumno.
+Suspender al instructor: solicita la cantidad de días de suspensión (mínimo 15) y, opcionalmente, un monto de multa. Cancela las clases del instructor dentro del período, con sus reintegros.
+Aplicar penalización económica: registra únicamente la multa, sin cancelar clases ni devolver pagos.
+Desestimar: cierra el caso sin consecuencias y notifica al denunciado.
+En las denuncias sobre una reseña, se agrega la acción Ocultar la reseña.
+Cada resolución deja la denuncia en estado "Resuelta", genera un registro de auditoría y deshabilita las acciones sobre ese caso. La operación es transaccional: si falla, la denuncia conserva su estado y no se ejecutan reintegros ni penalizaciones parciales.
+
+[IMAGEN: Pantalla de auditoría y resolución de denuncias (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.29: Pantalla de auditoría y resolución de denuncias
+
+4.7 Aplicar penalizaciones
+En "Penalizaciones", presionar "Nueva penalización".
+Buscar y seleccionar el usuario. Solo se ofrecen usuarios que pueden dictar clases, dado que la sanción corresponde a incumplimientos en el dictado.
+Marcar el tipo de penalización: "Económica", "Suspensión temporal" o ambas.
+Completar el "Motivo" (obligatorio) y, según el tipo, el "Monto" o los "Días de suspensión" (mínimo 15).
+Confirmar la aplicación. La penalización es irreversible, por lo que el sistema solicita una confirmación explícita.
+La pantalla resume la cantidad de usuarios penalizados, las suspensiones vigentes y el monto total de las multas. Cuando una penalización surge de una denuncia resuelta, queda vinculada automáticamente a ella. Las suspensiones vencidas se levantan solas.
+
+[IMAGEN: Pantalla de penalizaciones (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.30: Pantalla de penalizaciones
+
+4.8 Configurar roles y permisos
+La sección "Roles y permisos" tiene dos pestañas, que responden a preguntas distintas:
+
+"Roles y permisos" (qué puede hacer un rol): seleccionar el rol en el selector superior, marcar o desmarcar los permisos, agrupados por módulo, y guardar. El cambio impacta de inmediato sobre todos los usuarios con ese rol. El botón de creación de rol solicita el "Nombre del rol*" y una descripción opcional; el rol nuevo nace sin permisos asignados.
+"Roles de los usuarios" (qué rol tiene una persona): permite asignar un rol a cada cuenta, incluidos los roles creados por el administrador.
+El sistema impide quitar al rol Administrador sus permisos críticos ("Quitar este permiso dejaría al rol Administrador sin capacidad de gestión. Esta acción no está permitida."), cambiar el propio rol y modificar el rol de la última cuenta administradora.
+
+[IMAGEN: Pantalla de roles y permisos (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.31: Pantalla de roles y permisos
+
+4.9 Reportes
+Ingresar a "Reportes".
+Definir los filtros de período, categoría e instructor y presionar "Aplicar".
+Elegir la vista en las pestañas "Desempeño", "Financiero", "Actividades" o "Reclamos y penalizaciones". Cada pestaña presenta sus propios indicadores, gráficos y tabla de detalle.
+Exportar la vista con los botones "PDF" (abre la vista previa de impresión, con el gráfico incluido) o "CSV" (archivo compatible con Excel en la configuración regional argentina).
+El encabezado de cada reporte refleja el período y el alcance efectivamente aplicados.
+
+[IMAGEN: Pantalla de reportes (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.32: Pantalla de reportes
+
+4.10 Registro de auditoría y trazabilidad
+La sección "Trazabilidad" presenta el listado inalterable de todas las operaciones críticas del sistema, con indicadores de resumen, un buscador por palabra clave y filtros por rol y por tipo de acción. La columna "Detalle" describe cada operación en lenguaje natural, y el listado admite paginación y ordenamiento por columna. Las operaciones ejecutadas por tareas programadas figuran con el autor "Sistema", y también se registran los intentos de acceso denegado.
+
+El registro puede exportarse con "Exportar esta página" o "Exportar todo"; en este último caso, el sistema informa la cantidad de registros y solicita confirmación. La exportación respeta los filtros y el orden elegidos. Ningún registro puede modificarse ni eliminarse.
+
+[IMAGEN: Pantalla de registro de auditoría y trazabilidad (captura del sistema desarrollado) — ACÁ]
+
+Figura A8.33: Pantalla de registro de auditoría y trazabilidad
+
+4.11 Bandeja de soporte
+En "Gestión", pestaña "Soporte", se encuentran los reportes enviados desde la pantalla pública de Ayuda, con su autor (o la indicación "Sin cuenta" cuando el reporte es anónimo), el detalle, el estado y la respuesta. Para cerrar un reporte, se puede incluir opcionalmente una respuesta; el cierre no puede deshacerse.
+
+5. Glosario de estados
+La siguiente tabla resume los estados que el usuario encuentra en las distintas pantallas del sistema y su significado.
+
+Entidad	Estado	Significado para el usuario
+Inscripción	PreInscripción	Interés registrado en una clase que se dicta dentro de más de 4 días. No ocupa cupo ni genera pago.
+Inscripción	PagoPendiente	Inscripción con pago en efectivo que el instructor todavía no confirmó. Ocupa el cupo.
+Inscripción	Inscripto	Inscripción confirmada, con el pago aprobado o el cobro en efectivo confirmado.
+Inscripción	Cancelada	Inscripción cancelada por el alumno o por el sistema. No puede reactivarse.
+Clase	Programada	Clase creada que se dicta dentro de más de 4 días. Solo admite preinscripciones.
+Clase	Habilitada	Faltan 4 días o menos para la clase. Admite inscripciones hasta 1 hora antes del inicio.
+Clase	Cancelada	Clase cancelada por el instructor o por una sanción. No admite inscripciones y genera los reintegros.
+Clase	Finalizada	Clase ya dictada. Habilita el historial, las reseñas y las denuncias.
+Pago	Retenido	Pago con Mercado Pago aprobado, retenido hasta que finaliza la clase y vence el período de denuncias.
+Pago	Liberado	Pago acreditado al instructor.
+Pago	Cancelado	Pago reintegrado.
+Pago	Efectivo	Pago en efectivo, abonado directamente al instructor.
+Denuncia	Pendiente	Denuncia registrada, a la espera de revisión.
+Denuncia	En Auditoría	Denuncia en revisión por parte de un administrador.
+Denuncia	Resuelta	Denuncia resuelta mediante reintegro, sanción, penalización o desestimación.
+Solicitud del instructor	En revisión	Documentación pendiente de validación. Solo se accede a "Mis datos".
+Solicitud del instructor	Verificado	Instructor habilitado para publicar actividades y gestionar clases.
+Solicitud del instructor	Rechazada	Solicitud rechazada con motivo. Es posible volver a postularse.
+Disponibilidad de cupos	Disponible · Últimos cupos · Sin cupos	Indicador calculado a partir de los cupos ocupados sobre el cupo máximo de la clase.
+Reseña	Pendiente de moderación · Oculta · Respondida	Estado de la reseña: a la espera de aprobación, retirada de circulación por el administrador o con respuesta del instructor.

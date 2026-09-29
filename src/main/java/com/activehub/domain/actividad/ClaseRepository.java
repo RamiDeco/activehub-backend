@@ -42,6 +42,19 @@ public interface ClaseRepository extends JpaRepository<Clase, UUID> {
     boolean existsByAgendaClasesIdAndFechaHora(UUID agendaClasesId, Instant fechaHora);
 
     /**
+     * Clases de un instructor que se dictan dentro de una ventana y todavia estan vivas. La
+     * usa la penalizacion por suspension temporal para cancelar lo que cae en el periodo.
+     */
+    @Query("SELECT c FROM Clase c JOIN FETCH c.actividad a WHERE a.instructor.id = :instructorId "
+            + "AND c.estado NOT IN :estadosExcluidos "
+            + "AND c.fechaHora >= :desde AND c.fechaHora < :hasta ORDER BY c.fechaHora ASC")
+    List<Clase> findVivasDeInstructorEntre(
+            @Param("instructorId") UUID instructorId,
+            @Param("desde") Instant desde,
+            @Param("hasta") Instant hasta,
+            @Param("estadosExcluidos") Collection<EstadoClase> estadosExcluidos);
+
+    /**
      * UPDATE atomico condicional: evita la doble ocupacion del ultimo cupo
      * bajo pedidos concurrentes sin necesitar un lock explicito ni un
      * read-then-write en Java. Devuelve 0 filas afectadas si no habia cupo.

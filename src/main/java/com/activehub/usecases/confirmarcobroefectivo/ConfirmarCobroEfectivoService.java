@@ -8,6 +8,7 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
@@ -59,7 +60,7 @@ public class ConfirmarCobroEfectivoService {
                 "Confirmaron tu pago en efectivo de la clase de \"" + inscripcion.getClase().getActividad().getNombre()
                         + "\" del " + NotificacionMensajes.formatFechaHora(inscripcion.getClase().getFechaHora())
                         + ". Quedaste inscripto.",
-                inscripcion.getId());
+                inscripcion.getId(), Destino.inscripcion(inscripcion.getId()));
 
         auditService.registrar(instructorId, AuditAccion.COBRO_EFECTIVO_CONFIRMADO, "Inscripcion", inscripcion.getId(), null);
 

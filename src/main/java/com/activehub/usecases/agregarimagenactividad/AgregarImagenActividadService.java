@@ -9,12 +9,11 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import com.activehub.shared.storage.AlmacenamientoArchivos;
+import com.activehub.shared.storage.AlmacenamientoException;
+import com.activehub.shared.storage.CarpetaArchivos;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -22,7 +21,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Galería de la actividad (sección 2 pide {@code imagenes[]}, en plural).
+ * Galería de la actividad (sección 2 pide imagenes[], en plural).
  *
  * <p>Convive con {@code subirfotoactividad}, que sigue manejando la <b>portada</b>
  * ({@code actividad.fotoPath}) y es la que se ve en las tarjetas del catálogo. La primera
@@ -38,18 +37,18 @@ public class AgregarImagenActividadService {
     private final ActividadRepository actividadRepository;
     private final ActividadImagenRepository actividadImagenRepository;
     private final AuditService auditService;
-    private final String directorioAlmacenamiento;
+    private final AlmacenamientoArchivos almacenamiento;
 
     public AgregarImagenActividadService(
             ActividadRepository actividadRepository,
             ActividadImagenRepository actividadImagenRepository,
             AuditService auditService,
-            @Value("${app.storage.fotos-actividad-dir}") String directorioAlmacenamiento
+            AlmacenamientoArchivos almacenamiento
     ) {
         this.actividadRepository = actividadRepository;
         this.actividadImagenRepository = actividadImagenRepository;
         this.auditService = auditService;
-        this.directorioAlmacenamiento = directorioAlmacenamiento;
+        this.almacenamiento = almacenamiento;
     }
 
     @Transactional
@@ -77,28 +76,26 @@ public class AgregarImagenActividadService {
         }
 
         String nombreOriginal = archivo.getOriginalFilename() != null ? archivo.getOriginalFilename() : "imagen";
-        String nombreEnDisco = UUID.randomUUID() + extension(nombreOriginal);
+        String nombreGuardado = UUID.randomUUID() + extension(nombreOriginal);
 
         try {
-            Path directorio = Path.of(directorioAlmacenamiento);
-            Files.createDirectories(directorio);
-            Files.write(directorio.resolve(nombreEnDisco), archivo.getBytes());
-        } catch (IOException e) {
+            almacenamiento.guardar(CarpetaArchivos.FOTOS_ACTIVIDAD, nombreGuardado, archivo.getBytes(), contentType);
+        } catch (java.io.IOException | AlmacenamientoException e) {
             throw new ValidacionException("No pudimos guardar la imagen. Intentá de nuevo.");
         }
-        // El filesystem no es transaccional: si la transacción termina en rollback hay que
-        // borrar a mano el archivo que ya se escribió, o queda basura huérfana en disco.
-        // Mismo patrón que registrarinstructor.
-        registrarBorradoSiHayRollback(nombreEnDisco);
+        // El almacenamiento no es transaccional, ni el disco ni Supabase: si la transacción
+        // termina en rollback hay que borrar a mano el archivo ya escrito, o queda basura
+        // huérfana. Mismo patrón que registrarinstructor.
+        registrarBorradoSiHayRollback(nombreGuardado);
 
         ActividadImagen imagen = new ActividadImagen();
         imagen.setActividad(actividad);
-        imagen.setPath(nombreEnDisco);
+        imagen.setPath(nombreGuardado);
         imagen.setOrden(existentes);
         imagen = actividadImagenRepository.saveAndFlush(imagen);
 
         if (actividad.getFotoPath() == null) {
-            actividad.setFotoPath(nombreEnDisco);
+            actividad.setFotoPath(nombreGuardado);
             actividadRepository.save(actividad);
         }
 
@@ -108,7 +105,7 @@ public class AgregarImagenActividadService {
         return new AgregarImagenActividadResponse(imagen.getId(), actividadId, imagen.getOrden());
     }
 
-    private void registrarBorradoSiHayRollback(String nombreEnDisco) {
+    private void registrarBorradoSiHayRollback(String nombreGuardado) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             return;
         }
@@ -116,11 +113,7 @@ public class AgregarImagenActividadService {
             @Override
             public void afterCompletion(int status) {
                 if (status != STATUS_COMMITTED) {
-                    try {
-                        Files.deleteIfExists(Path.of(directorioAlmacenamiento).resolve(nombreEnDisco));
-                    } catch (IOException e) {
-                        // best-effort: no hay a quién reportarle esto después del rollback.
-                    }
+                    almacenamiento.borrarSiExiste(CarpetaArchivos.FOTOS_ACTIVIDAD, nombreGuardado);
                 }
             }
         });

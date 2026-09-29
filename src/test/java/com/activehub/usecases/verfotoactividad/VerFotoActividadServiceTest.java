@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.shared.error.NoEncontradoException;
+import com.activehub.shared.storage.AlmacenamientoDisco;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -34,7 +35,9 @@ class VerFotoActividadServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new VerFotoActividadService(actividadRepository, tempDir.toString());
+        AlmacenamientoDisco almacenamiento =
+                new AlmacenamientoDisco(tempDir.toString(), tempDir.toString(), tempDir.toString());
+        service = new VerFotoActividadService(actividadRepository, almacenamiento);
 
         actividadId = UUID.randomUUID();
         actividad = new Actividad();

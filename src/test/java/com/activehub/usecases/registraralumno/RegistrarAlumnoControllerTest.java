@@ -45,8 +45,8 @@ class RegistrarAlumnoControllerTest {
     void registrarAlumno_bodyValido_devuelve201ConTokenYUsuario() {
         var usuarioDto = new RegistrarAlumnoResponse.Usuario(
                 UUID.randomUUID(), "Martina", "Gómez", "martina@email.com", "2611234567",
-                LocalDate.of(2000, 5, 10), "ALUMNO", "ACTIVO", 0, Instant.now());
-        when(registrarAlumnoService.registrar(any())).thenReturn(new RegistrarAlumnoResponse("token-jwt", usuarioDto));
+                LocalDate.of(2000, 5, 10), "ALUMNO", "ACTIVO", 0, Instant.now(), false, "LOCAL");
+        when(registrarAlumnoService.registrar(any())).thenReturn(new RegistrarAlumnoResponse("token-jwt", true, usuarioDto));
 
         assertThat(mvc.post().uri("/api/auth/registro/alumno")
                 .contentType(MediaType.APPLICATION_JSON)

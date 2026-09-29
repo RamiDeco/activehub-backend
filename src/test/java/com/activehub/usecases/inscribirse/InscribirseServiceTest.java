@@ -25,6 +25,7 @@ import com.activehub.shared.security.InstructorVerificadoGuard;
 import com.activehub.shared.error.InscripcionYaExisteException;
 import com.activehub.shared.error.SinCuposDisponiblesException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.MercadoPagoOrderRequest;
@@ -99,6 +100,9 @@ class InscribirseServiceTest {
         clase.setEstado(EstadoClase.Programada);
         clase.setFechaHora(AHORA.plus(Duration.ofDays(2)));
         clase.setActividad(actividad);
+        // El cobro sale del precio de la CLASE, no del de la actividad (V23): cada clase nace
+        // con el precio vigente al crearse y no cambia si despues se edita la actividad.
+        clase.setPrecio(new BigDecimal("4500"));
         ReflectionTestUtils.setField(clase, "id", claseId);
     }
 
@@ -136,8 +140,8 @@ class InscribirseServiceTest {
         assertThat(response.pagoId()).isNotNull();
         verify(claseRepository).ocuparCupo(claseId);
         verify(mercadoPagoPaymentGateway).createOrder(datosPago);
-        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), any(), any());
-        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.NUEVA_INSCRIPCION), any(), any());
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), any(), any(), any());
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.NUEVA_INSCRIPCION), any(), any(), any());
     }
 
     @Test
@@ -181,8 +185,8 @@ class InscribirseServiceTest {
         assertThat(response.pagoId()).isNotNull();
         verify(claseRepository).ocuparCupo(claseId);
         verify(paymentGateway).iniciarPago(any(), org.mockito.ArgumentMatchers.eq(450000L));
-        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), any(), any());
-        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.NUEVA_INSCRIPCION), any(), any());
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), any(), any(), any());
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.NUEVA_INSCRIPCION), any(), any(), eq(Destino.clase(claseId)));
     }
 
     @Test
@@ -199,7 +203,7 @@ class InscribirseServiceTest {
         assertThat(response.estado()).isEqualTo("PagoPendiente");
         verify(paymentGateway, never()).iniciarPago(any(), org.mockito.ArgumentMatchers.anyLong());
         verify(mercadoPagoPaymentGateway, never()).createOrder(any());
-        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), any(), any());
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), any(), any(), any());
     }
 
     @Test

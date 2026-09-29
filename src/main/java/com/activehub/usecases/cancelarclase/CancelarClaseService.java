@@ -14,6 +14,7 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
@@ -95,7 +96,8 @@ public class CancelarClaseService {
             inscripcionRepository.save(inscripcion);
 
             notificacionService.notificar(
-                    inscripcion.getAlumno().getId(), TipoNotificacion.CLASE_CANCELADA, mensaje + detallePago, clase.getId());
+                    inscripcion.getAlumno().getId(), TipoNotificacion.CLASE_CANCELADA, mensaje + detallePago, clase.getId(),
+                    Destino.clase(clase.getId()));
         }
 
         clase.setEstado(EstadoClase.Cancelada);

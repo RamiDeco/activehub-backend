@@ -3,11 +3,10 @@ package com.activehub.usecases.verfotoactividad;
 import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.shared.error.NoEncontradoException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import com.activehub.shared.storage.AlmacenamientoArchivos;
+import com.activehub.shared.storage.AlmacenamientoException;
+import com.activehub.shared.storage.CarpetaArchivos;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,14 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class VerFotoActividadService {
 
     private final ActividadRepository actividadRepository;
-    private final String directorioAlmacenamiento;
+    private final AlmacenamientoArchivos almacenamiento;
 
-    public VerFotoActividadService(
-            ActividadRepository actividadRepository,
-            @Value("${app.storage.fotos-actividad-dir}") String directorioAlmacenamiento
-    ) {
+    public VerFotoActividadService(ActividadRepository actividadRepository, AlmacenamientoArchivos almacenamiento) {
         this.actividadRepository = actividadRepository;
-        this.directorioAlmacenamiento = directorioAlmacenamiento;
+        this.almacenamiento = almacenamiento;
     }
 
     @Transactional(readOnly = true)
@@ -35,9 +31,9 @@ public class VerFotoActividadService {
         }
 
         try {
-            byte[] contenido = Files.readAllBytes(Path.of(directorioAlmacenamiento).resolve(actividad.getFotoPath()));
+            byte[] contenido = almacenamiento.leer(CarpetaArchivos.FOTOS_ACTIVIDAD, actividad.getFotoPath());
             return new FotoDescarga(tipoContenido(actividad.getFotoPath()), contenido);
-        } catch (IOException e) {
+        } catch (AlmacenamientoException e) {
             throw new NoEncontradoException("No pudimos leer la foto.");
         }
     }
