@@ -86,6 +86,7 @@ final class DescripcionAuditoria {
             case INSCRIPCION_ACTUALIZADA -> "Se actualizó una inscripción.";
             case INSCRIPCION_CANCELADA -> actor + " canceló una inscripción.";
             case COBRO_EFECTIVO_CONFIRMADO -> actor + " confirmó el cobro en efectivo de una inscripción.";
+            case MERCADOPAGO_VINCULADA -> actor + " vinculó su cuenta de Mercado Pago.";
             case PAGO_LIBERADO -> "El sistema liberó un pago al instructor: la clase finalizó y pasó el período de denuncias.";
 
             case RESENIA_CREADA -> actor + " escribió una reseña.";

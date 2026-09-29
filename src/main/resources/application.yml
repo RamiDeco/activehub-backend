@@ -65,10 +65,23 @@ app:
   admin-seed:
     email: ${ADMIN_SEED_EMAIL:}
     password: ${ADMIN_SEED_PASSWORD:}
+  # A donde vuelve el navegador cuando termina un flujo que pasa por un sitio externo (el
+  # callback de Mercado Pago lo llama el navegador, no el frontend).
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   mercadopago:
     access-token: ${MP_ACCESS_TOKEN:}
+    # AES-256 (32 bytes en base64) para cifrar los tokens OAuth de los instructores en la base.
+    token-encryption-key: ${MP_TOKEN_ENCRYPTION_KEY:}
+    # OAuth del marketplace (KAN-54): con estas credenciales el instructor vincula su cuenta.
+    # APP_ID y REDIRECT_URI son los nombres con los que ya estaban cargadas en el .env (MP-01).
+    client-id: ${MP_CLIENT_ID:${APP_ID:}}
+    client-secret: ${MP_CLIENT_SECRET:}
+    # Tiene que coincidir EXACTO con la "URL de redireccionamiento" de la aplicacion en MP.
+    redirect-uri: ${MP_REDIRECT_URI:${REDIRECT_URI:}}
+    # true = el canje del codigo devuelve credenciales de sandbox (usuarios de prueba).
+    oauth-test-token: ${MP_OAUTH_TEST_TOKEN:false}
   mail:
     # De dónde sale el "From". Por defecto la propia cuenta de Gmail: **Gmail reescribe el
     # remitente a la cuenta autenticada**, así que poner otra dirección acá no sirve de nada.

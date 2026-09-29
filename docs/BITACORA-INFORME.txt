@@ -35,12 +35,12 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-09-29, despues de la ENTRADA 013) ===
-Casos de uso implementados en el backend: 111
+=== ESTADO GENERAL (actualizado: 2026-09-29, despues de la ENTRADA 014) ===
+Casos de uso implementados en el backend: 114
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
 
-Pruebas automatizadas del backend: 191 archivos / 869 pruebas / resultado: 867 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
+Pruebas automatizadas del backend: 199 archivos / 900 pruebas / resultado: 898 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
 (comando de conteo de archivos: find src/test -name "*Test.java" | wc -l)
 (comando de ejecucion: JAVA_HOME=C:\Users\Facundo\.jdks\corretto-21.0.10 ./mvnw -o test)
 (salida literal: "Tests run: 842, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS")
@@ -51,8 +51,8 @@ Pruebas automatizadas del frontend: 17 archivos / 145 pruebas / resultado: 145 c
 Cobertura sobre los archivos alcanzados: 75.25% de sentencias, 66.86% de ramas, 69.23% de funciones, 78.17% de lineas (comando: npm run test:coverage).
 Cubren lib/ completo salvo nominatim, notificaciones y resaltado, mas las dos pantallas publicas (Ayuda y Manual). Las pantallas de Alumno, Instructor y Administrador todavia no tienen pruebas.
 
-Migraciones Flyway: V1 a V28 (ultima: V28__mercadopago_marketplace, ENTRADA 012)
-(comando: ls src/main/resources/db/migration | wc -l  ->  28)
+Migraciones Flyway: V1 a V29 (ultima: V29__permiso_mercadopago, ENTRADA 014)
+(comando: ls src/main/resources/db/migration | wc -l  ->  29)
 
 ESLint del frontend: 0 errores / 11 advertencias
 (comando: npx eslint .  en activehub-frontend; salida literal: "11 problems (0 errors, 11 warnings)")
@@ -82,7 +82,7 @@ Estado por modulo (los 15):
 15. Ayuda y Soporte al Usuario - PARCIAL - pantalla Ayuda, reportes de soporte y asistente con modelo de lenguaje (Groq) sobre el manual de usuario, los tres PROBADOS (ENTRADAS 006 y 007); el manual de usuario ya es una pantalla de la plataforma (/manual, ENTRADA 009), IMPLEMENTADO pero todavia no probado en el navegador.
 
 Pendientes conocidos:
-1 (integracion real con Mercado Pago) - PENDIENTE - hoy MockPaymentGateway. Avance: modelo de datos del marketplace (ENTRADA 012, KAN-52 / MP-03) y pasarela real MercadoPagoGateway con autorizar/capturar/cancelar/reembolsar/consultar; la inscripcion con Mercado Pago ya autoriza de verdad con el token del instructor (ENTRADA 013, KAN-53 / MP-04). MockPaymentGateway RETIRADO. Falta: OAuth del instructor, migrar cancelaciones/liberacion/reintegros (KAN-65) y webhook.
+1 (integracion real con Mercado Pago) - PENDIENTE - hoy MockPaymentGateway. Avance: modelo de datos del marketplace (ENTRADA 012, KAN-52 / MP-03) y pasarela real MercadoPagoGateway con autorizar/capturar/cancelar/reembolsar/consultar; la inscripcion con Mercado Pago ya autoriza de verdad con el token del instructor (ENTRADA 013, KAN-53 / MP-04). MockPaymentGateway RETIRADO. OAuth del instructor en el backend (ENTRADA 014, KAN-54 / MP-05). Falta: pantalla del frontend para vincular, migrar cancelaciones/liberacion/reintegros (KAN-65) y webhook.
 2 (recuperacion de contrasenia por correo) - PROBADO (ENTRADA 002).
 3 (asistente con modelo de lenguaje y chatbot con Groq) - PROBADO. PENDIENTE 3: PARCIAL -> PROBADO (ENTRADA 007: verificado contra Groq con el modelo openai/gpt-oss-120b — preguntas legitimas respondidas con el manual, siete intentos de prompt injection rechazados, informe de beneficios generado para una cuenta de alumno de demostracion, y el aviso de cuota agotada con tiempo de espera funcionando). El codigo es de la ENTRADA 006 (2 casos de uso) mas las defensas y el manejo de cuota de la 007; en total 62 pruebas automatizadas. Queda como verificacion visual pendiente probar las dos pantallas en el navegador. El motor de recomendaciones adaptativo, que era la tercera parte de este pendiente, quedo PROBADO en la ENTRADA 004.
 4 (imagenes en Supabase Storage) - PROBADO - bucket creado, 15 archivos migrados y lectura verificada contra el proyecto real (ENTRADA 003). PENDIENTE 4: PARCIAL -> PROBADO. Queda aparte la optimizacion de imagenes, que nunca se implemento.
@@ -1205,3 +1205,62 @@ PENDIENTE QUE QUEDA:
  - OAuth del instructor (sin eso ninguna cuenta queda VINCULADA y el pago con Mercado Pago siempre se rechaza).
  - Ejecutar la prueba de sandbox. Copiar esta entrada a la bitacora espejo del frontend (no existe en este checkout).
 === FIN ENTRADA 013 ===
+
+=== ENTRADA 014 ===
+FECHA: 2026-09-29
+REPOSITORIO: activehub-backend
+RAMA Y COMMITS: sin commit al momento de este registro - sin Pull Request
+TIPO: NUEVA FUNCIONALIDAD
+TITULO: Vincular la cuenta de Mercado Pago del instructor por OAuth (KAN-54 / MP-05)
+
+QUE CAMBIA PARA EL USUARIO:
+ - Instructor: puede autorizar a ActiveHub en su cuenta de Mercado Pago. El flujo (lo dispara el frontend, todavia sin pantalla): se pide la URL de vinculacion, el navegador va a Mercado Pago, el instructor inicia sesion y acepta, y vuelve al panel del instructor (/instructor) con ?mercadopago=vinculada, =cancelada (cancelo en MP) o =error (MP no acepto el codigo).
+ - A partir de la vinculacion, las inscripciones con Mercado Pago a sus clases se autorizan en SU cuenta (ENTRADA 013).
+ - Vincular de nuevo reemplaza la vinculacion anterior (una sola cuenta por instructor).
+ - Administrador: permiso nuevo "Vincular su cuenta de Mercado Pago" (modulo Cobros) en "Roles y permisos". Nace habilitado solo para INSTRUCTOR. La auditoria muestra "<actor> vinculó su cuenta de Mercado Pago."
+TEXTOS DE INTERFAZ (literales, mensajes que devuelve la API):
+ - "La vinculación con Mercado Pago no es válida. Volvé a intentarlo desde tu perfil."
+ - "La vinculación con Mercado Pago venció. Volvé a intentarlo desde tu perfil."
+ - "La vinculación con Mercado Pago no está disponible en este momento."
+ - Permiso: modulo "Cobros", accion "Vincular su cuenta de Mercado Pago".
+ - Auditoria: "<actor> vinculó su cuenta de Mercado Pago."
+DETALLE TECNICO:
+ - Tres casos de uso NUEVOS (uno por paquete, convencion del repositorio, en lugar del paquete unico que sugeria el ticket):
+   iniciarvinculacionmercadopago - GET /api/instructor/mercadopago/vinculo -> {url} (permiso mercadopago.vincular).
+   completarvinculacionmercadopago - GET /api/instructor/mercadopago/callback?code&state[&error] -> 302 al frontend (publico, en permitAll).
+   obtenercuentamercadopago - GET /api/instructor/mercadopago -> {vinculada, estado, mpUserId, actualizadaEl, expiraEl} (permiso mercadopago.vincular). Nunca devuelve tokens ni public key; lee con una proyeccion que no carga los tokens (no los descifra).
+ - shared/payments/MercadoPagoOAuthState: state = base64url(instructorId|vencimiento|nonce) + HMAC-SHA256; vence a los 15 minutos. La clave HMAC se deriva de app.jwt.secret con una etiqueta propia: un state no sirve como token de sesion ni un JWT como state (hay prueba).
+ - shared/payments/MercadoPagoOAuthClient: URL https://auth.mercadopago.com/authorization (client_id, response_type=code, platform_id=mp, state, redirect_uri, con codificacion estricta) y canje en POST /oauth/token (grant_type authorization_code; test_token=true si MP_OAUTH_TEST_TOKEN). El client_secret nunca sale del backend.
+ - Callback: state invalido o vencido -> 400 (VALIDACION) sin guardar nada; sin code (cancelado en MP) -> redirige con =cancelada; MP rechaza el codigo -> redirige con =error sin tocar la fila; ok -> crea o actualiza la fila de cuenta_mercadopago_instructor (tokens cifrados por TokenCifradoConverter), estado VINCULADA, expires_at = ahora + expires_in (MP informa 180 dias), y audita MERCADOPAGO_VINCULADA con metadata "mp_user_id=<id>" (sin tokens).
+ - AuditAccion NUEVA: MERCADOPAGO_VINCULADA.
+ESTADO: IMPLEMENTADO. PROBADO con pruebas automatizadas. Flujo real con el usuario de prueba vendedor: PENDIENTE (requiere credenciales y ngrok).
+HISTORIAS DE USUARIO Y CRITERIOS: E2I (instructor, cobros). Se propone E2I-HU13 NUEVA "Vincular mi cuenta de Mercado Pago para cobrar mis clases".
+PANTALLAS: sin cambios (la pantalla es de otra tarea).
+REGLAS DE NEGOCIO: el instructor solo puede cobrar con Mercado Pago si tiene la cuenta VINCULADA y el token vigente.
+MODULOS: 8 Reservas y Pagos; 2 Gestion de Usuarios, Roles y Permisos (permiso nuevo); 4 Auditoria.
+CASOS DE USO: 114 (antes 111): iniciarvinculacionmercadopago, completarvinculacionmercadopago, obtenercuentamercadopago.
+ENTIDADES Y MIGRACIONES: V29__permiso_mercadopago (permiso mercadopago.vincular + configuracion_rol). Aplicada en Supabase (flyway_schema_history version 29 success=true) y re-ejecutada completa por JDBC en una transaccion revertida sin error. Resultado en la base: INSTRUCTOR habilitado; ADMIN, ALUMNO e Hibrido deshabilitado.
+TECNOLOGIAS: OAuth 2.0 (authorization code) de Mercado Pago, sin SDK.
+COSTOS: sin cambios.
+RIESGOS: R02 Mercado Pago - avanza.
+SEGURIDAD: callback publico pero atado a un state firmado que solo emite un endpoint con permiso; comparacion de firma en tiempo constante; tokens cifrados en la base y nunca devueltos ni auditados; el toString de las credenciales no los incluye.
+PRUEBAS:
+ - Suite backend: 199 archivos / 900 pruebas: 898 correctas, 0 fallidas, 0 con error, 2 omitidas (comando: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw -q test; conteo sumando target/surefire-reports/*.txt). Incluye GuardasDePermisoTest y CatalogoPublicoTest en verde.
+ - NUEVAS: MercadoPagoOAuthStateTest (7), MercadoPagoOAuthClientTest (5), CompletarVinculacionMercadoPagoServiceTest (5: primera vez, vincular de nuevo actualiza la misma fila, state invalido sin guardar, codigo rechazado por MP, cancelado en MP), CompletarVinculacionMercadoPagoControllerTest (2), IniciarVinculacionMercadoPagoServiceTest (2), IniciarVinculacionMercadoPagoControllerTest (1), ObtenerCuentaMercadoPagoServiceTest (4), ObtenerCuentaMercadoPagoControllerTest (1).
+ - CatalogoPublicoTest: el callback responde sin sesion (400 con state ajeno) y /api/instructor/mercadopago y /vinculo siguen exigiendo sesion (401).
+ANALISIS ESTATICO: sin cambios en el frontend.
+DESPLIEGUE Y CONFIGURACION: variables NUEVAS (solo nombres): MP_CLIENT_ID (si falta se usa APP_ID), MP_CLIENT_SECRET, MP_REDIRECT_URI (si falta se usa REDIRECT_URI; tiene que coincidir exacto con la URL de redireccionamiento de la aplicacion en MP), MP_OAUTH_TEST_TOKEN (true en sandbox), FRONTEND_URL (por defecto http://localhost:5173). Sin MP_CLIENT_SECRET la vinculacion responde "no está disponible". Hace falta MP_TOKEN_ENCRYPTION_KEY para guardar los tokens.
+DECISIONES:
+ - Tres paquetes y no uno: la convencion del repositorio es un caso de uso por paquete.
+ - Permiso propio (mercadopago.vincular) y no reutilizar cobros.confirmar: son habilitaciones distintas.
+ - El state no es un JWT (ver SEGURIDAD). No se uso PKCE: es opcional en MP y exige habilitarlo en la aplicacion; queda como mejora.
+ - State invalido = 400 y no redireccion, como pide el ticket: si el state no es nuestro, el pedido no salio de ActiveHub.
+ - No se exige instructor verificado para vincular: puede dejar la cuenta lista mientras espera la aprobacion (igual no puede recibir inscripciones hasta estar verificado).
+ERRORES DETECTADOS: las ENTRADAS 012 y 013 dicen que el backend no tenia repositorio git en esta maquina. Es incorrecto: activehub SI es un repositorio git; los cambios de las ENTRADAS 012 a 014 estan sin commitear.
+CAPTURAS SUGERIDAS: pantalla de consentimiento de Mercado Pago con el nombre de la aplicacion; fila en "Roles y permisos" con el permiso nuevo.
+PENDIENTE QUE QUEDA:
+ - Pantalla del frontend: boton "Vincular Mercado Pago" en el panel del instructor, lectura de ?mercadopago= y estado de la cuenta.
+ - Probar el flujo completo con el usuario de prueba vendedor (ngrok + MP_REDIRECT_URI cargada en la aplicacion de MP).
+ - Renovar el token con refresh_token antes de que venza (180 dias) y desvincular.
+ - Exponer la public_key del instructor al Brick de pago (ver ENTRADA 013).
+=== FIN ENTRADA 014 ===

@@ -62,6 +62,11 @@ public class SecurityConfig {
                         // registrarse o entrar: exigirle sesión lo dejaría sin forma de avisar.
                         // El service acepta `autorId` en null y guarda el reporte como anónimo.
                         .requestMatchers(HttpMethod.POST, "/api/soporte/reportes").permitAll()
+                        // Vuelta del OAuth de Mercado Pago (KAN-54): la llama el NAVEGADOR
+                        // redirigido desde MP, que no manda nuestro JWT. Público no es abierto:
+                        // sin un `state` firmado por nosotros (que solo emite /vinculo, con
+                        // permiso) responde 400 y no guarda nada.
+                        .requestMatchers(HttpMethod.GET, "/api/instructor/mercadopago/callback").permitAll()
                         // La burbuja "¿Dudas?" no vive sólo en las pantallas del alumno: también
                         // está en /ayuda, que es pública. Mismo criterio que el reporte de arriba —
                         // quien necesita ayuda muchas veces es quien no pudo entrar. Público no es

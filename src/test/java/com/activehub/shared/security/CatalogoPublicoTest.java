@@ -57,11 +57,21 @@ class CatalogoPublicoTest {
             "/api/alumno/favoritos",
             "/api/admin/roles",
             "/api/admin/niveles-intensidad",
+            "/api/instructor/mercadopago",
+            "/api/instructor/mercadopago/vinculo",
     })
     void loQueNoEsCatalogo_sigueExigiendoSesion(String ruta) {
         // La contraparte: que la lista de permitAll no se haya ido de mano.
         assertThat(mvc.get().uri(ruta).exchange())
                 .as("%s no es catálogo público", ruta)
                 .hasStatus(401);
+    }
+
+    @Test
+    void callbackDeMercadoPago_respondeSinSesionPeroRechazaUnStateAjeno() {
+        // Lo llama el navegador al volver de MP, sin JWT: si exigiera sesión el OAuth no podría
+        // terminar nunca. Sin un state firmado por nosotros tiene que ser 400, no 401 ni 302.
+        assertThat(mvc.get().uri("/api/instructor/mercadopago/callback?code=TG-x&state=inventado").exchange())
+                .hasStatus(400);
     }
 }
