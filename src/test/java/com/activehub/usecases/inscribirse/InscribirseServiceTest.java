@@ -27,6 +27,9 @@ import com.activehub.shared.error.SinCuposDisponiblesException;
 import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
+import com.activehub.shared.payments.MercadoPagoOrderRequest;
+import com.activehub.shared.payments.MercadoPagoOrderResponse;
+import com.activehub.shared.payments.MercadoPagoPaymentGateway;
 import com.activehub.shared.payments.PaymentGateway;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -61,9 +64,10 @@ class InscribirseServiceTest {
     private AuditService auditService;
     @Mock
     private NotificacionService notificacionService;
-
-    @org.mockito.Mock private InstructorVerificadoGuard instructorVerificadoGuard;
-
+    @Mock
+    private InstructorVerificadoGuard instructorVerificadoGuard;
+    @Mock
+    private MercadoPagoPaymentGateway mercadoPagoPaymentGateway;
 
     private InscribirseService service;
     private UUID claseId;
@@ -76,7 +80,7 @@ class InscribirseServiceTest {
         Clock clock = Clock.fixed(AHORA, ZoneOffset.UTC);
         service = new InscribirseService(
                 claseRepository, inscripcionRepository, pagoRepository, usuarioRepository, paymentGateway, auditService,
-                notificacionService, instructorVerificadoGuard, clock);
+                notificacionService, instructorVerificadoGuard, clock, mercadoPagoPaymentGateway);
 
         claseId = UUID.randomUUID();
         alumnoId = UUID.randomUUID();
@@ -121,11 +125,57 @@ class InscribirseServiceTest {
                 .thenReturn(Optional.empty());
         when(claseRepository.ocuparCupo(claseId)).thenReturn(1);
         when(usuarioRepository.getReferenceById(alumnoId)).thenReturn(new Usuario());
+        MercadoPagoOrderRequest datosPago = new MercadoPagoOrderRequest("order", null, "4500.00", "ext-123", null, null);
+        when(mercadoPagoPaymentGateway.createOrder(datosPago))
+                .thenReturn(new MercadoPagoOrderResponse("mp-order-123", "order", null, "ext-123", "4500.00", null, null, null, "created", null, null, null, null, null, null));
+        stubGuardados();
+
+        InscribirseResponse response = service.inscribirse(claseId, new InscribirseRequest("Mercado Pago", datosPago), alumnoId);
+
+        assertThat(response.estado()).isEqualTo("Inscripto");
+        assertThat(response.pagoId()).isNotNull();
+        verify(claseRepository).ocuparCupo(claseId);
+        verify(mercadoPagoPaymentGateway).createOrder(datosPago);
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), any(), any());
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.NUEVA_INSCRIPCION), any(), any());
+    }
+
+    @Test
+    void inscribirse_mercadoPago_sinDatosPago_lanzaValidacion() {
+        when(claseRepository.findById(claseId)).thenReturn(Optional.of(clase));
+        when(inscripcionRepository.findByClaseIdAndAlumnoIdAndEstadoNot(claseId, alumnoId, EstadoInscripcion.CANCELADA))
+                .thenReturn(Optional.empty());
+        when(claseRepository.ocuparCupo(claseId)).thenReturn(1);
+        when(usuarioRepository.getReferenceById(alumnoId)).thenReturn(new Usuario());
+        when(inscripcionRepository.saveAndFlush(any(Inscripcion.class))).thenAnswer(inv -> {
+            Inscripcion i = inv.getArgument(0);
+            ReflectionTestUtils.setField(i, "id", UUID.randomUUID());
+            ReflectionTestUtils.setField(i, "createdAt", AHORA);
+            return i;
+        });
+
+        assertThatThrownBy(() -> service.inscribirse(claseId, new InscribirseRequest("Mercado Pago"), alumnoId))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessage("Los datos de pago son obligatorios para Mercado Pago.");
+    }
+
+    @Test
+    void inscribirse_mercadoPago_sinMercadoPagoGateway_usaFallbackPaymentGateway() {
+        Clock clock = Clock.fixed(AHORA, ZoneOffset.UTC);
+        InscribirseService serviceSinMP = new InscribirseService(
+                claseRepository, inscripcionRepository, pagoRepository, usuarioRepository, paymentGateway, auditService,
+                notificacionService, instructorVerificadoGuard, clock, null);
+
+        when(claseRepository.findById(claseId)).thenReturn(Optional.of(clase));
+        when(inscripcionRepository.findByClaseIdAndAlumnoIdAndEstadoNot(claseId, alumnoId, EstadoInscripcion.CANCELADA))
+                .thenReturn(Optional.empty());
+        when(claseRepository.ocuparCupo(claseId)).thenReturn(1);
+        when(usuarioRepository.getReferenceById(alumnoId)).thenReturn(new Usuario());
         when(paymentGateway.iniciarPago(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyLong()))
                 .thenReturn(new PaymentGateway.IniciarPagoResultado("ref-123", "https://mock/checkout"));
         stubGuardados();
 
-        InscribirseResponse response = service.inscribirse(claseId, new InscribirseRequest("Mercado Pago"), alumnoId);
+        InscribirseResponse response = serviceSinMP.inscribirse(claseId, new InscribirseRequest("Mercado Pago"), alumnoId);
 
         assertThat(response.estado()).isEqualTo("Inscripto");
         assertThat(response.pagoId()).isNotNull();
@@ -148,6 +198,7 @@ class InscribirseServiceTest {
 
         assertThat(response.estado()).isEqualTo("PagoPendiente");
         verify(paymentGateway, never()).iniciarPago(any(), org.mockito.ArgumentMatchers.anyLong());
+        verify(mercadoPagoPaymentGateway, never()).createOrder(any());
         verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), any(), any());
     }
 
@@ -164,14 +215,16 @@ class InscribirseServiceTest {
                 .thenReturn(Optional.of(existente));
         when(claseRepository.ocuparCupo(claseId)).thenReturn(1);
         stubGuardados();
-        when(paymentGateway.iniciarPago(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyLong()))
-                .thenReturn(new PaymentGateway.IniciarPagoResultado("ref-123", "https://mock/checkout"));
+        MercadoPagoOrderRequest datosPago = new MercadoPagoOrderRequest("order", null, "4500.00", "ext-123", null, null);
+        when(mercadoPagoPaymentGateway.createOrder(datosPago))
+                .thenReturn(new MercadoPagoOrderResponse("mp-order-123", "order", null, "ext-123", "4500.00", null, null, null, "created", null, null, null, null, null, null));
 
-        InscribirseResponse response = service.inscribirse(claseId, new InscribirseRequest("Mercado Pago"), alumnoId);
+        InscribirseResponse response = service.inscribirse(claseId, new InscribirseRequest("Mercado Pago", datosPago), alumnoId);
 
         assertThat(response.id()).isEqualTo(inscripcionId);
         verify(inscripcionRepository).saveAndFlush(eq(existente));
         verify(usuarioRepository, never()).getReferenceById(any());
+        verify(mercadoPagoPaymentGateway).createOrder(datosPago);
     }
 
     @Test

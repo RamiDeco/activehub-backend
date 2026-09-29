@@ -21,6 +21,7 @@ import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
+import com.activehub.shared.payments.MercadoPagoPaymentGateway;
 import com.activehub.shared.payments.PaymentGateway;
 import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.time.Clock;
@@ -40,6 +41,7 @@ public class InscribirseService {
     private final NotificacionService notificacionService;
     private final InstructorVerificadoGuard instructorVerificadoGuard;
     private final Clock clock;
+    private final MercadoPagoPaymentGateway mercadoPagoPaymentGateway;
 
     public InscribirseService(
             ClaseRepository claseRepository,
@@ -52,6 +54,22 @@ public class InscribirseService {
             InstructorVerificadoGuard instructorVerificadoGuard,
             Clock clock
     ) {
+        this(claseRepository, inscripcionRepository, pagoRepository, usuarioRepository, paymentGateway, auditService, notificacionService, instructorVerificadoGuard, clock, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public InscribirseService(
+            ClaseRepository claseRepository,
+            InscripcionRepository inscripcionRepository,
+            PagoRepository pagoRepository,
+            UsuarioRepository usuarioRepository,
+            PaymentGateway paymentGateway,
+            AuditService auditService,
+            NotificacionService notificacionService,
+            InstructorVerificadoGuard instructorVerificadoGuard,
+            Clock clock,
+            MercadoPagoPaymentGateway mercadoPagoPaymentGateway
+    ) {
         this.claseRepository = claseRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.pagoRepository = pagoRepository;
@@ -61,6 +79,7 @@ public class InscribirseService {
         this.notificacionService = notificacionService;
         this.instructorVerificadoGuard = instructorVerificadoGuard;
         this.clock = clock;
+        this.mercadoPagoPaymentGateway = mercadoPagoPaymentGateway;
     }
 
     @Transactional
@@ -121,9 +140,17 @@ public class InscribirseService {
         pago.setMetodo(metodo);
 
         if (metodo == MetodoPago.MERCADO_PAGO) {
-            long montoEnCentavos = pago.getMonto().movePointRight(2).longValueExact();
-            var resultado = paymentGateway.iniciarPago(inscripcion.getId().toString(), montoEnCentavos);
-            pago.setReferenciaExterna(resultado.referenciaExterna());
+            if (mercadoPagoPaymentGateway != null) {
+                if (request.datosPago() == null) {
+                    throw new ValidacionException("Los datos de pago son obligatorios para Mercado Pago.");
+                }
+                var resultado = mercadoPagoPaymentGateway.createOrder(request.datosPago());
+                pago.setReferenciaExterna(resultado.id() != null ? resultado.id() : resultado.externalReference());
+            } else if (paymentGateway != null) {
+                long montoEnCentavos = pago.getMonto().movePointRight(2).longValueExact();
+                var resultado = paymentGateway.iniciarPago(inscripcion.getId().toString(), montoEnCentavos);
+                pago.setReferenciaExterna(resultado.referenciaExterna());
+            }
             pago.setEstado(EstadoPago.Retenido);
         } else {
             pago.setEstado(EstadoPago.Efectivo);

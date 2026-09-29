@@ -7,9 +7,9 @@ spring:
     application:
       name: activehub-api
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/activehub}
-    username: ${DATABASE_USERNAME:activehub}
-    password: ${DATABASE_PASSWORD:XXX}
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
     hikari:
       maximum-pool-size: ${DB_POOL_SIZE:5}
       minimum-idle: 1
@@ -51,7 +51,7 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   mercadopago:
-    access-token: ${MP_ACCESS_TOKEN}
+    access-token: ${MP_ACCESS_TOKEN:}
   storage:
     documentos-instructor-dir: ${DOCUMENTOS_INSTRUCTOR_DIR:./uploads/documentos-instructor}
     fotos-perfil-dir: ${FOTOS_PERFIL_DIR:./uploads/fotos-perfil}

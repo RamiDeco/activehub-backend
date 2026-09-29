@@ -38,8 +38,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/registro/alumno",
                                 "/api/auth/registro/instructor",
-                                "/api/auth/login",
-                                "/api/payments/process"
+                                "/api/auth/login"
                         ).permitAll()
                         // El catálogo público. Las tres listas de taxonomía van juntas
                         // porque el frontend las pide en un mismo Promise.all al arrancar,

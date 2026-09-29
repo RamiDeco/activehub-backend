@@ -16,11 +16,17 @@ public class MercadoPagoPaymentGateway {
 
     private static final Logger log = LoggerFactory.getLogger(MercadoPagoPaymentGateway.class);
     private final RestClient mpRestClient;
+    private final MercadoPagoProperties properties;
 
     /**
      * Creates an order in Mercado Pago and handles HTTP communication errors.
      */
     public MercadoPagoOrderResponse createOrder(MercadoPagoOrderRequest request) {
+        String accessToken = properties.getAccessToken();
+        if (accessToken == null || accessToken.isBlank()) {
+            log.error("Intento de pago con Mercado Pago sin MP_ACCESS_TOKEN configurado");
+            throw new PagoException("El pago con Mercado Pago no está disponible en este momento.");
+        }
         String idempotencyKey = UUID.randomUUID().toString();
         try {
             MercadoPagoOrderResponse response = mpRestClient.post()

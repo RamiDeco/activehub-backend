@@ -3,6 +3,7 @@ package com.activehub.usecases.listarusuariosadmin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.activehub.domain.permiso.ConfiguracionRolRepository;
 import com.activehub.domain.usuario.EstadoUsuario;
 import com.activehub.domain.usuario.Rol;
 import com.activehub.domain.usuario.RolNombre;
@@ -22,12 +23,14 @@ class ListarUsuariosAdminServiceTest {
 
     @Mock
     private UsuarioRepository usuarioRepository;
+    @Mock
+    private ConfiguracionRolRepository configuracionRolRepository;
 
     private ListarUsuariosAdminService service;
 
     @BeforeEach
     void setUp() {
-        service = new ListarUsuariosAdminService(usuarioRepository);
+        service = new ListarUsuariosAdminService(usuarioRepository, configuracionRolRepository);
     }
 
     @Test
@@ -45,6 +48,7 @@ class ListarUsuariosAdminServiceTest {
         usuario.setCantidadPenalizaciones(2);
         ReflectionTestUtils.setField(usuario, "id", UUID.randomUUID());
 
+        when(configuracionRolRepository.rolesConPermiso("clases.gestionar")).thenReturn(List.of());
         when(usuarioRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(usuario));
 
         List<ListarUsuariosAdminResponse> resultado = service.listar();

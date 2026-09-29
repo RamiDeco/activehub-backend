@@ -31,7 +31,7 @@ class ListarRolesPermisosControllerTest {
         var rol = new ListarRolesPermisosResponse.Rol(
                 UUID.randomUUID(), "ADMIN", "Gobierna la plataforma", true, 3, List.of("roles.configurar"));
         var permiso = new ListarRolesPermisosResponse.Permiso(
-                UUID.randomUUID(), "roles.configurar", "Roles", "Configurar roles y permisos", true);
+                UUID.randomUUID(), "roles.configurar", "Roles", "Configurar roles y permisos", true, true);
         when(listarRolesPermisosService.listar())
                 .thenReturn(new ListarRolesPermisosResponse(List.of(rol), List.of(permiso)));
 
@@ -46,7 +46,7 @@ class ListarRolesPermisosControllerTest {
     @Test
     void listar_incluyeLaCriticidadDeCadaPermiso() {
         var permiso = new ListarRolesPermisosResponse.Permiso(
-                UUID.randomUUID(), "usuarios.gestionar", "Usuarios", "Ver, editar y suspender cuentas", true);
+                UUID.randomUUID(), "usuarios.gestionar", "Usuarios", "Ver, editar y suspender cuentas", true, true);
         when(listarRolesPermisosService.listar())
                 .thenReturn(new ListarRolesPermisosResponse(List.of(), List.of(permiso)));
 
