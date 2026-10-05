@@ -27,13 +27,19 @@ import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.CuentaMercadoPagoGuard;
 import com.activehub.shared.payments.PaymentGateway;
 import com.activehub.shared.security.InstructorVerificadoGuard;
+
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class InscribirseService {
@@ -72,6 +78,8 @@ public class InscribirseService {
         this.cuentaMercadoPagoGuard = cuentaMercadoPagoGuard;
         this.clock = clock;
     }
+
+    private static final Logger log = LoggerFactory.getLogger(InscribirseService.class);
 
     @Transactional
     public InscribirseResponse inscribirse(UUID claseId, InscribirseRequest request, UUID alumnoId) {
@@ -174,16 +182,17 @@ public class InscribirseService {
     }
 
     /**
-     * Autoriza (NO cobra) el precio de la clase: captura diferida, MP-01. Si MP rechaza, la
-     * excepcion revierte toda la transaccion, cupo incluido.
+     * Autoriza (NO cobra) el precio de la clase: captura diferida, MP-01. Si MP
+     * rechaza, la excepcion revierte toda la transaccion, cupo incluido.
      *
-     * <p>La idempotency key sale de la inscripcion y del token de la tarjeta: el mismo pedido
-     * reintentado (mismo token, que es de un solo uso) da la misma clave y MP devuelve la misma
-     * orden en vez de reservar dos veces; un nuevo intento con otra tarjeta trae otro token y
-     * por lo tanto otra clave.
+     * <p>
+     * La idempotency key sale de la inscripcion y del token de la tarjeta: el
+     * mismo pedido reintentado (mismo token, que es de un solo uso) da la misma
+     * clave y MP devuelve la misma orden en vez de reservar dos veces; un nuevo
+     * intento con otra tarjeta trae otro token y por lo tanto otra clave.
      */
     private void autorizarConMercadoPago(Pago pago, DatosPagoRequest datos, String sellerToken, UUID alumnoId,
-                                         Instant ahora) {
+            Instant ahora) {
         BigDecimal comision = BigDecimal.ZERO; // MP-01: la plataforma no cobra comision
         String idempotencyKey = UUID.nameUUIDFromBytes(
                 ("autorizar:" + pago.getInscripcion().getId() + ":" + datos.token()).getBytes(StandardCharsets.UTF_8))
@@ -199,6 +208,22 @@ public class InscribirseService {
             // nadie. Si MP la confirma despues, vence sola a los 5 dias sin capturarse.
             throw new PagoException("Mercado Pago no confirmó la autorización del pago. Intentá nuevamente.");
         }
+
+        String orderId = resultado.orderId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_ROLLED_BACK) {
+                    return;
+                }
+                try {
+                    String cancelIdempotencyKey = idempotencyKey + ":cancel";
+                    paymentGateway.cancelarAutorizacion(sellerToken, orderId, cancelIdempotencyKey);
+                } catch (RuntimeException e) {
+                    log.error("No se pudo cancelar la autorización de Mercado Pago para la orden {} tras el rollback: quedó AUTORIZADA sin inscripción, cancelarla a mano en Mercado Pago", orderId, e);
+                }
+            }
+        });
 
         pago.setEstado(EstadoPago.Retenido);
         pago.setMpOrderId(resultado.orderId());
