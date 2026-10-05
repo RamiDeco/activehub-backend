@@ -30,7 +30,7 @@ import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
-import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.payments.OperacionesPagoMercadoPago;
 import com.activehub.shared.time.Zonas;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -52,7 +52,7 @@ public class ResolverDenunciaService {
     private final UsuarioRepository usuarioRepository;
     private final PenalizacionRepository penalizacionRepository;
     private final ReseniaRepository reseniaRepository;
-    private final PaymentGateway paymentGateway;
+    private final OperacionesPagoMercadoPago operacionesPago;
     private final AuditService auditService;
     private final NotificacionService notificacionService;
     private final Clock clock;
@@ -65,7 +65,7 @@ public class ResolverDenunciaService {
             UsuarioRepository usuarioRepository,
             PenalizacionRepository penalizacionRepository,
             ReseniaRepository reseniaRepository,
-            PaymentGateway paymentGateway,
+            OperacionesPagoMercadoPago operacionesPago,
             AuditService auditService,
             NotificacionService notificacionService,
             Clock clock
@@ -77,7 +77,7 @@ public class ResolverDenunciaService {
         this.usuarioRepository = usuarioRepository;
         this.penalizacionRepository = penalizacionRepository;
         this.reseniaRepository = reseniaRepository;
-        this.paymentGateway = paymentGateway;
+        this.operacionesPago = operacionesPago;
         this.auditService = auditService;
         this.notificacionService = notificacionService;
         this.clock = clock;
@@ -113,7 +113,7 @@ public class ResolverDenunciaService {
         }
 
         switch (accion) {
-            case REINTEGRAR -> reintegrar(denuncia);
+            case REINTEGRAR -> reintegrar(denuncia, actorId);
             case SUSPENDER -> suspenderInstructor(denuncia, request, actorId);
             case PENALIZAR -> penalizarInstructor(denuncia, actorId);
             case OCULTAR_RESENIA -> ocultarResenia(denuncia, actorId);
@@ -224,7 +224,7 @@ public class ResolverDenunciaService {
      * <p>A cada alumno se le notifica. Al denunciante le llega ademas la notificacion propia de
      * la resolucion de su denuncia, que manda {@code notificarResolucion}.
      */
-    private void reintegrar(Denuncia denuncia) {
+    private void reintegrar(Denuncia denuncia, UUID actorId) {
         Clase clase = denuncia.getClase();
         String contexto = "la clase de \"" + clase.getActividad().getNombre() + "\" del "
                 + NotificacionMensajes.formatFechaHora(clase.getFechaHora());
@@ -234,9 +234,7 @@ public class ResolverDenunciaService {
             Pago pago = inscripcion.getPago();
             String detallePago = "";
             if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
-                paymentGateway.cancelarPago(pago.getReferenciaExterna());
-                pago.setEstado(EstadoPago.Cancelado);
-                pagoRepository.save(pago);
+                operacionesPago.reintegrar(pago, clase.getActividad().getInstructor().getId(), actorId);
                 detallePago = " Se reintegra el pago retenido.";
             } else if (pago != null && pago.getEstado() == EstadoPago.Efectivo) {
                 pago.setEstado(EstadoPago.Cancelado);
@@ -350,9 +348,7 @@ public class ResolverDenunciaService {
                 Pago pago = inscripcion.getPago();
                 String detallePago = "";
                 if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
-                    paymentGateway.cancelarPago(pago.getReferenciaExterna());
-                    pago.setEstado(EstadoPago.Cancelado);
-                    pagoRepository.save(pago);
+                    operacionesPago.reintegrar(pago, instructor.getId(), actorId);
                     detallePago = " Se reintegra el pago retenido.";
                 } else if (pago != null && pago.getEstado() == EstadoPago.Efectivo) {
                     pago.setEstado(EstadoPago.Cancelado);

@@ -35,12 +35,12 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-09-29, despues de la ENTRADA 015) ===
+=== ESTADO GENERAL (actualizado: 2026-10-05, despues de la ENTRADA 017) ===
 Casos de uso implementados en el backend: 114
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
 
-Pruebas automatizadas del backend: 200 archivos / 906 pruebas / resultado: 904 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
+Pruebas automatizadas del backend: 201 archivos / 921 pruebas / resultado: 919 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
 (comando de conteo de archivos: find src/test -name "*Test.java" | wc -l)
 (comando de ejecucion: JAVA_HOME=C:\Users\Facundo\.jdks\corretto-21.0.10 ./mvnw -o test)
 (salida literal: "Tests run: 842, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS")
@@ -51,8 +51,8 @@ Pruebas automatizadas del frontend: 17 archivos / 145 pruebas / resultado: 145 c
 Cobertura sobre los archivos alcanzados: 75.25% de sentencias, 66.86% de ramas, 69.23% de funciones, 78.17% de lineas (comando: npm run test:coverage).
 Cubren lib/ completo salvo nominatim, notificaciones y resaltado, mas las dos pantallas publicas (Ayuda y Manual). Las pantallas de Alumno, Instructor y Administrador todavia no tienen pruebas.
 
-Migraciones Flyway: V1 a V29 (ultima: V29__permiso_mercadopago, ENTRADA 014)
-(comando: ls src/main/resources/db/migration | wc -l  ->  29)
+Migraciones Flyway: V1 a V30 (ultima: V30__pago_capturado_at, ENTRADA 017)
+(comando: ls src/main/resources/db/migration | wc -l  ->  30)
 
 ESLint del frontend: 0 errores / 11 advertencias
 (comando: npx eslint .  en activehub-frontend; salida literal: "11 problems (0 errors, 11 warnings)")
@@ -72,7 +72,7 @@ Estado por modulo (los 15):
 5. Alumno - PROBADO.
 6. Instructor - PROBADO.
 7. Actividades - PROBADO - alta, edicion, taxonomia, niveles, fotos (ahora en Supabase Storage), geolocalizacion.
-8. Reservas y Pagos - PARCIAL - la pasarela simulada se retiro (ENTRADA 013); la inscripcion autoriza contra Mercado Pago real, pero cancelar, reintegrar y liberar pagos reales sigue pendiente (KAN-65) (PENDIENTE 1).
+8. Reservas y Pagos - PARCIAL - la pasarela simulada se retiro (ENTRADA 013); la inscripcion autoriza contra Mercado Pago real y la captura al finalizar, la cancelacion y el reembolso reales estan IMPLEMENTADOS (KAN-65, ENTRADA 017), sin prueba en sandbox (PENDIENTE 1).
 9. Historial y Calificaciones - PROBADO.
 10. Busqueda y Filtrado - PROBADO - filtrado tradicional en Explorar y, desde esta actualizacion, motor de recomendaciones con puntaje en el Home del alumno.
 11. Administracion y Soporte - PROBADO.
@@ -82,7 +82,7 @@ Estado por modulo (los 15):
 15. Ayuda y Soporte al Usuario - PARCIAL - pantalla Ayuda, reportes de soporte y asistente con modelo de lenguaje (Groq) sobre el manual de usuario, los tres PROBADOS (ENTRADAS 006 y 007); el manual de usuario ya es una pantalla de la plataforma (/manual, ENTRADA 009), IMPLEMENTADO pero todavia no probado en el navegador.
 
 Pendientes conocidos:
-1 (integracion real con Mercado Pago) - PENDIENTE - hoy MockPaymentGateway. Avance: modelo de datos del marketplace (ENTRADA 012, KAN-52 / MP-03) y pasarela real MercadoPagoGateway con autorizar/capturar/cancelar/reembolsar/consultar; la inscripcion con Mercado Pago ya autoriza de verdad con el token del instructor (ENTRADA 013, KAN-53 / MP-04). MockPaymentGateway RETIRADO. OAuth del instructor en el backend (ENTRADA 014, KAN-54 / MP-05). Falta: pantalla del frontend para vincular, migrar cancelaciones/liberacion/reintegros (KAN-65) y webhook.
+1 (integracion real con Mercado Pago) - PENDIENTE - hoy MockPaymentGateway. Avance: modelo de datos del marketplace (ENTRADA 012, KAN-52 / MP-03) y pasarela real MercadoPagoGateway con autorizar/capturar/cancelar/reembolsar/consultar; la inscripcion con Mercado Pago ya autoriza de verdad con el token del instructor (ENTRADA 013, KAN-53 / MP-04). MockPaymentGateway RETIRADO. OAuth del instructor en el backend (ENTRADA 014, KAN-54 / MP-05). Captura, cancelacion y reembolso reales (ENTRADA 017, KAN-65). Falta: pantalla del frontend para vincular, webhook y prueba del ciclo completo en sandbox.
 2 (recuperacion de contrasenia por correo) - PROBADO (ENTRADA 002).
 3 (asistente con modelo de lenguaje y chatbot con Groq) - PROBADO. PENDIENTE 3: PARCIAL -> PROBADO (ENTRADA 007: verificado contra Groq con el modelo openai/gpt-oss-120b — preguntas legitimas respondidas con el manual, siete intentos de prompt injection rechazados, informe de beneficios generado para una cuenta de alumno de demostracion, y el aviso de cuota agotada con tiempo de espera funcionando). El codigo es de la ENTRADA 006 (2 casos de uso) mas las defensas y el manejo de cuota de la 007; en total 62 pruebas automatizadas. Queda como verificacion visual pendiente probar las dos pantallas en el navegador. El motor de recomendaciones adaptativo, que era la tercera parte de este pendiente, quedo PROBADO en la ENTRADA 004.
 4 (imagenes en Supabase Storage) - PROBADO - bucket creado, 15 archivos migrados y lectura verificada contra el proyecto real (ENTRADA 003). PENDIENTE 4: PARCIAL -> PROBADO. Queda aparte la optimizacion de imagenes, que nunca se implemento.
@@ -1307,3 +1307,77 @@ ERRORES DETECTADOS: el SDK de Mercado Pago se cacheaba con una sola public key p
 CAPTURAS SUGERIDAS: pantalla de inscripcion con el aviso "Esta clase solo acepta pago en efectivo...".
 PENDIENTE QUE QUEDA: verificar en el navegador con un instructor vinculado y otro sin vincular.
 === FIN ENTRADA 015 ===
+
+
+=== ENTRADA 016 ===
+FECHA: 2026-10-05
+REPOSITORIO: backend
+RAMA Y COMMITS: feat/mp-integration - 1945dce - sin Pull Request
+TIPO: CORRECCION DE ERROR
+TITULO: Si la inscripcion falla despues de autorizar en Mercado Pago, se cancela la autorizacion (KAN-53)
+QUE CAMBIA PARA EL USUARIO: Alumno: si Mercado Pago autoriza el pago pero la inscripcion no llega a guardarse (por ejemplo, un error de base de datos posterior), el monto ya no queda reservado en su tarjeta: el sistema le pide a Mercado Pago que cancele esa autorizacion. Antes la reserva quedaba hecha sin inscripcion asociada.
+TEXTOS DE INTERFAZ (literales): sin cambios
+DETALLE TECNICO: InscribirseService.autorizarConMercadoPago registra una TransactionSynchronization; en afterCompletion con estado STATUS_ROLLED_BACK llama a paymentGateway.cancelarAutorizacion con el token del instructor, la orden autorizada y la clave de idempotencia de la autorizacion con el sufijo ":cancel". Si esa cancelacion falla, no se propaga (no tapa el error original): se registra en el log con nivel ERROR indicando que la orden quedo autorizada sin inscripcion y que hay que cancelarla a mano en Mercado Pago. Si la transaccion confirma, no se hace nada.
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas (Mercado Pago simulado con mocks). No se probo contra el sandbox.
+HISTORIAS DE USUARIO Y CRITERIOS: E3A (inscripcion y pago).
+PANTALLAS: sin cambios
+REGLAS DE NEGOCIO: sin cambios
+MODULOS: 8 Reservas y Pagos.
+CASOS DE USO: sin nuevos. Modificado: inscribirse.
+ENTIDADES Y MIGRACIONES: sin cambios
+TECNOLOGIAS: sin cambios
+COSTOS: sin impacto
+RIESGOS: R02 Mercado Pago - mitigado parcialmente: no quedan fondos del alumno reservados por una inscripcion fallida, salvo que tambien falle la cancelacion (queda en el log).
+SEGURIDAD: sin cambios. El log no incluye el token del instructor, solo el id de la orden.
+PRUEBAS:
+ - Nuevas en InscribirseServiceTest (3): rollback -> cancela la autorizacion; commit -> no cancela; falla la cancelacion -> no tapa el error original.
+ - Suite backend: 200 archivos / 909 pruebas: 907 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (comando: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw -q test; conteo sumando target/surefire-reports/*.txt).
+ANALISIS ESTATICO: sin cambios
+DESPLIEGUE Y CONFIGURACION: sin cambios
+DECISIONES: la compensacion es en afterCompletion y no dentro de la transaccion, porque solo despues del rollback se sabe que la inscripcion no existe. Se eligio no reintentar: un fallo queda en el log para intervencion manual.
+ERRORES DETECTADOS: una inscripcion revertida despues de autorizar dejaba el monto reservado en la tarjeta del alumno sin inscripcion.
+CAPTURAS SUGERIDAS: sin capturas
+PENDIENTE QUE QUEDA: KAN-65 (captura al liberar, cancelacion y reintegro reales), pantalla de vinculacion del frontend y webhook.
+=== FIN ENTRADA 016 ===
+
+
+=== ENTRADA 017 ===
+FECHA: 2026-10-05
+REPOSITORIO: backend
+RAMA Y COMMITS: feat/mp-integration - commit indicado en la entrada siguiente o en ESTADO GENERAL - sin Pull Request
+TIPO: NUEVA FUNCIONALIDAD
+TITULO: Captura, cancelacion y reembolso reales en Mercado Pago (KAN-65)
+QUE CAMBIA PARA EL USUARIO:
+ - Instructor: cobra en Mercado Pago cuando la clase pasa a Finalizada (el sistema captura el pago autorizado). Antes ningun pago de Mercado Pago se capturaba: el camino anterior fallaba con "Esta operación sobre pagos de Mercado Pago todavía no está disponible.".
+ - Alumno: si su inscripcion se cancela antes de la clase (cancela el, el instructor cancela la clase o notifica ausencia, o el instructor es suspendido), se cancela la autorizacion en Mercado Pago y el monto deja de estar reservado en su tarjeta. Si se le reintegra despues de la clase (denuncia resuelta con REINTEGRAR), se hace un reembolso real y el pago queda Reembolsado.
+ - El paso a Liberado (24 h despues de la clase sin denuncias) ya no mueve dinero: indica que el pago quedo firme.
+TEXTOS DE INTERFAZ (literales): sin cambios en pantallas. Textos nuevos de la auditoria (columna Detalle): "El sistema cobró en Mercado Pago un pago autorizado: la clase finalizó." y "Se reembolsó en Mercado Pago un pago ya cobrado.".
+DETALLE TECNICO:
+ - Cambio de diseno: antes el plan era capturar al liberar. La autorizacion de Mercado Pago dura 5 dias (VentanaPagos.VIGENCIA_AUTORIZACION) y la inscripcion abre 4 dias antes de la clase; la liberacion ocurre 24 h despues de la clase, asi que una inscripcion hecha con mas de unos 3 dias de anticipacion perdia la autorizacion antes de capturarse. Alternativas evaluadas: capturar al liberar (descartada por lo anterior), capturar al inscribirse con todo reintegro como reembolso (descartada: todo reintegro pasa por un refund). Elegida por el usuario: capturar al finalizar la clase.
+ - shared/payments/OperacionesPagoMercadoPago (NUEVO): capturar(pago, instructorId) y reintegrar(pago, instructorId, actorId). reintegrar decide: sin capturar -> cancelar autorizacion -> Cancelado; capturado -> reembolso -> Reembolsado. Autorizacion ya vencida: no llama a Mercado Pago (ya la cancelo) y queda Cancelado. Pago sin mp_order_id (simulado, previo a MP-04): solo cambia de estado. Claves de idempotencia derivadas de la de la autorizacion con sufijos ":capture", ":cancel" y ":refund".
+ - finalizarclasesvencidas: metodo nuevo capturarPagosPendientes(), sin transaccion comun (cada pago se confirma por separado) y llamado por el scheduler despues de finalizar(); captura todo pago Retenido de Mercado Pago sin capturar de clases Finalizadas. Si una captura falla se registra en el log y se reintenta en la corrida siguiente (cada 5 minutos); si la autorizacion vencio, el pago pasa a Cancelado y se registra un error en el log.
+ - liberarpagos: ya no llama a Mercado Pago y no libera un pago de Mercado Pago sin capturar.
+ - cancelarclase, cancelarinscripcion, notificarausenciaprofesor, crearpenalizacion y resolverdenuncia (REINTEGRAR y SUSPENDER) reintegran por OperacionesPagoMercadoPago.
+ - PaymentGateway: se quitaron los metodos de transicion confirmarPago y cancelarPago (deprecados desde MP-04) y su implementacion en MercadoPagoGateway.
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas (Mercado Pago simulado con mocks). NO probado contra el sandbox de Mercado Pago.
+HISTORIAS DE USUARIO Y CRITERIOS: E2I-HU08 criterio 5 (reintegro al cancelar clase); E3A (cancelacion de inscripcion); E4Ad (resolucion de denuncias y penalizaciones).
+PANTALLAS: sin cambios
+REGLAS DE NEGOCIO: RN-04 (retencion y liberacion): el dinero se captura al finalizar la clase; Liberado pasa a ser un estado interno. Propuesta NUEVA RN-22: un pago de Mercado Pago se captura al finalizar la clase y se reintegra cancelando la autorizacion (antes de capturar) o reembolsando (despues).
+MODULOS: 8 Reservas y Pagos.
+CASOS DE USO: sin nuevos. Modificados: finalizarclasesvencidas, liberarpagos, cancelarclase, cancelarinscripcion, notificarausenciaprofesor, crearpenalizacion, resolverdenuncia.
+ENTIDADES Y MIGRACIONES: V30__pago_capturado_at.sql (NUEVA, idempotente): columna pago.capturado_at (TIMESTAMPTZ, nullable; nulo = no capturado). Aplicada a la base de Supabase al ejecutar la suite. AuditAccion suma PAGO_CAPTURADO y PAGO_REEMBOLSADO.
+TECNOLOGIAS: sin cambios
+COSTOS: sin cambios
+RIESGOS: R02 Mercado Pago - avanza: el ciclo completo de dinero ya opera contra Mercado Pago. Riesgo NUEVO asumido: un instructor que desvincula su cuenta con pagos retenidos no puede cancelar esas clases (el sistema responde 409) hasta volver a vincularla.
+SEGURIDAD: sin cambios. Los logs nunca incluyen el token del instructor, solo ids de pago y de orden.
+PRUEBAS:
+ - NUEVA OperacionesPagoMercadoPagoTest (11): captura con el token del instructor; no recaptura; autorizacion vencida -> Cancelado sin llamar; falla de Mercado Pago no marca capturado; pago simulado; reintegro sin capturar -> cancela; capturado -> reembolsa y audita; vencida -> sin llamar; falla de Mercado Pago no cambia el estado; sin cuenta vinculada propaga; pago no Retenido -> error.
+ - FinalizarClasesVencidasServiceTest +2 (captura con el instructor de la clase; si falla un pago siguen los demas). LiberarPagosServiceTest +2 (sin capturar no libera; capturado libera). MercadoPagoGatewayTest -2 (pruebas del camino legacy eliminado). Adaptadas: CancelarClase, CancelarInscripcion, NotificarAusenciaProfesor, CrearPenalizacion y ResolverDenuncia.
+ - Suite backend: 201 archivos / 921 pruebas: 919 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (comando: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw -q test; conteo sumando target/surefire-reports/*.txt; archivos: find src/test -name "*Test.java" | wc -l).
+ANALISIS ESTATICO: sin cambios
+DESPLIEGUE Y CONFIGURACION: sin variables nuevas.
+DECISIONES: ver DETALLE TECNICO (momento de la captura). El componente vive en shared/payments y no en un caso de uso, para no inyectar el Service de un caso de uso en otro (convencion del proyecto).
+ERRORES DETECTADOS: con el diseno anterior, la autorizacion vencia antes de capturarse en inscripciones hechas con mas de unos 3 dias de anticipacion. docs/mercadopago-integracion.md (sin versionar) describe captura inmediata y no coincide con lo implementado.
+CAPTURAS SUGERIDAS: auditoria con una fila "El sistema cobró en Mercado Pago un pago autorizado: la clase finalizó.".
+PENDIENTE QUE QUEDA: prueba en sandbox del ciclo completo (aprobado -> finalizada -> capturado -> liberado; aprobado -> denuncia -> reembolso); webhook; pantalla del frontend para vincular la cuenta.
+=== FIN ENTRADA 017 ===

@@ -67,6 +67,13 @@ public class Pago {
     @Column(name = "autorizado_hasta")
     private Instant autorizadoHasta;
 
+    /**
+     * Cuando se capturo la orden en MP (al finalizar la clase, KAN-65). Null = autorizado sin
+     * capturar: reintegrar es cancelar la autorizacion; con fecha, es reembolsar.
+     */
+    @Column(name = "capturado_at")
+    private Instant capturadoAt;
+
     /** Header X-Idempotency-Key enviado a MP: evita crear dos ordenes por un reintento. */
     @Column(name = "idempotency_key", length = 100, unique = true)
     private String idempotencyKey;

@@ -26,9 +26,6 @@ public class MercadoPagoGateway implements PaymentGateway {
 
     private static final Logger log = LoggerFactory.getLogger(MercadoPagoGateway.class);
 
-    /** Prefijo de los ids de orden de la Orders API. Lo que no lo tiene es un pago simulado viejo. */
-    static final String PREFIJO_ORDEN = "ORD";
-
     private final RestClient mpRestClient;
     private final ObjectMapper objectMapper;
 
@@ -81,33 +78,6 @@ public class MercadoPagoGateway implements PaymentGateway {
                 .header("Authorization", bearer(sellerToken))
                 .retrieve()
                 .body(MercadoPagoOrderResponse.class));
-    }
-
-    /**
-     * Transicion (KAN-65): sin el token del instructor no se puede operar una orden real. Un
-     * pago simulado de antes de MP-04 no tiene nada del lado de MP, asi que no hay que hacer
-     * nada. Una orden real NO se ignora: fallar revierte la operacion, que es preferible a marcar
-     * "reintegrado" algo que sigue reservado en la tarjeta del alumno.
-     */
-    @Override
-    @Deprecated
-    public void confirmarPago(String referenciaExterna) {
-        legacy("confirmar", referenciaExterna);
-    }
-
-    @Override
-    @Deprecated
-    public void cancelarPago(String referenciaExterna) {
-        legacy("cancelar", referenciaExterna);
-    }
-
-    private void legacy(String operacion, String referenciaExterna) {
-        if (referenciaExterna == null || !referenciaExterna.startsWith(PREFIJO_ORDEN)) {
-            log.info("Pago simulado previo a Mercado Pago real ({}): {} sin llamar a MP", referenciaExterna, operacion);
-            return;
-        }
-        log.error("Se intento {} la orden real {} por el camino legacy (pendiente KAN-65)", operacion, referenciaExterna);
-        throw new PagoException("Esta operación sobre pagos de Mercado Pago todavía no está disponible.");
     }
 
     private ResultadoPago accion(String accion, String sellerToken, String orderId, String idempotencyKey) {

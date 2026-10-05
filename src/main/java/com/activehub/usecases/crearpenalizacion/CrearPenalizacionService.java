@@ -23,7 +23,7 @@ import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
-import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.payments.OperacionesPagoMercadoPago;
 import com.activehub.shared.security.PermisosService;
 import com.activehub.shared.time.Zonas;
 import java.math.BigDecimal;
@@ -75,7 +75,7 @@ public class CrearPenalizacionService {
     private final ClaseRepository claseRepository;
     private final InscripcionRepository inscripcionRepository;
     private final PagoRepository pagoRepository;
-    private final PaymentGateway paymentGateway;
+    private final OperacionesPagoMercadoPago operacionesPago;
     private final AuditService auditService;
     private final NotificacionService notificacionService;
     private final PermisosService permisosService;
@@ -86,7 +86,7 @@ public class CrearPenalizacionService {
             ClaseRepository claseRepository,
             InscripcionRepository inscripcionRepository,
             PagoRepository pagoRepository,
-            PaymentGateway paymentGateway,
+            OperacionesPagoMercadoPago operacionesPago,
             AuditService auditService,
             NotificacionService notificacionService,
             PermisosService permisosService
@@ -96,7 +96,7 @@ public class CrearPenalizacionService {
         this.claseRepository = claseRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.pagoRepository = pagoRepository;
-        this.paymentGateway = paymentGateway;
+        this.operacionesPago = operacionesPago;
         this.auditService = auditService;
         this.notificacionService = notificacionService;
         this.permisosService = permisosService;
@@ -225,9 +225,7 @@ public class CrearPenalizacionService {
                 Pago pago = inscripcion.getPago();
                 String detallePago = "";
                 if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
-                    paymentGateway.cancelarPago(pago.getReferenciaExterna());
-                    pago.setEstado(EstadoPago.Cancelado);
-                    pagoRepository.save(pago);
+                    operacionesPago.reintegrar(pago, instructor.getId(), actorId);
                     detallePago = " Se reintegra el pago retenido.";
                 } else if (pago != null && pago.getEstado() == EstadoPago.Efectivo) {
                     pago.setEstado(EstadoPago.Cancelado);

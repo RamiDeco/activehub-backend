@@ -1,5 +1,7 @@
 package com.activehub.usecases.resolverdenuncia;
 
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.lenient;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,7 +38,7 @@ import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
-import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.payments.OperacionesPagoMercadoPago;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -71,7 +73,7 @@ class ResolverDenunciaServiceTest {
     @Mock
     private PenalizacionRepository penalizacionRepository;
     @Mock
-    private PaymentGateway paymentGateway;
+    private OperacionesPagoMercadoPago operacionesPago;
     @Mock
     private AuditService auditService;
     @Mock
@@ -89,9 +91,16 @@ class ResolverDenunciaServiceTest {
 
     @BeforeEach
     void setUp() {
+        // El componente real decide cancelar o reembolsar; aca solo importa que se lo llame y
+        // que el pago quede en el estado que devolveria para uno sin capturar.
+        lenient().when(operacionesPago.reintegrar(any(), any(), any())).thenAnswer(inv -> {
+            Pago p = inv.getArgument(0);
+            p.setEstado(EstadoPago.Cancelado);
+            return EstadoPago.Cancelado;
+        });
         service = new ResolverDenunciaService(
                 denunciaRepository, claseRepository, inscripcionRepository, pagoRepository, usuarioRepository,
-                penalizacionRepository, reseniaRepository, paymentGateway, auditService, notificacionService,
+                penalizacionRepository, reseniaRepository, operacionesPago, auditService, notificacionService,
                 Clock.fixed(AHORA, ZoneOffset.UTC));
 
         instructorId = UUID.randomUUID();
@@ -146,7 +155,7 @@ class ResolverDenunciaServiceTest {
         assertThat(response.estado()).isEqualTo("Resuelta");
         assertThat(inscripcion.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
-        verify(paymentGateway).cancelarPago("ref-1");
+        verify(operacionesPago).reintegrar(argThat(p -> "ref-1".equals(p.getReferenciaExterna())), any(), any());
         verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId), eq(Destino.denuncia(denunciaId)));
         verify(notificacionService, never()).notificar(eq(instructorId), any(), any(), any(), any());
     }
@@ -184,8 +193,8 @@ class ResolverDenunciaServiceTest {
 
         assertThat(deOtro.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         assertThat(pagoOtro.getEstado()).isEqualTo(EstadoPago.Cancelado);
-        verify(paymentGateway).cancelarPago("ref-1");
-        verify(paymentGateway).cancelarPago("ref-2");
+        verify(operacionesPago).reintegrar(argThat(p -> "ref-1".equals(p.getReferenciaExterna())), any(), any());
+        verify(operacionesPago).reintegrar(argThat(p -> "ref-2".equals(p.getReferenciaExterna())), any(), any());
         // Al que no denuncio tambien se le avisa: se le canceló una inscripción que él no pidió
         // cancelar.
         verify(notificacionService).notificar(
@@ -214,7 +223,7 @@ class ResolverDenunciaServiceTest {
 
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         assertThat(inscripcion.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
-        verify(paymentGateway, never()).cancelarPago(any());
+        verify(operacionesPago, never()).reintegrar(any(), any(), any());
     }
 
     private Inscripcion inscripcionDe(UUID alumno, Pago pago) {

@@ -1,5 +1,9 @@
 package com.activehub.usecases.crearpenalizacion;
 
+import com.activehub.domain.inscripcion.EstadoPago;
+import com.activehub.domain.inscripcion.Pago;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.lenient;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -20,7 +24,7 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
-import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.payments.OperacionesPagoMercadoPago;
 import com.activehub.shared.security.PermisosService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -46,7 +50,7 @@ class CrearPenalizacionServiceTest {
     @Mock private ClaseRepository claseRepository;
     @Mock private InscripcionRepository inscripcionRepository;
     @Mock private PagoRepository pagoRepository;
-    @Mock private PaymentGateway paymentGateway;
+    @Mock private OperacionesPagoMercadoPago operacionesPago;
 
     @InjectMocks private CrearPenalizacionService service;
 
@@ -56,6 +60,13 @@ class CrearPenalizacionServiceTest {
 
     @BeforeEach
     void setUp() {
+        // El componente real decide cancelar o reembolsar; aca solo importa que se lo llame y
+        // que el pago quede en el estado que devolveria para uno sin capturar.
+        lenient().when(operacionesPago.reintegrar(any(), any(), any())).thenAnswer(inv -> {
+            Pago p = inv.getArgument(0);
+            p.setEstado(EstadoPago.Cancelado);
+            return EstadoPago.Cancelado;
+        });
         usuarioId = UUID.randomUUID();
         adminId = UUID.randomUUID();
         usuario = new Usuario();
@@ -189,7 +200,7 @@ class CrearPenalizacionServiceTest {
         assertThat(inscripcion.getEstado())
                 .isEqualTo(com.activehub.domain.inscripcion.EstadoInscripcion.CANCELADA);
         assertThat(pago.getEstado()).isEqualTo(com.activehub.domain.inscripcion.EstadoPago.Cancelado);
-        verify(paymentGateway).cancelarPago("ref-1");
+        verify(operacionesPago).reintegrar(argThat(p -> "ref-1".equals(p.getReferenciaExterna())), any(), any());
         verify(notificacionService).notificar(
                 org.mockito.ArgumentMatchers.eq(alumno.getId()),
                 org.mockito.ArgumentMatchers.eq(com.activehub.shared.notificacion.TipoNotificacion.CLASE_CANCELADA),

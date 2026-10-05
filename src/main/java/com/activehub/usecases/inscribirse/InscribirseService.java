@@ -227,7 +227,7 @@ public class InscribirseService {
 
         pago.setEstado(EstadoPago.Retenido);
         pago.setMpOrderId(resultado.orderId());
-        // Los casos de uso legacy (KAN-65) todavia operan por referenciaExterna.
+        // Mismo valor que mpOrderId; se conserva por trazabilidad con los pagos previos a MP-04.
         pago.setReferenciaExterna(resultado.orderId());
         pago.setStatusDetail(resultado.statusDetail());
         pago.setIdempotencyKey(idempotencyKey);

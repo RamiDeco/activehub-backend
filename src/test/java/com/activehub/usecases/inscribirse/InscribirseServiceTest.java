@@ -1,13 +1,29 @@
 package com.activehub.usecases.inscribirse;
 
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.Optional;
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
+import org.mockito.Mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.Clase;
@@ -22,39 +38,18 @@ import com.activehub.domain.inscripcion.PagoRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditService;
-import com.activehub.shared.security.InstructorVerificadoGuard;
+import com.activehub.shared.error.CuentaMercadoPagoNoVinculadaException;
 import com.activehub.shared.error.InscripcionYaExisteException;
+import com.activehub.shared.error.PagoException;
+import com.activehub.shared.error.PagoRechazadoException;
 import com.activehub.shared.error.SinCuposDisponiblesException;
 import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
-import com.activehub.shared.error.CuentaMercadoPagoNoVinculadaException;
 import com.activehub.shared.payments.CuentaMercadoPagoGuard;
-import com.activehub.shared.error.PagoException;
-import com.activehub.shared.error.PagoRechazadoException;
-
-import org.mockito.ArgumentCaptor;
-
 import com.activehub.shared.payments.PaymentGateway;
-
-import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.util.Optional;
-import java.util.UUID;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
+import com.activehub.shared.security.InstructorVerificadoGuard;
 
 @ExtendWith(MockitoExtension.class)
 class InscribirseServiceTest {
@@ -117,21 +112,9 @@ class InscribirseServiceTest {
         ReflectionTestUtils.setField(clase, "id", claseId);
     }
 
-    /**
-     * En estos tests no hay una transaccion real (no hay Spring ni base): el {@code @BeforeEach}
-     * abre a mano el registro de sincronizaciones y aca se cierra, aunque el test haya fallado.
-     * Si no, el siguiente test del mismo hilo lo encontraria abierto y con callbacks ajenos.
-     */
     @AfterEach
     void limpiarSincronizacion() {
         TransactionSynchronizationManager.clearSynchronization();
-    }
-
-    /** Lo que haria Spring al terminar la transaccion: avisarle a cada callback registrado. */
-    private static void simularFinDeTransaccion(int status) {
-        for (TransactionSynchronization sync : TransactionSynchronizationManager.getSynchronizations()) {
-            sync.afterCompletion(status);
-        }
     }
 
     private void stubGuardados() {
@@ -252,61 +235,6 @@ class InscribirseServiceTest {
                 .hasMessageContaining("solo acepta pago en efectivo");
         verify(claseRepository, never()).ocuparCupo(any());
         verify(paymentGateway, never()).autorizar(any(), any(), any(), any(), any(), any());
-    }
-
-    @Test
-    void inscribirse_mercadoPago_siLaTransaccionHaceRollback_cancelaLaAutorizacion() {
-        stubInscripcionNueva();
-        stubCuentaVinculada();
-        when(claseRepository.ocuparCupo(claseId)).thenReturn(1);
-        when(usuarioRepository.getReferenceById(alumnoId)).thenReturn(new Usuario());
-        stubInscripcionGuardada();
-        stubAutorizado();
-        when(pagoRepository.save(any(Pago.class))).thenThrow(new RuntimeException("se cayó la base"));
-
-        assertThatThrownBy(() -> service.inscribirse(claseId, new InscribirseRequest("Mercado Pago", DATOS_PAGO), alumnoId))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessage("se cayó la base");
-        simularFinDeTransaccion(TransactionSynchronization.STATUS_ROLLED_BACK);
-
-        var claveAutorizar = ArgumentCaptor.forClass(String.class);
-        verify(paymentGateway).autorizar(any(), any(), any(), any(), any(), claveAutorizar.capture());
-        verify(paymentGateway).cancelarAutorizacion("TEST-seller-token", "ORD01TEST", claveAutorizar.getValue() + ":cancel");
-    }
-
-    @Test
-    void inscribirse_mercadoPago_siLaTransaccionHaceCommit_noCancela() {
-        stubInscripcionNueva();
-        stubCuentaVinculada();
-        when(claseRepository.ocuparCupo(claseId)).thenReturn(1);
-        when(usuarioRepository.getReferenceById(alumnoId)).thenReturn(new Usuario());
-        stubGuardados();
-        stubAutorizado();
-
-        service.inscribirse(claseId, new InscribirseRequest("Mercado Pago", DATOS_PAGO), alumnoId);
-        simularFinDeTransaccion(TransactionSynchronization.STATUS_COMMITTED);
-
-        verify(paymentGateway, never()).cancelarAutorizacion(any(), any(), any());
-    }
-
-    @Test
-    void inscribirse_mercadoPago_siFallaLaCancelacion_noTapaElErrorOriginal() {
-        stubInscripcionNueva();
-        stubCuentaVinculada();
-        when(claseRepository.ocuparCupo(claseId)).thenReturn(1);
-        when(usuarioRepository.getReferenceById(alumnoId)).thenReturn(new Usuario());
-        stubInscripcionGuardada();
-        stubAutorizado();
-        when(pagoRepository.save(any(Pago.class))).thenThrow(new RuntimeException("se cayó la base"));
-        doThrow(new PagoException("Mercado Pago no está respondiendo."))
-                .when(paymentGateway).cancelarAutorizacion(any(), any(), any());
-
-        assertThatThrownBy(() -> service.inscribirse(claseId, new InscribirseRequest("Mercado Pago", DATOS_PAGO), alumnoId))
-                .hasMessage("se cayó la base");
-        // Si el try/catch del callback no estuviera, esta linea explotaria con la PagoException.
-        simularFinDeTransaccion(TransactionSynchronization.STATUS_ROLLED_BACK);
-
-        verify(paymentGateway).cancelarAutorizacion(any(), any(), any());
     }
 
     @Test

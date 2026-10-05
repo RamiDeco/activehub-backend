@@ -26,20 +26,6 @@ public interface PaymentGateway {
     /** Estado actual de la orden (lo usa el webhook). */
     ResultadoPago consultar(String sellerToken, String orderId);
 
-    /**
-     * @deprecated transicion de MP-04: los casos de uso todavia no pasan el token del
-     * instructor. Se reemplaza por {@link #capturar} en KAN-65.
-     */
-    @Deprecated
-    void confirmarPago(String referenciaExterna);
-
-    /**
-     * @deprecated transicion de MP-04. Se reemplaza por {@link #cancelarAutorizacion} /
-     * {@link #reembolsar} en KAN-65.
-     */
-    @Deprecated
-    void cancelarPago(String referenciaExterna);
-
     /** Estado de la orden tal como lo devuelve Mercado Pago ({@code status} / {@code status_detail}). */
     record ResultadoPago(String orderId, String status, String statusDetail) {
 

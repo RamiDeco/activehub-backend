@@ -11,7 +11,6 @@ import com.activehub.domain.inscripcion.PagoRepository;
 import com.activehub.domain.inscripcion.VentanaPagos;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
-import com.activehub.shared.payments.PaymentGateway;
 import java.time.Clock;
 import java.time.Instant;
 import org.springframework.stereotype.Service;
@@ -26,8 +25,14 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>el pago esta Retenido (los Efectivo se cobran mano a mano y los Cancelado ya se reintegraron);</li>
  *   <li>la inscripcion sigue Inscripto (si el alumno cancelo, el pago ya paso a Cancelado);</li>
  *   <li>la clase esta Finalizada y pasaron {@link VentanaPagos#PERIODO_DENUNCIAS} desde su horario;</li>
- *   <li>no hay ninguna denuncia abierta sobre esa clase.</li>
+ *   <li>no hay ninguna denuncia abierta sobre esa clase;</li>
+ *   <li>si es de Mercado Pago, ya se capturo (KAN-65: lo captura {@code finalizarclasesvencidas}).</li>
  * </ol>
+ *
+ * <p>Liberar NO llama a Mercado Pago: la plata ya esta en la cuenta del instructor desde la
+ * captura. {@code Liberado} es un estado interno que significa "paso el periodo de denuncias y
+ * ya no se reintegra". Un pago autorizado cuya captura fallo se queda Retenido: liberarlo seria
+ * dar por cobrado algo que MP nunca cobro.
  *
  * <p>Si hay una denuncia sin resolver el pago se queda Retenido: cuando el admin la
  * resuelve, o bien reintegra (y el pago pasa a Cancelado) o bien la desestima, y en la
@@ -38,20 +43,17 @@ public class LiberarPagosService {
 
     private final PagoRepository pagoRepository;
     private final DenunciaRepository denunciaRepository;
-    private final PaymentGateway paymentGateway;
     private final AuditService auditService;
     private final Clock clock;
 
     public LiberarPagosService(
             PagoRepository pagoRepository,
             DenunciaRepository denunciaRepository,
-            PaymentGateway paymentGateway,
             AuditService auditService,
             Clock clock
     ) {
         this.pagoRepository = pagoRepository;
         this.denunciaRepository = denunciaRepository;
-        this.paymentGateway = paymentGateway;
         this.auditService = auditService;
         this.clock = clock;
     }
@@ -78,7 +80,10 @@ public class LiberarPagosService {
                 continue;
             }
 
-            paymentGateway.confirmarPago(pago.getReferenciaExterna());
+            if (pago.getMpOrderId() != null && pago.getCapturadoAt() == null) {
+                continue;
+            }
+
             pago.setEstado(EstadoPago.Liberado);
             pagoRepository.save(pago);
 

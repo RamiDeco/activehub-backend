@@ -88,6 +88,8 @@ final class DescripcionAuditoria {
             case COBRO_EFECTIVO_CONFIRMADO -> actor + " confirmó el cobro en efectivo de una inscripción.";
             case MERCADOPAGO_VINCULADA -> actor + " vinculó su cuenta de Mercado Pago.";
             case PAGO_LIBERADO -> "El sistema liberó un pago al instructor: la clase finalizó y pasó el período de denuncias.";
+            case PAGO_CAPTURADO -> "El sistema cobró en Mercado Pago un pago autorizado: la clase finalizó.";
+            case PAGO_REEMBOLSADO -> "Se reembolsó en Mercado Pago un pago ya cobrado.";
 
             case RESENIA_CREADA -> actor + " escribió una reseña.";
             case RESENIA_ACTUALIZADA -> actor + " editó su reseña; vuelve a moderación.";

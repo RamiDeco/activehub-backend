@@ -1,5 +1,7 @@
 package com.activehub.usecases.cancelarclase;
 
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.lenient;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,7 +30,7 @@ import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
-import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.payments.OperacionesPagoMercadoPago;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -51,7 +53,7 @@ class CancelarClaseServiceTest {
     @Mock
     private PagoRepository pagoRepository;
     @Mock
-    private PaymentGateway paymentGateway;
+    private OperacionesPagoMercadoPago operacionesPago;
     @Mock
     private NotificacionService notificacionService;
     @Mock
@@ -67,8 +69,15 @@ class CancelarClaseServiceTest {
 
     @BeforeEach
     void setUp() {
+        // El componente real decide cancelar o reembolsar; aca solo importa que se lo llame y
+        // que el pago quede en el estado que devolveria para uno sin capturar.
+        lenient().when(operacionesPago.reintegrar(any(), any(), any())).thenAnswer(inv -> {
+            Pago p = inv.getArgument(0);
+            p.setEstado(EstadoPago.Cancelado);
+            return EstadoPago.Cancelado;
+        });
         service = new CancelarClaseService(
-                claseRepository, inscripcionRepository, pagoRepository, paymentGateway, notificacionService, auditService, instructorVerificadoGuard);
+                claseRepository, inscripcionRepository, pagoRepository, operacionesPago, notificacionService, auditService, instructorVerificadoGuard);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();
@@ -118,7 +127,7 @@ class CancelarClaseServiceTest {
         assertThat(clase.getEstado()).isEqualTo(EstadoClase.Cancelada);
         assertThat(inscripto.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
-        verify(paymentGateway).cancelarPago("ref-abc");
+        verify(operacionesPago).reintegrar(argThat(p -> "ref-abc".equals(p.getReferenciaExterna())), any(), any());
         verify(notificacionService).notificar(
                 eq(inscripto.getAlumno().getId()), eq(TipoNotificacion.CLASE_CANCELADA), any(), eq(claseId), eq(Destino.clase(claseId)));
     }
@@ -142,7 +151,7 @@ class CancelarClaseServiceTest {
         // pero el registro no puede quedar como un pago válido de una clase que no existe.
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         assertThat(pendiente.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
-        verify(paymentGateway, never()).cancelarPago(any());
+        verify(operacionesPago, never()).reintegrar(any(), any(), any());
         verify(pagoRepository).save(pago);
     }
 

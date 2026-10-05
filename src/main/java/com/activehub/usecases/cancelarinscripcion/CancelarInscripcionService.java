@@ -6,7 +6,6 @@ import com.activehub.domain.inscripcion.EstadoPago;
 import com.activehub.domain.inscripcion.Inscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.domain.inscripcion.Pago;
-import com.activehub.domain.inscripcion.PagoRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
@@ -16,7 +15,7 @@ import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
-import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.payments.OperacionesPagoMercadoPago;
 import java.time.Clock;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -27,8 +26,7 @@ public class CancelarInscripcionService {
 
     private final InscripcionRepository inscripcionRepository;
     private final ClaseRepository claseRepository;
-    private final PagoRepository pagoRepository;
-    private final PaymentGateway paymentGateway;
+    private final OperacionesPagoMercadoPago operacionesPago;
     private final AuditService auditService;
     private final NotificacionService notificacionService;
     private final Clock clock;
@@ -36,16 +34,14 @@ public class CancelarInscripcionService {
     public CancelarInscripcionService(
             InscripcionRepository inscripcionRepository,
             ClaseRepository claseRepository,
-            PagoRepository pagoRepository,
-            PaymentGateway paymentGateway,
+            OperacionesPagoMercadoPago operacionesPago,
             AuditService auditService,
             NotificacionService notificacionService,
             Clock clock
     ) {
         this.inscripcionRepository = inscripcionRepository;
         this.claseRepository = claseRepository;
-        this.pagoRepository = pagoRepository;
-        this.paymentGateway = paymentGateway;
+        this.operacionesPago = operacionesPago;
         this.auditService = auditService;
         this.notificacionService = notificacionService;
         this.clock = clock;
@@ -82,9 +78,7 @@ public class CancelarInscripcionService {
         }
 
         if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
-            paymentGateway.cancelarPago(pago.getReferenciaExterna());
-            pago.setEstado(EstadoPago.Cancelado);
-            pagoRepository.save(pago);
+            operacionesPago.reintegrar(pago, instructorId, alumnoId);
         }
 
         inscripcion.setEstado(EstadoInscripcion.CANCELADA);

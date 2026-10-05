@@ -1,0 +1,196 @@
+package com.activehub.shared.payments;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import com.activehub.domain.inscripcion.EstadoPago;
+import com.activehub.domain.inscripcion.Pago;
+import com.activehub.domain.inscripcion.PagoRepository;
+import com.activehub.shared.audit.AuditAccion;
+import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.error.CuentaMercadoPagoNoVinculadaException;
+import com.activehub.shared.error.PagoException;
+import com.activehub.shared.payments.PaymentGateway.ResultadoPago;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+@ExtendWith(MockitoExtension.class)
+class OperacionesPagoMercadoPagoTest {
+
+    private static final Instant AHORA = Instant.parse("2026-10-05T12:00:00Z");
+    private static final String TOKEN = "seller-token";
+    private static final String ORDEN = "ORD01ABC";
+
+    @Mock private PaymentGateway paymentGateway;
+    @Mock private CuentaMercadoPagoGuard cuentaGuard;
+    @Mock private PagoRepository pagoRepository;
+    @Mock private AuditService auditService;
+
+    private OperacionesPagoMercadoPago operaciones;
+    private UUID instructorId;
+    private UUID actorId;
+    private Pago pago;
+
+    @BeforeEach
+    void setUp() {
+        operaciones = new OperacionesPagoMercadoPago(
+                paymentGateway, cuentaGuard, pagoRepository, auditService, Clock.fixed(AHORA, ZoneOffset.UTC));
+        instructorId = UUID.randomUUID();
+        actorId = UUID.randomUUID();
+
+        pago = new Pago();
+        pago.setEstado(EstadoPago.Retenido);
+        pago.setMpOrderId(ORDEN);
+        pago.setIdempotencyKey("idem-1");
+        pago.setAutorizadoHasta(AHORA.plus(Duration.ofDays(2)));
+        ReflectionTestUtils.setField(pago, "id", UUID.randomUUID());
+    }
+
+    // --- capturar ---------------------------------------------------------------------
+
+    @Test
+    void capturar_autorizadoVigente_capturaConElTokenDelInstructorYSigueRetenido() {
+        when(cuentaGuard.exigirCuentaVinculada(instructorId)).thenReturn(TOKEN);
+        when(paymentGateway.capturar(TOKEN, ORDEN, "idem-1:capture"))
+                .thenReturn(new ResultadoPago(ORDEN, "processed", "accredited"));
+
+        operaciones.capturar(pago, instructorId);
+
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Retenido);
+        assertThat(pago.getCapturadoAt()).isEqualTo(AHORA);
+        assertThat(pago.getAutorizadoHasta()).isNull();
+        assertThat(pago.getStatusDetail()).isEqualTo("accredited");
+        verify(pagoRepository).save(pago);
+        verify(auditService).registrar(isNull(), eq(AuditAccion.PAGO_CAPTURADO), eq("Pago"), eq(pago.getId()), isNull());
+    }
+
+    @Test
+    void capturar_yaCapturado_noVuelveACapturar() {
+        pago.setCapturadoAt(AHORA.minus(Duration.ofHours(1)));
+
+        operaciones.capturar(pago, instructorId);
+
+        verifyNoInteractions(paymentGateway, cuentaGuard, pagoRepository);
+    }
+
+    @Test
+    void capturar_autorizacionVencida_pasaACanceladoSinLlamarAMercadoPago() {
+        pago.setAutorizadoHasta(AHORA.minus(Duration.ofMinutes(1)));
+
+        operaciones.capturar(pago, instructorId);
+
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
+        assertThat(pago.getCapturadoAt()).isNull();
+        verifyNoInteractions(paymentGateway);
+        verify(pagoRepository).save(pago);
+    }
+
+    @Test
+    void capturar_mercadoPagoFalla_propagaYNoMarcaCapturado() {
+        when(cuentaGuard.exigirCuentaVinculada(instructorId)).thenReturn(TOKEN);
+        when(paymentGateway.capturar(any(), any(), any())).thenThrow(new PagoException("caido"));
+
+        assertThatThrownBy(() -> operaciones.capturar(pago, instructorId)).isInstanceOf(PagoException.class);
+
+        assertThat(pago.getCapturadoAt()).isNull();
+        verify(pagoRepository, never()).save(any());
+    }
+
+    @Test
+    void capturar_pagoSimuladoViejo_soloMarcaCapturadoSinLlamarAMercadoPago() {
+        pago.setMpOrderId(null);
+
+        operaciones.capturar(pago, instructorId);
+
+        assertThat(pago.getCapturadoAt()).isEqualTo(AHORA);
+        verifyNoInteractions(paymentGateway, cuentaGuard);
+    }
+
+    // --- reintegrar -------------------------------------------------------------------
+
+    @Test
+    void reintegrar_sinCapturar_cancelaLaAutorizacion() {
+        when(cuentaGuard.exigirCuentaVinculada(instructorId)).thenReturn(TOKEN);
+        when(paymentGateway.cancelarAutorizacion(TOKEN, ORDEN, "idem-1:cancel"))
+                .thenReturn(new ResultadoPago(ORDEN, "canceled", "canceled"));
+
+        EstadoPago estado = operaciones.reintegrar(pago, instructorId, actorId);
+
+        assertThat(estado).isEqualTo(EstadoPago.Cancelado);
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
+        verify(paymentGateway, never()).reembolsar(any(), any(), any());
+        verify(pagoRepository).save(pago);
+    }
+
+    @Test
+    void reintegrar_capturado_reembolsaYAudita() {
+        pago.setCapturadoAt(AHORA.minus(Duration.ofHours(3)));
+        pago.setAutorizadoHasta(null);
+        when(cuentaGuard.exigirCuentaVinculada(instructorId)).thenReturn(TOKEN);
+        when(paymentGateway.reembolsar(TOKEN, ORDEN, "idem-1:refund"))
+                .thenReturn(new ResultadoPago(ORDEN, "refunded", "refunded"));
+
+        EstadoPago estado = operaciones.reintegrar(pago, instructorId, actorId);
+
+        assertThat(estado).isEqualTo(EstadoPago.Reembolsado);
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Reembolsado);
+        verify(paymentGateway, never()).cancelarAutorizacion(any(), any(), any());
+        verify(auditService).registrar(eq(actorId), eq(AuditAccion.PAGO_REEMBOLSADO), eq("Pago"), eq(pago.getId()), isNull());
+    }
+
+    @Test
+    void reintegrar_autorizacionYaVencida_quedaCanceladoSinLlamarAMercadoPago() {
+        // MP la cancelo sola: pedirlo daria error y frenaria, por ejemplo, la cancelacion de la clase.
+        pago.setAutorizadoHasta(AHORA.minus(Duration.ofHours(1)));
+
+        EstadoPago estado = operaciones.reintegrar(pago, instructorId, actorId);
+
+        assertThat(estado).isEqualTo(EstadoPago.Cancelado);
+        verifyNoInteractions(paymentGateway, cuentaGuard);
+    }
+
+    @Test
+    void reintegrar_mercadoPagoFalla_propagaYNoCambiaElEstado() {
+        when(cuentaGuard.exigirCuentaVinculada(instructorId)).thenReturn(TOKEN);
+        when(paymentGateway.cancelarAutorizacion(any(), any(), any())).thenThrow(new PagoException("caido"));
+
+        assertThatThrownBy(() -> operaciones.reintegrar(pago, instructorId, actorId)).isInstanceOf(PagoException.class);
+
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Retenido);
+        verify(pagoRepository, never()).save(any());
+    }
+
+    @Test
+    void reintegrar_instructorSinCuentaVinculada_propaga() {
+        when(cuentaGuard.exigirCuentaVinculada(instructorId)).thenThrow(new CuentaMercadoPagoNoVinculadaException());
+
+        assertThatThrownBy(() -> operaciones.reintegrar(pago, instructorId, actorId))
+                .isInstanceOf(CuentaMercadoPagoNoVinculadaException.class);
+
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Retenido);
+    }
+
+    @Test
+    void reintegrar_pagoQueNoEstaRetenido_esUnErrorDeProgramacion() {
+        pago.setEstado(EstadoPago.Liberado);
+
+        assertThatThrownBy(() -> operaciones.reintegrar(pago, instructorId, actorId))
+                .isInstanceOf(IllegalStateException.class);
+    }
+}

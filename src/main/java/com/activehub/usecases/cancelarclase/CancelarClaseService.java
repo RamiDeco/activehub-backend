@@ -18,7 +18,7 @@ import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
-import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.payments.OperacionesPagoMercadoPago;
 import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,7 @@ public class CancelarClaseService {
     private final ClaseRepository claseRepository;
     private final InscripcionRepository inscripcionRepository;
     private final PagoRepository pagoRepository;
-    private final PaymentGateway paymentGateway;
+    private final OperacionesPagoMercadoPago operacionesPago;
     private final NotificacionService notificacionService;
     private final AuditService auditService;
 
@@ -40,7 +40,7 @@ public class CancelarClaseService {
             ClaseRepository claseRepository,
             InscripcionRepository inscripcionRepository,
             PagoRepository pagoRepository,
-            PaymentGateway paymentGateway,
+            OperacionesPagoMercadoPago operacionesPago,
             NotificacionService notificacionService,
             AuditService auditService,
             InstructorVerificadoGuard instructorVerificadoGuard
@@ -48,7 +48,7 @@ public class CancelarClaseService {
         this.claseRepository = claseRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.pagoRepository = pagoRepository;
-        this.paymentGateway = paymentGateway;
+        this.operacionesPago = operacionesPago;
         this.notificacionService = notificacionService;
         this.auditService = auditService;
         this.instructorVerificadoGuard = instructorVerificadoGuard;
@@ -81,9 +81,7 @@ public class CancelarClaseService {
             // ya se cobraron en Efectivo; ambos quedan en Cancelado. Antes el efectivo no se
             // tocaba y el alumno seguía viendo su pago como válido para una clase que no existe.
             if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
-                paymentGateway.cancelarPago(pago.getReferenciaExterna());
-                pago.setEstado(EstadoPago.Cancelado);
-                pagoRepository.save(pago);
+                operacionesPago.reintegrar(pago, instructorId, instructorId);
                 detallePago = " Se reintegra el pago retenido.";
             } else if (pago != null && pago.getEstado() == EstadoPago.Efectivo) {
                 // No hay gateway al que pedirle nada: la plata la cobró el instructor en mano.

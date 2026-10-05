@@ -17,5 +17,8 @@ public class FinalizarClasesVencidasScheduler {
     @Scheduled(fixedRate = CADA_5_MINUTOS)
     public void ejecutar() {
         finalizarClasesVencidasService.finalizar();
+        // Despues de finalizar, y como llamada aparte: finalizar() commitea antes de que se
+        // capture nada, y las capturas no comparten su transaccion (ver el javadoc).
+        finalizarClasesVencidasService.capturarPagosPendientes();
     }
 }

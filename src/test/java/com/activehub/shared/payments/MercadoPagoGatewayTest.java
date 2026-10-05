@@ -178,17 +178,4 @@ class MercadoPagoGatewayTest {
 
         assertThat(gateway.consultar(SELLER, "ORD01ABC").autorizado()).isTrue();
     }
-
-    @Test
-    void legacy_pagoSimuladoViejo_noLlamaAMercadoPago() {
-        gateway.cancelarPago("3f1c9a4e-0000-4000-8000-000000000000");
-        gateway.confirmarPago(null);
-        server.verify();
-    }
-
-    @Test
-    void legacy_ordenReal_fallaEnVezDeIgnorarla() {
-        assertThatThrownBy(() -> gateway.cancelarPago("ORD01ABC")).isInstanceOf(PagoException.class);
-        assertThatThrownBy(() -> gateway.confirmarPago("ORD01ABC")).isInstanceOf(PagoException.class);
-    }
 }

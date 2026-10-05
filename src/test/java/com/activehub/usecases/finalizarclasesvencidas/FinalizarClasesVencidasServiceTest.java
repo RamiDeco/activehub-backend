@@ -1,5 +1,11 @@
 package com.activehub.usecases.finalizarclasesvencidas;
 
+import com.activehub.shared.error.PagoException;
+import static org.mockito.Mockito.doThrow;
+import com.activehub.domain.usuario.Usuario;
+import com.activehub.domain.actividad.Actividad;
+import com.activehub.shared.payments.OperacionesPagoMercadoPago;
+import com.activehub.domain.inscripcion.PagoRepository;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -42,6 +48,10 @@ class FinalizarClasesVencidasServiceTest {
     @Mock
     private InscripcionRepository inscripcionRepository;
     @Mock
+    private PagoRepository pagoRepository;
+    @Mock
+    private OperacionesPagoMercadoPago operacionesPago;
+    @Mock
     private AuditService auditService;
 
     private FinalizarClasesVencidasService service;
@@ -51,7 +61,8 @@ class FinalizarClasesVencidasServiceTest {
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(AHORA, ZoneOffset.UTC);
-        service = new FinalizarClasesVencidasService(claseRepository, inscripcionRepository, auditService, clock);
+        service = new FinalizarClasesVencidasService(
+                claseRepository, inscripcionRepository, pagoRepository, operacionesPago, auditService, clock);
 
         claseId = UUID.randomUUID();
         clase = new Clase();
@@ -149,5 +160,49 @@ class FinalizarClasesVencidasServiceTest {
         service.finalizar();
 
         verify(auditService, org.mockito.Mockito.never()).registrar(any(), any(), any(), any(), any());
+    }
+
+    private Pago pagoMercadoPagoDeClaseFinalizada(UUID instructorId) {
+        Usuario instructor = new Usuario();
+        ReflectionTestUtils.setField(instructor, "id", instructorId);
+        Actividad actividad = new Actividad();
+        actividad.setInstructor(instructor);
+        clase.setActividad(actividad);
+        clase.setEstado(EstadoClase.Finalizada);
+
+        Pago pago = new Pago();
+        pago.setEstado(EstadoPago.Retenido);
+        pago.setMpOrderId("ORD-" + UUID.randomUUID());
+        ReflectionTestUtils.setField(pago, "id", UUID.randomUUID());
+        pago.setInscripcion(inscripcionCon(EstadoInscripcion.INSCRIPTO, pago));
+        return pago;
+    }
+
+    @Test
+    void capturarPagosPendientes_capturaConElInstructorDeLaClase() {
+        UUID instructorId = UUID.randomUUID();
+        Pago pago = pagoMercadoPagoDeClaseFinalizada(instructorId);
+        when(pagoRepository.findSinCapturarDeClasesEn(EstadoPago.Retenido, EstadoClase.Finalizada))
+                .thenReturn(List.of(pago));
+
+        int capturados = service.capturarPagosPendientes();
+
+        assertThat(capturados).isEqualTo(1);
+        verify(operacionesPago).capturar(pago, instructorId);
+    }
+
+    @Test
+    void capturarPagosPendientes_siFallaUno_siguenLosDemas() {
+        UUID instructorId = UUID.randomUUID();
+        Pago falla = pagoMercadoPagoDeClaseFinalizada(instructorId);
+        Pago anda = pagoMercadoPagoDeClaseFinalizada(instructorId);
+        when(pagoRepository.findSinCapturarDeClasesEn(EstadoPago.Retenido, EstadoClase.Finalizada))
+                .thenReturn(List.of(falla, anda));
+        doThrow(new PagoException("MP caido")).when(operacionesPago).capturar(falla, instructorId);
+
+        int capturados = service.capturarPagosPendientes();
+
+        assertThat(capturados).isEqualTo(1);
+        verify(operacionesPago).capturar(anda, instructorId);
     }
 }

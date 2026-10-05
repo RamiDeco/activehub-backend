@@ -1,5 +1,7 @@
 package com.activehub.usecases.notificarausenciaprofesor;
 
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.lenient;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -18,7 +20,6 @@ import com.activehub.domain.inscripcion.Inscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.domain.inscripcion.MetodoPago;
 import com.activehub.domain.inscripcion.Pago;
-import com.activehub.domain.inscripcion.PagoRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.security.InstructorVerificadoGuard;
@@ -28,7 +29,7 @@ import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
-import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.payments.OperacionesPagoMercadoPago;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -48,9 +49,7 @@ class NotificarAusenciaProfesorServiceTest {
     @Mock
     private InscripcionRepository inscripcionRepository;
     @Mock
-    private PagoRepository pagoRepository;
-    @Mock
-    private PaymentGateway paymentGateway;
+    private OperacionesPagoMercadoPago operacionesPago;
     @Mock
     private NotificacionService notificacionService;
     @Mock
@@ -67,8 +66,15 @@ class NotificarAusenciaProfesorServiceTest {
 
     @BeforeEach
     void setUp() {
+        // El componente real decide cancelar o reembolsar; aca solo importa que se lo llame y
+        // que el pago quede en el estado que devolveria para uno sin capturar.
+        lenient().when(operacionesPago.reintegrar(any(), any(), any())).thenAnswer(inv -> {
+            Pago p = inv.getArgument(0);
+            p.setEstado(EstadoPago.Cancelado);
+            return EstadoPago.Cancelado;
+        });
         service = new NotificarAusenciaProfesorService(
-                claseRepository, inscripcionRepository, pagoRepository, paymentGateway, notificacionService, auditService, instructorVerificadoGuard);
+                claseRepository, inscripcionRepository, operacionesPago, notificacionService, auditService, instructorVerificadoGuard);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();
@@ -121,7 +127,7 @@ class NotificarAusenciaProfesorServiceTest {
         assertThat(clase.getEstado()).isEqualTo(EstadoClase.Cancelada);
         assertThat(inscripto.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
-        verify(paymentGateway).cancelarPago("ref-abc");
+        verify(operacionesPago).reintegrar(argThat(p -> "ref-abc".equals(p.getReferenciaExterna())), any(), any());
         verify(notificacionService).notificar(
                 eq(alumnoId), eq(TipoNotificacion.AUSENCIA_PROFESOR), eq(request.mensaje()), eq(claseId), eq(Destino.clase(claseId)));
     }
