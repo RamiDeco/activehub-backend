@@ -35,7 +35,7 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-10-07, despues de la ENTRADA 019) ===
+=== ESTADO GENERAL (actualizado: 2026-10-07, despues de la ENTRADA 020) ===
 Casos de uso implementados en el backend: 114
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
@@ -1466,3 +1466,47 @@ ERRORES DETECTADOS: ninguno del sistema; la configuracion del sandbox era incorr
 CAPTURAS SUGERIDAS: inscripcion confirmada con Mercado Pago; movimiento reservado en la cuenta del vendedor de prueba.
 PENDIENTE QUE QUEDA: verificar la captura en sandbox cuando finalice la clase (KAN-65); probar un reintegro (cancelar la inscripcion); webhook (KAN-60).
 === FIN ENTRADA 019 ===
+
+=== ENTRADA 020 ===
+FECHA: 2026-10-07
+REPOSITORIO: activehub-frontend
+RAMA Y COMMITS: integracion - 3f4a8e1 - sin Pull Request
+TIPO: CAMBIO FUNCIONAL
+TITULO: Checkout con Mercado Pago: resultado segun el estado real, solo tarjeta de credito y reintento (KAN-59 / MP-10)
+
+QUE CAMBIA PARA EL USUARIO:
+ - Alumno, pantalla de resultado de la inscripcion con Mercado Pago: ahora depende de lo que respondio el backend. Si el pago quedo reservado, se confirma la inscripcion y se aclara que el cobro se hace despues de la clase. Si Mercado Pago lo dejo en revision, se informa que se espera su confirmacion (icono de reloj). Antes decia "Tu pago fue aprobado" en los dos casos, lo cual era falso: el pago se reserva, no se cobra, y en revision ni siquiera esta aprobado.
+ - El formulario de tarjeta acepta solo tarjetas de CREDITO (sin debito ni prepagas).
+ - Si Mercado Pago rechaza la tarjeta, el mensaje queda visible y el formulario se reinicia para probar con otra.
+TEXTOS DE INTERFAZ (literales):
+ - Opcion de pago: "MercadoPago" / "Tarjeta de crédito" (antes "Tarjeta de crédito, débito o dinero en cuenta").
+ - Panel de pago: "Vas a completar los datos de tu tarjeta de crédito en una ventana segura de MercadoPago. El monto queda reservado en tu tarjeta y se cobra después de la clase."
+ - Modal: "Completá los datos de tu tarjeta de crédito para confirmar el pago".
+ - Resultado, pago reservado: titulo "¡Inscripción confirmada!"; texto "Tu lugar en <actividad> del <fecha> quedó confirmado. El cobro se hace efectivo después de la clase: hasta entonces el monto queda reservado en tu tarjeta."
+ - Resultado, en revision: titulo "Estamos esperando la confirmación de Mercado Pago"; texto "Tu lugar en <actividad> del <fecha> está reservado mientras Mercado Pago revisa el pago. Te avisamos con una notificación apenas se confirme."
+ - Efectivo: sin cambios ("¡Inscripción registrada!").
+DETALLE TECNICO:
+ - DataContext.inscribirse devuelve la respuesta de POST /inscripciones (id, estado, pagoId; null en una preinscripcion). Inscripcion.tsx decide el texto por el estado devuelto.
+ - ModalPagoMercadoPago: customization.paymentMethods.types.excluded = debit_card y prepaid_card (la captura manual de la Orders API es solo para credito; con debito MP responde 400). Tras un rechazo se incrementa un contador que vuelve a montar el Brick (el token de tarjeta es de un solo uso).
+ - Ya estaban hechos desde KAN-53/57: Brick con la public key del instructor (una instancia del SDK por key) y onSubmit sin monto ni referencia.
+ESTADO: IMPLEMENTADO. Compila y pasan las pruebas existentes. Pruebas en sandbox APRO / OTHE / CONT: PENDIENTE (manual).
+HISTORIAS DE USUARIO Y CRITERIOS: E3A (inscripcion y pago).
+PANTALLAS: Inscripcion y pago del alumno (pantalla de resultado y modal de pago).
+REGLAS DE NEGOCIO: el pago con Mercado Pago es solo con tarjeta de credito (reserva con captura posterior, MP-01).
+MODULOS: 8 Reservas y Pagos.
+CASOS DE USO: sin cambios en el backend.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin cambios.
+RIESGOS: R02 Mercado Pago - avanza.
+SEGURIDAD: sin cambios (el request de inscripcion sigue sin monto ni referencia).
+PRUEBAS: frontend 17 archivos / 145 pruebas en verde (npx vitest run); "npx tsc -b" sin errores; "npm run build" ok; "npx eslint ." -> "11 problems (0 errors, 11 warnings)", sin cambios.
+ANALISIS ESTATICO: ver PRUEBAS.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES:
+ - 3DS (punto 5 del ticket): NO se implementa en esta tarea. En la Orders API el 3DS es opcional y esta apagado por defecto: solo corre si la orden se crea con config.online.transaction_security.validation = on_fraud_risk; sin ese campo vale "never" y Mercado Pago nunca pide el desafio. Activarlo requiere backend (devolver la URL del desafio, mostrarla en un iframe y consultar el estado o recibir el webhook) y combinarlo con la captura manual; queda como tarea aparte, posterior al webhook (KAN-60).
+ - El texto de resultado se basa en el estado devuelto por el backend y no en el metodo elegido.
+ERRORES DETECTADOS: desde KAN-58 la pantalla decia "Tu pago fue aprobado" para un pago que Mercado Pago dejo en revision.
+CAPTURAS SUGERIDAS: pantalla "Estamos esperando la confirmación de Mercado Pago"; modal con el rechazo y el formulario listo para otra tarjeta.
+PENDIENTE QUE QUEDA: probar en sandbox APRO (confirmada y visible en "Mis clases"), OTHE (rechazo, sin inscripcion, cupo intacto) y CONT (pantalla de revision); 3DS en tarea aparte.
+=== FIN ENTRADA 020 ===
