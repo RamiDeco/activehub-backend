@@ -97,12 +97,19 @@ public class MercadoPagoGateway implements PaymentGateway {
         try {
             response = llamada.get();
         } catch (RestClientResponseException ex) {
-            log.error("Mercado Pago HTTP {} al {} {}: {}", ex.getStatusCode(), operacion, referencia,
-                    ex.getResponseBodyAsString());
+            // El body de MP repite el token de la tarjeta: nunca se loguea sin recortar.
+            String cuerpo = MercadoPagoHttpLog.ocultar(ex.getResponseBodyAsString(), false);
             MercadoPagoOrderResponse fallida = ordenFallida(ex.getResponseBodyAsString());
             if (fallida != null) {
-                throw new PagoRechazadoException(detalleRechazo(fallida));
+                // Un rechazo de la tarjeta es un resultado del negocio, no una falla del sistema:
+                // WARN y no ERROR, para que el monitoreo no trate cada tarjeta rechazada como alarma.
+                String detalle = detalleRechazo(fallida);
+                log.warn("Mercado Pago rechazo el pago al {} {}: {} (HTTP {})", operacion, referencia, detalle,
+                        ex.getStatusCode().value());
+                log.debug("Respuesta completa del rechazo: {}", cuerpo);
+                throw new PagoRechazadoException(detalle);
             }
+            log.error("Mercado Pago HTTP {} al {} {}: {}", ex.getStatusCode(), operacion, referencia, cuerpo);
             if (ex.getStatusCode().is4xxClientError()) {
                 throw new PagoException("Mercado Pago no aceptó la operación (" + ex.getStatusCode().value() + ").");
             }
@@ -117,7 +124,9 @@ public class MercadoPagoGateway implements PaymentGateway {
             throw new PagoException("No se pudo obtener una respuesta válida de Mercado Pago.");
         }
         if ("failed".equals(response.status())) {
-            throw new PagoRechazadoException(detalleRechazo(response));
+            String detalle = detalleRechazo(response);
+            log.warn("Mercado Pago rechazo el pago al {} {}: {}", operacion, referencia, detalle);
+            throw new PagoRechazadoException(detalle);
         }
         return new ResultadoPago(response.id(), response.status(), response.statusDetail());
     }

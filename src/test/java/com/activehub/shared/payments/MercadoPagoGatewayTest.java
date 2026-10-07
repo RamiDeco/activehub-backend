@@ -123,6 +123,26 @@ class MercadoPagoGatewayTest {
     }
 
     @Test
+    void autorizar_rechazadoPorElBanco_mensajeClaro() {
+        // Respuesta real del sandbox con titular OTHE (2026-10-07).
+        String body = """
+                {"errors":[{"code":"failed","message":"The following transactions failed",
+                  "details":["PAY01: rejected_by_issuer"]}],
+                 "data":{"id":"ORDTST01","status":"failed","status_detail":"failed",
+                  "transactions":{"payments":[{"id":"PAY01","status":"failed","status_detail":"rejected_by_issuer",
+                  "payment_method":{"id":"master","type":"credit_card","token":"1d1e51a0a2162c76aeb24be62c6d467e"}}]}}}
+                """;
+        server.expect(requestTo(BASE + "/v1/orders"))
+                .andRespond(withStatus(HttpStatus.PAYMENT_REQUIRED).contentType(MediaType.APPLICATION_JSON).body(body));
+
+        assertThatThrownBy(() -> gateway.autorizar(SELLER, TARJETA, new BigDecimal("5200"), BigDecimal.ZERO, "i", "k"))
+                .isInstanceOfSatisfying(PagoRechazadoException.class, e -> {
+                    assertThat(e.getStatusDetail()).isEqualTo("rejected_by_issuer");
+                    assertThat(e.getMessage()).isEqualTo("Tu banco rechazó el pago. Probá con otra tarjeta.");
+                });
+    }
+
+    @Test
     void autorizar_failedEnRespuesta200_tambienEsRechazo() {
         server.expect(requestTo(BASE + "/v1/orders"))
                 .andRespond(withSuccess(orden("failed", "cc_rejected_high_risk"), MediaType.APPLICATION_JSON));

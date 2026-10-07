@@ -55,7 +55,9 @@ public record MercadoPagoOrderResponse(
             String id,
             String type,
             String token,
-            int installments
+            // Integer y no int: Jackson 3 falla si a un primitivo le falta el valor, y entonces un
+            // rechazo de MP sin este campo se perdia como error generico (ordenFallida -> null).
+            Integer installments
     ) {
     }
 }

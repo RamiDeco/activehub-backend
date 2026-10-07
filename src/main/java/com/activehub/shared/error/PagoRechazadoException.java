@@ -23,6 +23,9 @@ public class PagoRechazadoException extends ApiException {
             Map.entry("card_disabled", "La tarjeta no está habilitada. Comunicate con tu banco."),
             Map.entry("cc_rejected_card_disabled", "La tarjeta no está habilitada. Comunicate con tu banco."),
             Map.entry("high_risk", "Mercado Pago rechazó el pago. Probá con otra tarjeta."),
+            // Orders API: el banco emisor no autorizo (es lo que devuelve el sandbox con titular OTHE).
+            Map.entry("rejected_by_issuer", "Tu banco rechazó el pago. Probá con otra tarjeta."),
+            Map.entry("cc_rejected_other_reason", "Tu banco rechazó el pago. Probá con otra tarjeta."),
             Map.entry("cc_rejected_high_risk", "Mercado Pago rechazó el pago. Probá con otra tarjeta."),
             Map.entry("max_attempts_exceeded", "Superaste el límite de intentos. Probá con otra tarjeta."),
             Map.entry("cc_rejected_max_attempts", "Superaste el límite de intentos. Probá con otra tarjeta."),
