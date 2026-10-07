@@ -77,7 +77,7 @@ public class CancelarInscripcionService {
             claseRepository.liberarCupo(inscripcion.getClase().getId());
         }
 
-        if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
+        if (pago != null && pago.getEstado().reservadoEnMercadoPago()) {
             operacionesPago.reintegrar(pago, instructorId, alumnoId);
         }
 

@@ -187,6 +187,27 @@ class OperacionesPagoMercadoPagoTest {
     }
 
     @Test
+    void reintegrar_pagoEnRevision_cancelaLaOrdenEnMercadoPago() {
+        // KAN-58: la orden existe en MP aunque todavia no este autorizada; si la inscripcion se
+        // cae (clase cancelada, baja del alumno), hay que cancelarla para que no se apruebe sola.
+        pago.setEstado(EstadoPago.EnRevision);
+        pago.setAutorizadoHasta(null);
+        when(cuentaGuard.exigirCuentaVinculada(instructorId)).thenReturn(TOKEN);
+        when(paymentGateway.cancelarAutorizacion(TOKEN, ORDEN, "idem-1:cancel"))
+                .thenReturn(new ResultadoPago(ORDEN, "canceled", "canceled"));
+
+        assertThat(operaciones.reintegrar(pago, instructorId, actorId)).isEqualTo(EstadoPago.Cancelado);
+        verify(paymentGateway).cancelarAutorizacion(TOKEN, ORDEN, "idem-1:cancel");
+        verify(paymentGateway, never()).reembolsar(any(), any(), any());
+    }
+
+    @Test
+    void reservadoEnMercadoPago_soloRetenidoYEnRevision() {
+        assertThat(java.util.Arrays.stream(EstadoPago.values()).filter(EstadoPago::reservadoEnMercadoPago))
+                .containsExactlyInAnyOrder(EstadoPago.Retenido, EstadoPago.EnRevision);
+    }
+
+    @Test
     void reintegrar_pagoQueNoEstaRetenido_esUnErrorDeProgramacion() {
         pago.setEstado(EstadoPago.Liberado);
 

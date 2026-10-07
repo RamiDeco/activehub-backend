@@ -4,10 +4,13 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.BufferingClientHttpRequestFactory;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
+import com.activehub.shared.payments.MercadoPagoHttpLog;
 import com.activehub.shared.payments.MercadoPagoProperties;
+import org.slf4j.LoggerFactory;
 
 @Configuration
 @EnableConfigurationProperties(MercadoPagoProperties.class)
@@ -30,10 +33,18 @@ public class MercadoPagoConfig {
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
         requestFactory.setReadTimeout(Duration.ofSeconds(10));
 
-        return RestClient.builder()
+        RestClient.Builder builder = RestClient.builder()
                 .baseUrl(props.getBaseUrl())
-                .requestFactory(requestFactory)
-                .defaultHeader("Content-Type", "application/json")
-                .build();
+                .defaultHeader("Content-Type", "application/json");
+        if (LoggerFactory.getLogger(MercadoPagoHttpLog.class).isDebugEnabled()) {
+            // MP_LOG_LEVEL=DEBUG: se loguea cada pedido y respuesta (con los secretos recortados).
+            // La fabrica "buffering" permite leer el body de la respuesta para el log sin
+            // consumirlo; solo se usa con el log activo porque guarda cada respuesta en memoria.
+            builder.requestFactory(new BufferingClientHttpRequestFactory(requestFactory))
+                    .requestInterceptor(new MercadoPagoHttpLog());
+        } else {
+            builder.requestFactory(requestFactory);
+        }
+        return builder.build();
     }
 }

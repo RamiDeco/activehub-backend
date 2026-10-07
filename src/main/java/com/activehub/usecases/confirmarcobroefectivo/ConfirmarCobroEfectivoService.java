@@ -1,6 +1,7 @@
 package com.activehub.usecases.confirmarcobroefectivo;
 
 import com.activehub.domain.inscripcion.EstadoInscripcion;
+import com.activehub.domain.inscripcion.MetodoPago;
 import com.activehub.domain.inscripcion.Inscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.shared.audit.AuditAccion;
@@ -49,6 +50,14 @@ public class ConfirmarCobroEfectivoService {
 
         if (inscripcion.getEstado() != EstadoInscripcion.PAGO_PENDIENTE) {
             throw new ValidacionException("Esta inscripción no tiene un cobro en efectivo pendiente.");
+        }
+        // KAN-58: PagoPendiente tambien es "Mercado Pago lo esta revisando". Ese pago lo resuelve
+        // MP (webhook), no el instructor: confirmarlo a mano inscribiria a alguien que quizas
+        // termina con la tarjeta rechazada. Solo se confirma a mano lo que se cobra en mano.
+        var pago = inscripcion.getPago();
+        if (pago == null || pago.getMetodo() != MetodoPago.EFECTIVO) {
+            throw new ValidacionException(
+                    "Este pago lo está procesando Mercado Pago: la inscripción se confirma sola cuando se apruebe.");
         }
 
         inscripcion.setEstado(EstadoInscripcion.INSCRIPTO);

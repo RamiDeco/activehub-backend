@@ -56,9 +56,8 @@ public class MercadoPagoOAuthClient {
         body.put("grant_type", "authorization_code");
         body.put("code", code);
         body.put("redirect_uri", properties.getRedirectUri());
-        if (properties.isOauthTestToken()) {
-            body.put("test_token", true);
-        }
+        // Sin "test_token": pide credenciales TEST-, que la Orders API rechaza. En sandbox la
+        // prueba la dan las cuentas (vendedor de prueba), no el tipo de credencial.
 
         CredencialesOAuth credenciales;
         try {

@@ -40,12 +40,14 @@ class MercadoPagoGatewayTest {
 
     private MockRestServiceServer server;
     private MercadoPagoGateway gateway;
+    private MercadoPagoProperties props;
 
     @BeforeEach
     void setUp() {
         RestClient.Builder builder = RestClient.builder().baseUrl(BASE);
         server = MockRestServiceServer.bindTo(builder).build();
-        gateway = new MercadoPagoGateway(builder.build(), JsonMapper.builder().build());
+        props = new MercadoPagoProperties();
+        gateway = new MercadoPagoGateway(builder.build(), JsonMapper.builder().build(), props);
     }
 
     private static String orden(String status, String detail) {
@@ -74,6 +76,18 @@ class MercadoPagoGatewayTest {
 
         assertThat(r.orderId()).isEqualTo("ORD01ABC");
         assertThat(r.autorizado()).isTrue();
+        server.verify();
+    }
+
+    @Test
+    void autorizar_enSandbox_mandaComoPagadorAlCompradorDePrueba() {
+        // En sandbox el pagador es el comprador de prueba, no el correo real del alumno.
+        props.setSandboxPayerEmail("test_user_123@testuser.com");
+        server.expect(requestTo(BASE + "/v1/orders"))
+                .andExpect(jsonPath("$.payer.email").value("test_user_123@testuser.com"))
+                .andRespond(withSuccess(orden("action_required", "waiting_capture"), MediaType.APPLICATION_JSON));
+
+        gateway.autorizar(SELLER, TARJETA, new BigDecimal("4500"), BigDecimal.ZERO, "insc-1", "k");
         server.verify();
     }
 

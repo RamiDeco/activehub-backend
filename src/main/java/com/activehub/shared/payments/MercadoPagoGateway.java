@@ -28,10 +28,13 @@ public class MercadoPagoGateway implements PaymentGateway {
 
     private final RestClient mpRestClient;
     private final ObjectMapper objectMapper;
+    private final MercadoPagoProperties properties;
 
-    public MercadoPagoGateway(RestClient mercadoPagoRestClient, ObjectMapper objectMapper) {
+    public MercadoPagoGateway(RestClient mercadoPagoRestClient, ObjectMapper objectMapper,
+                              MercadoPagoProperties properties) {
         this.mpRestClient = mercadoPagoRestClient;
         this.objectMapper = objectMapper;
+        this.properties = properties;
     }
 
     @Override
@@ -41,7 +44,7 @@ public class MercadoPagoGateway implements PaymentGateway {
         var body = new MercadoPagoOrderRequest(
                 "online", "automatic", "manual", total, externalReference,
                 comision == null || comision.signum() == 0 ? null : comision.setScale(2).toPlainString(),
-                new MercadoPagoOrderRequest.Payer(tarjeta.emailPagador()),
+                new MercadoPagoOrderRequest.Payer(emailPagador(tarjeta)),
                 new MercadoPagoOrderRequest.Transactions(List.of(new MercadoPagoOrderRequest.Payment(
                         total,
                         new MercadoPagoOrderRequest.PaymentMethod(
@@ -146,6 +149,17 @@ public class MercadoPagoGateway implements PaymentGateway {
             }
         }
         return orden.statusDetail();
+    }
+
+    /**
+     * En sandbox el pagador es el COMPRADOR de prueba (correo @testuser.com), como en los
+     * ejemplos de la documentacion de MP: con {@code MP_SANDBOX_PAYER_EMAIL} cargada se manda
+     * ese; en produccion queda vacia y va el del alumno. Es un detalle de como se habla con MP,
+     * por eso vive aca y no en inscribirse.
+     */
+    private String emailPagador(DatosTarjeta tarjeta) {
+        String sandbox = properties.getSandboxPayerEmail();
+        return sandbox != null && !sandbox.isBlank() ? sandbox : tarjeta.emailPagador();
     }
 
     private static String bearer(String sellerToken) {

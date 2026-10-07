@@ -66,6 +66,7 @@ class MercadoPagoOAuthClientTest {
                 .andExpect(jsonPath("$.client_id").value("123456"))
                 .andExpect(jsonPath("$.client_secret").value("secreto"))
                 .andExpect(jsonPath("$.redirect_uri").value(props.getRedirectUri()))
+                // Nunca se piden credenciales TEST-: la Orders API las rechaza (401).
                 .andExpect(jsonPath("$.test_token").doesNotExist())
                 .andRespond(withSuccess("""
                         {"access_token":"APP_USR-at","token_type":"Bearer","expires_in":15552000,
@@ -81,17 +82,6 @@ class MercadoPagoOAuthClientTest {
         assertThat(c.userId()).isEqualTo(987654L);
         assertThat(c.expiresIn()).isEqualTo(15552000L);
         assertThat(c.toString()).doesNotContain("APP_USR", "TG-rt");
-        server.verify();
-    }
-
-    @Test
-    void canjearCodigo_conTestToken_loPideAlSandbox() {
-        props.setOauthTestToken(true);
-        server.expect(requestTo(BASE + "/oauth/token"))
-                .andExpect(jsonPath("$.test_token").value(true))
-                .andRespond(withSuccess("{\"access_token\":\"TEST-at\",\"user_id\":1}", MediaType.APPLICATION_JSON));
-
-        client.canjearCodigo("TG-123");
         server.verify();
     }
 

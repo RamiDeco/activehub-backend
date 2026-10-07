@@ -80,7 +80,7 @@ public class CancelarClaseService {
             // E2I-HU08 criterio 5: el reintegro alcanza a los pagos Retenidos *y* a los que
             // ya se cobraron en Efectivo; ambos quedan en Cancelado. Antes el efectivo no se
             // tocaba y el alumno seguía viendo su pago como válido para una clase que no existe.
-            if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
+            if (pago != null && pago.getEstado().reservadoEnMercadoPago()) {
                 operacionesPago.reintegrar(pago, instructorId, instructorId);
                 detallePago = " Se reintegra el pago retenido.";
             } else if (pago != null && pago.getEstado() == EstadoPago.Efectivo) {

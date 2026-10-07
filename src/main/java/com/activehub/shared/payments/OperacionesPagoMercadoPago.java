@@ -79,7 +79,8 @@ public class OperacionesPagoMercadoPago {
     }
 
     /**
-     * Devuelve al alumno un pago {@code Retenido}: sin capturar se cancela la autorizacion
+     * Devuelve al alumno un pago {@code Retenido} o {@code EnRevision} (KAN-58; nunca esta
+     * capturado, asi que se cancela la orden): sin capturar se cancela la autorizacion
      * ({@code Cancelado}); capturado se reembolsa ({@code Reembolsado}). Si MP falla, lanza y la
      * operacion que reintegra se revierte entera: es preferible a marcar devuelto algo que sigue
      * cobrado o reservado en la tarjeta del alumno.
@@ -88,8 +89,8 @@ public class OperacionesPagoMercadoPago {
      * @return el estado en que quedo el pago
      */
     public EstadoPago reintegrar(Pago pago, UUID instructorId, UUID actorId) {
-        if (pago.getEstado() != EstadoPago.Retenido) {
-            throw new IllegalStateException("Solo se reintegra un pago Retenido, no " + pago.getEstado());
+        if (!pago.getEstado().reservadoEnMercadoPago()) {
+            throw new IllegalStateException("Solo se reintegra un pago Retenido o EnRevision, no " + pago.getEstado());
         }
         EstadoPago destino = pago.getCapturadoAt() == null ? EstadoPago.Cancelado : EstadoPago.Reembolsado;
 

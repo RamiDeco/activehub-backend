@@ -18,11 +18,13 @@ import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.activehub.domain.actividad.Actividad;
@@ -115,6 +117,13 @@ class InscribirseServiceTest {
     @AfterEach
     void limpiarSincronizacion() {
         TransactionSynchronizationManager.clearSynchronization();
+    }
+
+    /** Lo que haria Spring al terminar la transaccion: avisarle a cada callback registrado. */
+    private static void simularFinDeTransaccion(int status) {
+        for (TransactionSynchronization sync : TransactionSynchronizationManager.getSynchronizations()) {
+            sync.afterCompletion(status);
+        }
     }
 
     private void stubGuardados() {
@@ -235,6 +244,119 @@ class InscribirseServiceTest {
                 .hasMessageContaining("solo acepta pago en efectivo");
         verify(claseRepository, never()).ocuparCupo(any());
         verify(paymentGateway, never()).autorizar(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void inscribirse_mercadoPago_siLaTransaccionHaceRollback_cancelaLaAutorizacion() {
+        stubInscripcionNueva();
+        stubCuentaVinculada();
+        when(claseRepository.ocuparCupo(claseId)).thenReturn(1);
+        when(usuarioRepository.getReferenceById(alumnoId)).thenReturn(new Usuario());
+        stubInscripcionGuardada();
+        stubAutorizado();
+        when(pagoRepository.save(any(Pago.class))).thenThrow(new RuntimeException("se cayó la base"));
+
+        assertThatThrownBy(() -> service.inscribirse(claseId, new InscribirseRequest("Mercado Pago", DATOS_PAGO), alumnoId))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("se cayó la base");
+        simularFinDeTransaccion(TransactionSynchronization.STATUS_ROLLED_BACK);
+
+        var claveAutorizar = ArgumentCaptor.forClass(String.class);
+        verify(paymentGateway).autorizar(any(), any(), any(), any(), any(), claveAutorizar.capture());
+        verify(paymentGateway).cancelarAutorizacion("TEST-seller-token", "ORD01TEST", claveAutorizar.getValue() + ":cancel");
+    }
+
+    @Test
+    void inscribirse_mercadoPago_siLaTransaccionHaceCommit_noCancela() {
+        stubInscripcionNueva();
+        stubCuentaVinculada();
+        when(claseRepository.ocuparCupo(claseId)).thenReturn(1);
+        when(usuarioRepository.getReferenceById(alumnoId)).thenReturn(new Usuario());
+        stubGuardados();
+        stubAutorizado();
+
+        service.inscribirse(claseId, new InscribirseRequest("Mercado Pago", DATOS_PAGO), alumnoId);
+        simularFinDeTransaccion(TransactionSynchronization.STATUS_COMMITTED);
+
+        verify(paymentGateway, never()).cancelarAutorizacion(any(), any(), any());
+    }
+
+    @Test
+    void inscribirse_mercadoPago_siFallaLaCancelacion_noTapaElErrorOriginal() {
+        stubInscripcionNueva();
+        stubCuentaVinculada();
+        when(claseRepository.ocuparCupo(claseId)).thenReturn(1);
+        when(usuarioRepository.getReferenceById(alumnoId)).thenReturn(new Usuario());
+        stubInscripcionGuardada();
+        stubAutorizado();
+        when(pagoRepository.save(any(Pago.class))).thenThrow(new RuntimeException("se cayó la base"));
+        doThrow(new PagoException("Mercado Pago no está respondiendo."))
+                .when(paymentGateway).cancelarAutorizacion(any(), any(), any());
+
+        assertThatThrownBy(() -> service.inscribirse(claseId, new InscribirseRequest("Mercado Pago", DATOS_PAGO), alumnoId))
+                .hasMessage("se cayó la base");
+        // Si el try/catch del callback no estuviera, esta linea explotaria con la PagoException.
+        simularFinDeTransaccion(TransactionSynchronization.STATUS_ROLLED_BACK);
+
+        verify(paymentGateway).cancelarAutorizacion(any(), any(), any());
+    }
+
+    @Test
+    void inscribirse_mercadoPago_enRevision_reservaElLugarEnPagoPendienteYPagoEnRevision() {
+        stubInscripcionNueva();
+        stubCuentaVinculada();
+        when(claseRepository.ocuparCupo(claseId)).thenReturn(1);
+        when(usuarioRepository.getReferenceById(alumnoId)).thenReturn(new Usuario());
+        stubGuardados();
+        when(paymentGateway.autorizar(any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PaymentGateway.ResultadoPago("ORD01TEST", "in_review", "in_review"));
+
+        InscribirseResponse response = service.inscribirse(claseId, new InscribirseRequest("Mercado Pago", DATOS_PAGO), alumnoId);
+
+        assertThat(response.estado()).isEqualTo("PagoPendiente");
+        var pago = ArgumentCaptor.forClass(Pago.class);
+        verify(pagoRepository).save(pago.capture());
+        assertThat(pago.getValue().getEstado()).isEqualTo(EstadoPago.EnRevision);
+        assertThat(pago.getValue().getMpOrderId()).isEqualTo("ORD01TEST");
+        // Todavia no hay autorizacion que venza.
+        assertThat(pago.getValue().getAutorizadoHasta()).isNull();
+        var mensaje = ArgumentCaptor.forClass(String.class);
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CONFIRMADA), mensaje.capture(), any(), any());
+        assertThat(mensaje.getValue()).contains("Mercado Pago está revisando tu pago").doesNotContain("efectivo");
+    }
+
+    @Test
+    void inscribirse_mercadoPago_processingTambienEsEnRevision() {
+        stubInscripcionNueva();
+        stubCuentaVinculada();
+        when(claseRepository.ocuparCupo(claseId)).thenReturn(1);
+        when(usuarioRepository.getReferenceById(alumnoId)).thenReturn(new Usuario());
+        stubGuardados();
+        when(paymentGateway.autorizar(any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PaymentGateway.ResultadoPago("ORD01TEST", "processing", "in_process"));
+
+        assertThat(service.inscribirse(claseId, new InscribirseRequest("Mercado Pago", DATOS_PAGO), alumnoId).estado())
+                .isEqualTo("PagoPendiente");
+    }
+
+    @Test
+    void inscribirse_mercadoPago_enRevisionYRollback_tambienCancelaLaOrden() {
+        // La orden existe en MP aunque este en revision: si la inscripcion no se guarda, hay
+        // que cancelarla para que MP no la apruebe despues sin inscripcion detras.
+        stubInscripcionNueva();
+        stubCuentaVinculada();
+        when(claseRepository.ocuparCupo(claseId)).thenReturn(1);
+        when(usuarioRepository.getReferenceById(alumnoId)).thenReturn(new Usuario());
+        stubInscripcionGuardada();
+        when(paymentGateway.autorizar(any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PaymentGateway.ResultadoPago("ORD01TEST", "in_review", "in_review"));
+        when(pagoRepository.save(any(Pago.class))).thenThrow(new RuntimeException("se cayó la base"));
+
+        assertThatThrownBy(() -> service.inscribirse(claseId, new InscribirseRequest("Mercado Pago", DATOS_PAGO), alumnoId))
+                .hasMessage("se cayó la base");
+        simularFinDeTransaccion(TransactionSynchronization.STATUS_ROLLED_BACK);
+
+        verify(paymentGateway).cancelarAutorizacion(eq("TEST-seller-token"), eq("ORD01TEST"), any());
     }
 
     @Test

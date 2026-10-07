@@ -4,12 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.inscripcion.EstadoInscripcion;
+import com.activehub.domain.inscripcion.Pago;
+import com.activehub.domain.inscripcion.EstadoPago;
+import com.activehub.domain.inscripcion.MetodoPago;
 import com.activehub.domain.inscripcion.Inscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.domain.usuario.Usuario;
@@ -75,6 +79,15 @@ class ConfirmarCobroEfectivoServiceTest {
         inscripcion.setAlumno(alumno);
         inscripcion.setEstado(EstadoInscripcion.PAGO_PENDIENTE);
         ReflectionTestUtils.setField(inscripcion, "id", inscripcionId);
+        inscripcion.setPago(pago(MetodoPago.EFECTIVO, EstadoPago.Efectivo));
+    }
+
+    private Pago pago(MetodoPago metodo, EstadoPago estado) {
+        Pago p = new Pago();
+        p.setInscripcion(inscripcion);
+        p.setMetodo(metodo);
+        p.setEstado(estado);
+        return p;
     }
 
     @Test
@@ -102,5 +115,18 @@ class ConfirmarCobroEfectivoServiceTest {
 
         assertThatThrownBy(() -> service.confirmar(inscripcionId, instructorId))
                 .isInstanceOf(ValidacionException.class);
+    }
+
+    @Test
+    void confirmar_pagoDeMercadoPagoEnRevision_lanzaValidacionYNoInscribe() {
+        // KAN-58: tambien esta en PagoPendiente, pero lo resuelve Mercado Pago, no el instructor.
+        inscripcion.setPago(pago(MetodoPago.MERCADO_PAGO, EstadoPago.EnRevision));
+        when(inscripcionRepository.findById(inscripcionId)).thenReturn(Optional.of(inscripcion));
+
+        assertThatThrownBy(() -> service.confirmar(inscripcionId, instructorId))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessageContaining("Mercado Pago");
+        assertThat(inscripcion.getEstado()).isEqualTo(EstadoInscripcion.PAGO_PENDIENTE);
+        verify(notificacionService, never()).notificar(any(), any(), any(), any(), any());
     }
 }

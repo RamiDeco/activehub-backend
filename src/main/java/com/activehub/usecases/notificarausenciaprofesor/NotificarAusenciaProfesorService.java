@@ -70,7 +70,7 @@ public class NotificarAusenciaProfesorService {
         int notificados = 0;
         for (Inscripcion inscripcion : inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA)) {
             Pago pago = inscripcion.getPago();
-            if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
+            if (pago != null && pago.getEstado().reservadoEnMercadoPago()) {
                 operacionesPago.reintegrar(pago, instructorId, instructorId);
             }
             inscripcion.setEstado(EstadoInscripcion.CANCELADA);

@@ -33,6 +33,11 @@ public interface PaymentGateway {
         public boolean autorizado() {
             return "action_required".equals(status) && "waiting_capture".equals(statusDetail);
         }
+
+        /** MP no decidio todavia (antifraude o revision manual): lo resuelve el webhook. */
+        public boolean enRevision() {
+            return "processing".equals(status) || "in_review".equals(status);
+        }
     }
 
     /** Lo que devuelve el Card Payment Brick al tokenizar. Nunca viaja el numero de tarjeta. */

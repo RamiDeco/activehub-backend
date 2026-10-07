@@ -17,15 +17,15 @@ import tools.jackson.databind.json.JsonMapper;
  * {@code ./mvnw test -Dtest=MercadoPagoGatewaySandboxTest}.
  *
  * <ul>
- *   <li>{@code MP_SANDBOX_SELLER_ACCESS_TOKEN}: access token TEST del usuario de prueba VENDEDOR.</li>
- *   <li>{@code MP_SANDBOX_SELLER_PUBLIC_KEY}: su public key TEST (para tokenizar la tarjeta).</li>
- *   <li>{@code MP_SANDBOX_BUYER_EMAIL}: correo del usuario de prueba COMPRADOR.</li>
+ *   <li>{@code MP_SANDBOX_SELLER_ACCESS_TOKEN}: access token del usuario de prueba VENDEDOR (APP_USR-: la Orders API ya no acepta TEST-).</li>
+ *   <li>{@code MP_SANDBOX_SELLER_PUBLIC_KEY}: su public key (APP_USR-, para tokenizar la tarjeta).</li>
+ *   <li>{@code MP_SANDBOX_BUYER_EMAIL}: correo del usuario de prueba COMPRADOR (@testuser.com).</li>
  * </ul>
  *
  * <p>Despues de cada test, buscar la orden impresa en el panel del vendedor de prueba y
  * verificar el estado: autorizada → aprobada, y autorizada → cancelada.
  */
-@Disabled("Manual: pega contra el sandbox de Mercado Pago con credenciales TEST")
+@Disabled("Manual: pega contra el sandbox de Mercado Pago con un usuario de prueba vendedor")
 class MercadoPagoGatewaySandboxTest {
 
     private final String sellerToken = System.getenv("MP_SANDBOX_SELLER_ACCESS_TOKEN");
@@ -33,7 +33,8 @@ class MercadoPagoGatewaySandboxTest {
     private final String buyerEmail = System.getenv("MP_SANDBOX_BUYER_EMAIL");
 
     private final RestClient restClient = new MercadoPagoConfig().mercadoPagoRestClient(new MercadoPagoProperties());
-    private final MercadoPagoGateway gateway = new MercadoPagoGateway(restClient, JsonMapper.builder().build());
+    private final MercadoPagoGateway gateway =
+            new MercadoPagoGateway(restClient, JsonMapper.builder().build(), new MercadoPagoProperties());
 
     @Test
     void autorizarYCapturar() {

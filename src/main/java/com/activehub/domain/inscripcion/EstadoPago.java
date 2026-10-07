@@ -14,5 +14,20 @@ public enum EstadoPago {
     /** Mercado Pago rechazo el cobro; el motivo viaja en {@code Pago.statusDetail}. */
     Rechazado,
     /** Fue capturado y despues devuelto al alumno (refund), p. ej. por una denuncia que prospero. */
-    Reembolsado
+    Reembolsado,
+    /**
+     * Mercado Pago todavia no decidio (antifraude o revision manual; status {@code processing} /
+     * {@code in_review}). La orden existe en MP; el webhook (KAN-60) la resuelve. Mientras tanto
+     * la inscripcion queda en PagoPendiente y el instructor NO puede confirmarla a mano.
+     */
+    EnRevision;
+
+    /**
+     * Hay una orden viva en Mercado Pago que hay que deshacer si la inscripcion se cae
+     * (cancelacion, clase cancelada, denuncia): reservada ({@code Retenido}, capturada o no) o
+     * todavia en revision. Es la condicion que usan los casos de uso antes de reintegrar.
+     */
+    public boolean reservadoEnMercadoPago() {
+        return this == Retenido || this == EnRevision;
+    }
 }

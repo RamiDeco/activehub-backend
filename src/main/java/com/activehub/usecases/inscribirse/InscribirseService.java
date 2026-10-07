@@ -160,9 +160,15 @@ public class InscribirseService {
         pago = pagoRepository.save(pago);
 
         String contexto = "la clase de \"" + actividadNombre + "\" del " + NotificacionMensajes.formatFechaHora(fechaHoraClase);
-        String mensajeAlumno = inscripcion.getEstado() == EstadoInscripcion.INSCRIPTO
-                ? "Se confirmó tu inscripción a " + contexto + "."
-                : "Tu inscripción a " + contexto + " quedó pendiente hasta que el instructor confirme el pago en efectivo.";
+        String mensajeAlumno;
+        if (inscripcion.getEstado() == EstadoInscripcion.INSCRIPTO) {
+            mensajeAlumno = "Se confirmó tu inscripción a " + contexto + ".";
+        } else if (pago.getEstado() == EstadoPago.EnRevision) {
+            mensajeAlumno = "Tu lugar en " + contexto + " está reservado: Mercado Pago está revisando tu pago y te "
+                    + "avisamos apenas se confirme.";
+        } else {
+            mensajeAlumno = "Tu inscripción a " + contexto + " quedó pendiente hasta que el instructor confirme el pago en efectivo.";
+        }
         notificacionService.notificar(
                 alumnoId, TipoNotificacion.INSCRIPCION_CONFIRMADA, mensajeAlumno, inscripcion.getId(),
                 Destino.inscripcion(inscripcion.getId()));
@@ -203,9 +209,10 @@ public class InscribirseService {
 
         var resultado = paymentGateway.autorizar(
                 sellerToken, tarjeta, pago.getMonto(), comision, pago.getInscripcion().getId().toString(), idempotencyKey);
-        if (!resultado.autorizado()) {
-            // "pending" u otro estado intermedio: sin autorizacion confirmada no se inscribe a
-            // nadie. Si MP la confirma despues, vence sola a los 5 dias sin capturarse.
+        boolean enRevision = resultado.enRevision();
+        if (!resultado.autorizado() && !enRevision) {
+            // Un estado que no es ni autorizado, ni rechazado (eso ya lanzo), ni en revision: no
+            // se inscribe a nadie. Si igual quedara algo reservado, vence solo a los 5 dias.
             throw new PagoException("Mercado Pago no confirmó la autorización del pago. Intentá nuevamente.");
         }
 
@@ -225,7 +232,16 @@ public class InscribirseService {
             }
         });
 
-        pago.setEstado(EstadoPago.Retenido);
+        if (enRevision) {
+            // KAN-58: MP no decidio todavia. El lugar queda reservado (PagoPendiente) pero el
+            // instructor no puede confirmarlo a mano: lo resuelve el webhook (KAN-60). Sin
+            // autorizado_hasta, porque todavia no hay autorizacion que venza.
+            pago.setEstado(EstadoPago.EnRevision);
+            pago.getInscripcion().setEstado(EstadoInscripcion.PAGO_PENDIENTE);
+        } else {
+            pago.setEstado(EstadoPago.Retenido);
+            pago.setAutorizadoHasta(ahora.plus(VentanaPagos.VIGENCIA_AUTORIZACION));
+        }
         pago.setMpOrderId(resultado.orderId());
         // Mismo valor que mpOrderId; se conserva por trazabilidad con los pagos previos a MP-04.
         pago.setReferenciaExterna(resultado.orderId());
@@ -233,6 +249,5 @@ public class InscribirseService {
         pago.setIdempotencyKey(idempotencyKey);
         pago.setComision(comision);
         pago.setMontoInstructor(pago.getMonto().subtract(comision));
-        pago.setAutorizadoHasta(ahora.plus(VentanaPagos.VIGENCIA_AUTORIZACION));
     }
 }

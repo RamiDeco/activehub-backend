@@ -17,7 +17,8 @@ public class MercadoPagoProperties {
     private String clientId;
     private String clientSecret;
     private String redirectUri;
-    private boolean oauthTestToken;
+    /** Solo sandbox: correo del COMPRADOR de prueba, que reemplaza al del alumno como pagador. */
+    private String sandboxPayerEmail;
 
     public boolean oauthConfigurado() {
         return noVacio(clientId) && noVacio(clientSecret) && noVacio(redirectUri);
