@@ -35,7 +35,7 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-10-09, despues de la ENTRADA 021) ===
+=== ESTADO GENERAL (actualizado: 2026-10-09, despues de la ENTRADA 022) ===
 Casos de uso implementados en el backend: 115
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
@@ -1549,3 +1549,33 @@ ERRORES DETECTADOS: la primera version de la validacion de firma rechazaba toda 
 CAPTURAS SUGERIDAS: panel de Mercado Pago con la notificacion de prueba respondida 200.
 PENDIENTE QUE QUEDA: verificar una notificacion real desde el panel; comparar la firma en tiempo constante (MessageDigest.isEqual); la dependencia sdk-java sin uso.
 === FIN ENTRADA 021 ===
+
+
+=== ENTRADA 022 ===
+FECHA: 2026-10-09
+REPOSITORIO: backend
+RAMA Y COMMITS: feat/mp-integration - commit indicado en la entrada siguiente o en ESTADO GENERAL - sin Pull Request
+TIPO: SEGURIDAD
+TITULO: La firma del webhook de Mercado Pago se compara en tiempo constante (KAN-60)
+QUE CAMBIA PARA EL USUARIO: sin cambios visibles.
+TEXTOS DE INTERFAZ (literales): sin cambios
+DETALLE TECNICO: FirmaWebhookMercadoPago compara la firma calculada con la recibida (v1) con MessageDigest.isEqual sobre los bytes UTF-8, en lugar de String.equals. equals corta en el primer caracter distinto y su tiempo de respuesta permite ir adivinando una firma valida; isEqual recorre siempre ambos arrays completos.
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas.
+HISTORIAS DE USUARIO Y CRITERIOS: sin cambios
+PANTALLAS: sin cambios
+REGLAS DE NEGOCIO: sin cambios
+MODULOS: 3 Seguridad; 8 Reservas y Pagos.
+CASOS DE USO: sin nuevos. Modificado indirectamente: recibirnotificacionmercadopago.
+ENTIDADES Y MIGRACIONES: sin cambios
+TECNOLOGIAS: sin cambios
+COSTOS: sin impacto
+RIESGOS: sin cambios
+SEGURIDAD: cierra el pendiente de la ENTRADA 021 (comparacion en tiempo constante).
+PRUEBAS: FirmaWebhookMercadoPagoTest 10/10, RecibirNotificacionMercadoPagoServiceTest 10/10 y RecibirNotificacionMercadoPagoControllerTest 3/3, correctas (comando: ./mvnw -q -o test -Dtest='FirmaWebhookMercadoPagoTest,RecibirNotificacionMercadoPago*Test'). No se ejecuto la suite completa: el cambio esta acotado a esa clase. Cantidad total sin cambios respecto de la ENTRADA 021 (962 pruebas).
+ANALISIS ESTATICO: sin cambios
+DESPLIEGUE Y CONFIGURACION: sin cambios
+DECISIONES: sin cambios
+ERRORES DETECTADOS: sin cambios
+CAPTURAS SUGERIDAS: sin capturas
+PENDIENTE QUE QUEDA: verificar una notificacion real desde el panel de Mercado Pago; la dependencia sdk-java sin uso.
+=== FIN ENTRADA 022 ===

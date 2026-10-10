@@ -1,5 +1,7 @@
 package com.activehub.shared.payments;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import org.apache.commons.codec.digest.HmacUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,6 +76,9 @@ public class FirmaWebhookMercadoPago {
         signedTemplate = (signedTemplate == null ? "" : signedTemplate) + "ts:" + ts + ";";
 
         String cyphedSignature = new HmacUtils("HmacSHA256", secret).hmacHex(signedTemplate);
-        return cyphedSignature.equals(v1);
+        // Tiempo constante: equals() corta en el primer caracter distinto, y midiendo cuanto tarda
+        // en responder se puede ir adivinando la firma de a un caracter.
+        return MessageDigest.isEqual(
+                cyphedSignature.getBytes(StandardCharsets.UTF_8), v1.getBytes(StandardCharsets.UTF_8));
     }
 }
