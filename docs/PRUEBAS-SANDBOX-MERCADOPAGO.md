@@ -40,6 +40,9 @@ Matriz de KAN-64 (MP-15), más las verificaciones que quedaron pendientes en KAN
 | 12 | Pago en efectivo | `PagoPendiente` → el instructor confirma el cobro → `Inscripto`, igual que antes | Pendiente |
 | 13 | "Mis pagos" del alumno con los datos de estas pruebas | Cada estado con su etiqueta y su frase: "Retenido hasta la clase", "Cobrado", "Reembolsado", "Retención liberada"… (cierra **KAN-63**) | Pendiente |
 | 14 | Detalle de una clase paga con MP, visto por el instructor | Columnas "Pago" y "A recibir" con el neto correcto (hoy, el precio) y el total al pie (cierra **KAN-63**) | Pendiente |
+| 15 | El instructor desvincula su cuenta sin pagos retenidos ni en revisión (botón "Desvincular" del Panel → "Sí, desvincular") | La tarjeta vuelve a mostrar "Vincular Mercado Pago"; en la base la cuenta queda `DESVINCULADA` sin tokens; en Auditoría, "<actor> desvinculó su cuenta de Mercado Pago." (cierra **KAN-67**) | Pendiente |
+| 16 | Lo mismo, con un pago `Retenido` de un alumno | El diálogo muestra "No podés desvincular tu cuenta de Mercado Pago todavía: hay 1 pago de un alumno…" y la tarjeta sigue igual (cierra **KAN-67**) | Pendiente |
+| 17 | Cuenta en `TOKEN_VENCIDO` (forzar en la base `expires_at` en el pasado y que MP rechace la renovación, o poner el estado a mano) | La tarjeta ofrece "Volver a vincular" y "Desvincular"; la notificación de vinculación vencida se ve en la campana con el ícono de alerta y sin link (cierra **KAN-67**; si se fuerza `expires_at` con un refresh token válido, el job lo renueva y cierra el criterio 4 de **KAN-55**) | Pendiente |
 
 ## Al terminar
 
