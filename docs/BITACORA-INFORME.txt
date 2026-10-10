@@ -35,12 +35,12 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-10-07, despues de la ENTRADA 020) ===
-Casos de uso implementados en el backend: 114
+=== ESTADO GENERAL (actualizado: 2026-10-09, despues de la ENTRADA 021) ===
+Casos de uso implementados en el backend: 115
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
 
-Pruebas automatizadas del backend: 202 archivos / 935 pruebas / resultado: 933 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
+Pruebas automatizadas del backend: 205 archivos / 962 pruebas / resultado: 960 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
 (comando de conteo de archivos: find src/test -name "*Test.java" | wc -l)
 (comando de ejecucion: JAVA_HOME=C:\Users\Facundo\.jdks\corretto-21.0.10 ./mvnw -o test)
 (salida literal: "Tests run: 842, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS")
@@ -82,7 +82,7 @@ Estado por modulo (los 15):
 15. Ayuda y Soporte al Usuario - PARCIAL - pantalla Ayuda, reportes de soporte y asistente con modelo de lenguaje (Groq) sobre el manual de usuario, los tres PROBADOS (ENTRADAS 006 y 007); el manual de usuario ya es una pantalla de la plataforma (/manual, ENTRADA 009), IMPLEMENTADO pero todavia no probado en el navegador.
 
 Pendientes conocidos:
-1 (integracion real con Mercado Pago) - PENDIENTE - hoy MockPaymentGateway. Avance: modelo de datos del marketplace (ENTRADA 012, KAN-52 / MP-03) y pasarela real MercadoPagoGateway con autorizar/capturar/cancelar/reembolsar/consultar; la inscripcion con Mercado Pago ya autoriza de verdad con el token del instructor (ENTRADA 013, KAN-53 / MP-04). MockPaymentGateway RETIRADO. OAuth del instructor en el backend (ENTRADA 014, KAN-54 / MP-05). Captura, cancelacion y reembolso reales (ENTRADA 017, KAN-65). Falta: pantalla del frontend para vincular, webhook y prueba del ciclo completo en sandbox.
+1 (integracion real con Mercado Pago) - PENDIENTE - hoy MockPaymentGateway. Avance: modelo de datos del marketplace (ENTRADA 012, KAN-52 / MP-03) y pasarela real MercadoPagoGateway con autorizar/capturar/cancelar/reembolsar/consultar; la inscripcion con Mercado Pago ya autoriza de verdad con el token del instructor (ENTRADA 013, KAN-53 / MP-04). MockPaymentGateway RETIRADO. OAuth del instructor en el backend (ENTRADA 014, KAN-54 / MP-05). Captura, cancelacion y reembolso reales (ENTRADA 017, KAN-65). Webhook con firma (ENTRADA 021, KAN-60). Falta: pantalla del frontend para vincular y prueba del ciclo completo en sandbox.
 2 (recuperacion de contrasenia por correo) - PROBADO (ENTRADA 002).
 3 (asistente con modelo de lenguaje y chatbot con Groq) - PROBADO. PENDIENTE 3: PARCIAL -> PROBADO (ENTRADA 007: verificado contra Groq con el modelo openai/gpt-oss-120b — preguntas legitimas respondidas con el manual, siete intentos de prompt injection rechazados, informe de beneficios generado para una cuenta de alumno de demostracion, y el aviso de cuota agotada con tiempo de espera funcionando). El codigo es de la ENTRADA 006 (2 casos de uso) mas las defensas y el manejo de cuota de la 007; en total 62 pruebas automatizadas. Queda como verificacion visual pendiente probar las dos pantallas en el navegador. El motor de recomendaciones adaptativo, que era la tercera parte de este pendiente, quedo PROBADO en la ENTRADA 004.
 4 (imagenes en Supabase Storage) - PROBADO - bucket creado, 15 archivos migrados y lectura verificada contra el proyecto real (ENTRADA 003). PENDIENTE 4: PARCIAL -> PROBADO. Queda aparte la optimizacion de imagenes, que nunca se implemento.
@@ -1510,3 +1510,42 @@ ERRORES DETECTADOS: desde KAN-58 la pantalla decia "Tu pago fue aprobado" para u
 CAPTURAS SUGERIDAS: pantalla "Estamos esperando la confirmación de Mercado Pago"; modal con el rechazo y el formulario listo para otra tarjeta.
 PENDIENTE QUE QUEDA: probar en sandbox APRO (confirmada y visible en "Mis clases"), OTHE (rechazo, sin inscripcion, cupo intacto) y CONT (pantalla de revision); 3DS en tarea aparte.
 === FIN ENTRADA 020 ===
+
+
+=== ENTRADA 021 ===
+FECHA: 2026-10-09
+REPOSITORIO: backend
+RAMA Y COMMITS: feat/mp-integration - commit indicado en la entrada siguiente o en ESTADO GENERAL - sin Pull Request
+TIPO: NUEVA FUNCIONALIDAD
+TITULO: Webhook de Mercado Pago con verificacion de firma (KAN-60)
+QUE CAMBIA PARA EL USUARIO:
+ - Alumno: si Mercado Pago deja un pago en revision y despues lo aprueba, la inscripcion se confirma sola y recibe la notificacion "Mercado Pago aprobó tu pago: se confirmó tu inscripción a <clase>.". Si lo rechaza, el lugar se libera y recibe "Mercado Pago no aprobó tu pago para <clase>, así que tu lugar se liberó. Podés volver a inscribirte con otra tarjeta o en efectivo.".
+ - Un reembolso hecho desde el panel de Mercado Pago queda reflejado como Reembolsado en ActiveHub; un contracargo queda registrado (su resolucion es manual).
+TEXTOS DE INTERFAZ (literales): los dos textos de notificacion citados arriba.
+DETALLE TECNICO:
+ - Caso de uso NUEVO recibirnotificacionmercadopago: POST /api/instructor/mercadopago/webhook, publico (SecurityConfig.permitAll) porque lo llama Mercado Pago sin JWT. No le cree al cuerpo: consulta la orden en Mercado Pago con el token del instructor y aplica la transicion desde un estado concreto, asi que los avisos duplicados o desordenados no tienen efecto. Responde 200 aunque ignore el aviso (para que Mercado Pago no reintente) y 401 solo si la firma no es valida.
+ - shared/payments/FirmaWebhookMercadoPago (NUEVO): valida el header x-signature segun la documentacion de Mercado Pago: lee ts y v1 por nombre (en cualquier orden), arma el manifest id:<data.id en minusculas>;request-id:<x-request-id>;ts:<ts>; omitiendo las partes ausentes, y compara el HMAC-SHA256 con la clave secreta. Ante secreto sin configurar o header ausente o mal formado devuelve false (nunca una excepcion).
+ - PagoRepository.findConDetalleByMpOrderId (busqueda sin distinguir mayusculas). AuditAccion suma PAGO_CONFIRMADO_MP y PAGO_RECHAZADO_MP.
+ - pom.xml suma la dependencia com.mercadopago:sdk-java 3.7.0 (hoy sin uso en el codigo).
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas. La recepcion de una notificacion real del panel de Mercado Pago despues de la correccion de la firma: no verificada en esta sesion.
+HISTORIAS DE USUARIO Y CRITERIOS: E3A (inscripcion y pago).
+PANTALLAS: sin cambios
+REGLAS DE NEGOCIO: sin cambios
+MODULOS: 8 Reservas y Pagos; 3 Seguridad.
+CASOS DE USO: NUEVO recibirnotificacionmercadopago.
+ENTIDADES Y MIGRACIONES: sin migraciones.
+TECNOLOGIAS: sin cambios (HMAC con commons-codec).
+COSTOS: sin cambios
+RIESGOS: R02 Mercado Pago - avanza.
+SEGURIDAD: endpoint publico protegido por firma HMAC. La firma calculada no se escribe en el log (con ella se podria falsificar esa notificacion). Variable de entorno NUEVA: MP_WEBHOOK_SECRET (sin ella se rechazan todas las notificaciones y se registra un error).
+PRUEBAS:
+ - FirmaWebhookMercadoPagoTest (10): firma correcta, data.id en minusculas, orden de ts y v1, manifest sin request-id, firma alterada, otra orden, otro timestamp, otro secreto, secreto sin configurar y siete headers mal formados. Los valores esperados se calcularon con la receta de la documentacion, no con la clase.
+ - RecibirNotificacionMercadoPagoServiceTest y ControllerTest; CatalogoPublicoTest suma el webhook sin sesion.
+ - Suite backend: 205 archivos / 962 pruebas: 960 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (comando: ./mvnw -q test con Java 25; conteo sumando target/surefire-reports/*.txt; archivos: find src/test -name "*Test.java" | wc -l).
+ANALISIS ESTATICO: sin cambios
+DESPLIEGUE Y CONFIGURACION: MP_WEBHOOK_SECRET (clave del panel de la aplicacion, Webhooks) y la URL del webhook configurada en el panel apuntando a /api/instructor/mercadopago/webhook. Cambiar la clave exige reiniciar el backend.
+DECISIONES: la ruta del webhook queda bajo /api/instructor/mercadopago/ junto al callback de OAuth.
+ERRORES DETECTADOS: la primera version de la validacion de firma rechazaba toda notificacion (respuesta 401 en el panel de Mercado Pago): tomaba "ts=..." y "v1=..." con su prefijo, incluia v1 dentro del manifest y no pasaba data.id a minusculas. Ademas lanzaba excepciones (respuesta 500) con un header mal formado o el secreto vacio. Corregido.
+CAPTURAS SUGERIDAS: panel de Mercado Pago con la notificacion de prueba respondida 200.
+PENDIENTE QUE QUEDA: verificar una notificacion real desde el panel; comparar la firma en tiempo constante (MessageDigest.isEqual); la dependencia sdk-java sin uso.
+=== FIN ENTRADA 021 ===

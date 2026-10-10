@@ -90,6 +90,8 @@ final class DescripcionAuditoria {
             case PAGO_LIBERADO -> "El sistema liberó un pago al instructor: la clase finalizó y pasó el período de denuncias.";
             case PAGO_CAPTURADO -> "El sistema cobró en Mercado Pago un pago autorizado: la clase finalizó.";
             case PAGO_REEMBOLSADO -> "Se reembolsó en Mercado Pago un pago ya cobrado.";
+            case PAGO_CONFIRMADO_MP -> "Mercado Pago aprobó un pago que estaba en revisión: la inscripción quedó confirmada.";
+            case PAGO_RECHAZADO_MP -> "Mercado Pago rechazó un pago que estaba en revisión: la inscripción se canceló y se liberó el lugar.";
 
             case RESENIA_CREADA -> actor + " escribió una reseña.";
             case RESENIA_ACTUALIZADA -> actor + " editó su reseña; vuelve a moderación.";

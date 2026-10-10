@@ -67,6 +67,9 @@ public class SecurityConfig {
                         // sin un `state` firmado por nosotros (que solo emite /vinculo, con
                         // permiso) responde 400 y no guarda nada.
                         .requestMatchers(HttpMethod.GET, "/api/instructor/mercadopago/callback").permitAll()
+                        // Webhook de Mercado Pago (KAN-60): lo llama MP, sin nuestro JWT. Publico
+                        // no es abierto: sin una firma x-signature valida responde 401 y no procesa.
+                        .requestMatchers(HttpMethod.POST, "/api/instructor/mercadopago/webhook").permitAll()
                         // La burbuja "¿Dudas?" no vive sólo en las pantallas del alumno: también
                         // está en /ayuda, que es pública. Mismo criterio que el reporte de arriba —
                         // quien necesita ayuda muchas veces es quien no pudo entrar. Público no es

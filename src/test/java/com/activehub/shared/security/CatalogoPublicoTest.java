@@ -74,4 +74,16 @@ class CatalogoPublicoTest {
         assertThat(mvc.get().uri("/api/instructor/mercadopago/callback?code=TG-x&state=inventado").exchange())
                 .hasStatus(400);
     }
+
+    @Test
+    void webhookDeMercadoPago_respondeSinSesionPeroRechazaUnaFirmaAjena() {
+        // Lo llama Mercado Pago, sin JWT: si exigiera sesion nunca llegaria una notificacion.
+        // Sin una x-signature valida tiene que ser el 401 del webhook, SIN cuerpo; el 401 de la
+        // cadena de seguridad (falta de sesion) trae un ApiError en el cuerpo.
+        var respuesta = mvc.post().uri("/api/instructor/mercadopago/webhook?data.id=ORDTST01X&type=order")
+                .header("x-signature", "ts=1,v1=inventada").contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content("{}").exchange();
+        assertThat(respuesta).hasStatus(401);
+        assertThat(respuesta.getResponse().getContentLength()).isZero();
+    }
 }

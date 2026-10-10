@@ -90,6 +90,9 @@ app:
     # Solo sandbox: correo del comprador de prueba (@testuser.com) como pagador de las ordenes.
     # En produccion, vacia: va el correo del alumno.
     sandbox-payer-email: ${MP_SANDBOX_PAYER_EMAIL:}
+    # Clave secreta del webhook (panel de la aplicacion > Webhooks > Configurar notificaciones).
+    # Sin ella toda notificacion se rechaza con 401: no se procesa nada que no se pueda verificar.
+    webhook-secret: ${MP_WEBHOOK_SECRET:}
   mail:
     # De dónde sale el "From". Por defecto la propia cuenta de Gmail: **Gmail reescribe el
     # remitente a la cuenta autenticada**, así que poner otra dirección acá no sirve de nada.
