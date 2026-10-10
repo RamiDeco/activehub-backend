@@ -35,7 +35,7 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-10-10, despues de la ENTRADA 030) ===
+=== ESTADO GENERAL (actualizado: 2026-10-10, despues de la ENTRADA 031) ===
 Casos de uso implementados en el backend: 117
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Los dos ultimos son desvincularcuentamp y renovartokensmercadopago (ENTRADA 030, KAN-55).
@@ -46,11 +46,11 @@ Pruebas automatizadas del backend: 209 archivos / 1004 pruebas / resultado: 1002
 (comando de ejecucion: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw test)
 (salida literal: "Tests run: 1004, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS", ejecutada el 2026-10-10 en la ENTRADA 030)
 
-Pruebas automatizadas del frontend: 17 archivos / 150 pruebas / resultado: 150 correctas, 0 fallidas (ENTRADA 028)
-(comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  17)
-(comando de ejecucion: npm test; salida literal: "Test Files  17 passed (17)" - "Tests  150 passed (150)")
+Pruebas automatizadas del frontend: 18 archivos / 153 pruebas / resultado: 153 correctas, 0 fallidas (ENTRADA 031)
+(comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  18)
+(comando de ejecucion: npx vitest run; salida literal: "Test Files  18 passed (18)" - "Tests  153 passed (153)")
 Cobertura sobre los archivos alcanzados: 75.25% de sentencias, 66.86% de ramas, 69.23% de funciones, 78.17% de lineas (comando: npm run test:coverage).
-Cubren lib/ completo salvo nominatim, notificaciones y resaltado, mas las dos pantallas publicas (Ayuda y Manual). Las pantallas de Alumno, Instructor y Administrador todavia no tienen pruebas.
+Cubren lib/ completo salvo nominatim y resaltado (notificaciones tiene pruebas desde la ENTRADA 031, sin medir de nuevo la cobertura), mas las dos pantallas publicas (Ayuda y Manual). Las pantallas de Alumno, Instructor y Administrador todavia no tienen pruebas.
 
 Migraciones Flyway: V1 a V32 (ultima: V32__pago_intentos_captura, ENTRADA 023)
 (comando: ls src/main/resources/db/migration | wc -l  ->  32)
@@ -73,7 +73,7 @@ Estado por modulo (los 15):
 5. Alumno - PROBADO.
 6. Instructor - PROBADO.
 7. Actividades - PROBADO - alta, edicion, taxonomia, niveles, fotos (ahora en Supabase Storage), geolocalizacion.
-8. Reservas y Pagos - PARCIAL - la pasarela simulada se retiro (ENTRADA 013); la inscripcion autoriza contra Mercado Pago real (probado en sandbox, KAN-58); la captura al finalizar la clase y el reembolso de un pago capturado estan PROBADOS en sandbox (ENTRADA 025); la cancelacion de una autorizacion sin capturar sigue sin prueba en sandbox. Auditoria duplicada del reembolso corregida (KAN-66, ENTRADA 027), pendiente de verificar en sandbox. Renovacion automatica de la vinculacion y desvinculacion de la cuenta (KAN-55, ENTRADA 030) IMPLEMENTADAS y con pruebas automatizadas; la prueba manual con la base (vencimiento forzado) esta PENDIENTE y el frontend todavia no tiene boton para desvincular.
+8. Reservas y Pagos - PARCIAL - la pasarela simulada se retiro (ENTRADA 013); la inscripcion autoriza contra Mercado Pago real (probado en sandbox, KAN-58); la captura al finalizar la clase y el reembolso de un pago capturado estan PROBADOS en sandbox (ENTRADA 025); la cancelacion de una autorizacion sin capturar sigue sin prueba en sandbox. Auditoria duplicada del reembolso corregida (KAN-66, ENTRADA 027), pendiente de verificar en sandbox. Renovacion automatica de la vinculacion y desvinculacion de la cuenta (KAN-55, ENTRADA 030) IMPLEMENTADAS y con pruebas automatizadas; la prueba manual con la base (vencimiento forzado) esta PENDIENTE. Boton "Desvincular" en el Panel del instructor (KAN-67, ENTRADA 031) IMPLEMENTADO, sin verificar en el navegador.
 9. Historial y Calificaciones - PROBADO.
 10. Busqueda y Filtrado - PROBADO - filtrado tradicional en Explorar y, desde esta actualizacion, motor de recomendaciones con puntaje en el Home del alumno.
 11. Administracion y Soporte - PROBADO.
@@ -83,7 +83,7 @@ Estado por modulo (los 15):
 15. Ayuda y Soporte al Usuario - PARCIAL - pantalla Ayuda, reportes de soporte y asistente con modelo de lenguaje (Groq) sobre el manual de usuario, los tres PROBADOS (ENTRADAS 006 y 007); el manual de usuario ya es una pantalla de la plataforma (/manual, ENTRADA 009), IMPLEMENTADO pero todavia no probado en el navegador.
 
 Pendientes conocidos:
-1 (integracion real con Mercado Pago) - PARCIAL - Avance: modelo de datos del marketplace (ENTRADA 012, KAN-52 / MP-03) y pasarela real MercadoPagoGateway con autorizar/capturar/cancelar/reembolsar/consultar; la inscripcion con Mercado Pago ya autoriza de verdad con el token del instructor (ENTRADA 013, KAN-53 / MP-04). MockPaymentGateway RETIRADO. OAuth del instructor en el backend (ENTRADA 014, KAN-54 / MP-05). Captura, cancelacion y reembolso reales (ENTRADA 017, KAN-65). Webhook con firma (ENTRADA 021, KAN-60). Captura anticipada, registro de capturas fallidas y aviso a la administracion (ENTRADAS 023 y 024, KAN-61). Captura y reembolso probados en sandbox (ENTRADA 025). KAN-66 (auditoria duplicada del reembolso) corregido en la ENTRADA 027, pendiente de verificar en sandbox. La vinculacion de la cuenta del instructor desde su Panel se uso en la prueba de la ENTRADA 025. Renovacion de tokens y desvinculacion de la cuenta en el backend (ENTRADA 030, KAN-55 / MP-06). Falta: verificar KAN-66 en sandbox, probar en sandbox la cancelacion de una autorizacion sin capturar y el paso a Liberado, la prueba manual de la renovacion (ENTRADA 030) y el boton "desvincular" en el Panel del instructor (frontend).
+1 (integracion real con Mercado Pago) - PARCIAL - Avance: modelo de datos del marketplace (ENTRADA 012, KAN-52 / MP-03) y pasarela real MercadoPagoGateway con autorizar/capturar/cancelar/reembolsar/consultar; la inscripcion con Mercado Pago ya autoriza de verdad con el token del instructor (ENTRADA 013, KAN-53 / MP-04). MockPaymentGateway RETIRADO. OAuth del instructor en el backend (ENTRADA 014, KAN-54 / MP-05). Captura, cancelacion y reembolso reales (ENTRADA 017, KAN-65). Webhook con firma (ENTRADA 021, KAN-60). Captura anticipada, registro de capturas fallidas y aviso a la administracion (ENTRADAS 023 y 024, KAN-61). Captura y reembolso probados en sandbox (ENTRADA 025). KAN-66 (auditoria duplicada del reembolso) corregido en la ENTRADA 027, pendiente de verificar en sandbox. La vinculacion de la cuenta del instructor desde su Panel se uso en la prueba de la ENTRADA 025. Renovacion de tokens y desvinculacion de la cuenta en el backend (ENTRADA 030, KAN-55 / MP-06). Falta: verificar KAN-66 en sandbox, probar en sandbox la cancelacion de una autorizacion sin capturar y el paso a Liberado, la prueba manual de la renovacion (ENTRADA 030) y verificar en el navegador el boton "Desvincular" del Panel del instructor (ENTRADA 031, KAN-67).
 2 (recuperacion de contrasenia por correo) - PROBADO (ENTRADA 002).
 3 (asistente con modelo de lenguaje y chatbot con Groq) - PROBADO. PENDIENTE 3: PARCIAL -> PROBADO (ENTRADA 007: verificado contra Groq con el modelo openai/gpt-oss-120b — preguntas legitimas respondidas con el manual, siete intentos de prompt injection rechazados, informe de beneficios generado para una cuenta de alumno de demostracion, y el aviso de cuota agotada con tiempo de espera funcionando). El codigo es de la ENTRADA 006 (2 casos de uso) mas las defensas y el manejo de cuota de la 007; en total 62 pruebas automatizadas. Queda como verificacion visual pendiente probar las dos pantallas en el navegador. El motor de recomendaciones adaptativo, que era la tercera parte de este pendiente, quedo PROBADO en la ENTRADA 004.
 4 (imagenes en Supabase Storage) - PROBADO - bucket creado, 15 archivos migrados y lectura verificada contra el proyecto real (ENTRADA 003). PENDIENTE 4: PARCIAL -> PROBADO. Queda aparte la optimizacion de imagenes, que nunca se implemento.
@@ -1879,3 +1879,51 @@ CAPTURAS SUGERIDAS:
  auditoria-mercadopago-desvinculada.png - pantalla de Auditoria con la fila "<actor> desvinculó su cuenta de Mercado Pago." (cuando exista el boton en el frontend).
 PENDIENTE QUE QUEDA: prueba manual del criterio 4 de KAN-55 (forzar expires_at en el pasado y ver el token renovado por el job); boton para desvincular en la tarjeta "Mercado Pago" del Panel del instructor (frontend) que llame a DELETE /api/instructor/mercadopago y muestre el 409; icono para el tipo de notificacion MERCADOPAGO_TOKEN_VENCIDO en el frontend.
 === FIN ENTRADA 030 ===
+
+=== ENTRADA 031 ===
+FECHA: 2026-10-10
+REPOSITORIO: frontend (en el backend solo se actualizan esta copia espejo y una linea del CLAUDE.md)
+RAMA Y COMMITS: frontend integracion - commit "KAN-67" posterior a 1019e1c - sin Pull Request. Backend feat/mp-integration - commit de la bitacora posterior a ba9c1a9.
+TIPO: NUEVA FUNCIONALIDAD
+TITULO: Boton "Desvincular" en la tarjeta de Mercado Pago del Panel del instructor e icono de alerta para las notificaciones que piden una accion (KAN-67)
+QUE CAMBIA PARA EL USUARIO:
+ - Instructor: la tarjeta "Cobros con Mercado Pago" de su Panel muestra el boton "Desvincular" cuando la cuenta esta vinculada y tambien cuando la autorizacion vencio. Al tocarlo se abre un dialogo de confirmacion que avisa que desde ese momento sus clases solo aceptan efectivo. Si confirma y no tiene pagos pendientes, la cuenta se desvincula y la tarjeta vuelve a mostrar el boton "Vincular Mercado Pago". Si tiene pagos de alumnos todavia retenidos o en revision, el dialogo muestra el mensaje del servidor (dice cuantos pagos son) y la cuenta sigue vinculada. Antes no habia forma de desvincular la cuenta desde la pantalla (el backend ya lo permitia desde la ENTRADA 030).
+ - Instructor y Administrador: en la campana de notificaciones, los avisos que piden una accion (la vinculacion con Mercado Pago vencio, para el instructor; una captura de pago que fallo varias veces, para el administrador) se muestran con un icono de alerta naranja en lugar del punto de "no leida", y sin enlace.
+TEXTOS DE INTERFAZ (literales):
+ - Boton en la tarjeta: "Desvincular"
+ - Titulo del dialogo: "¿Desvincular tu cuenta de Mercado Pago?"
+ - Texto del dialogo: "Desde ese momento tus clases solo van a aceptar pagos en efectivo. Podés volver a vincularla cuando quieras."
+ - Botones del dialogo: "Cancelar" / "Sí, desvincular" (mientras procesa: "Desvinculando…"). Con un error a la vista, "Cancelar" pasa a decir "Cerrar" y el boton de confirmar desaparece.
+ - Error 409 (texto del backend, sin cambios, ver ENTRADA 030): "No podés desvincular tu cuenta de Mercado Pago todavía: hay N pagos de alumnos que todavía se cobran o se devuelven a través de ella. Vas a poder desvincularla cuando esas clases finalicen y los pagos se acrediten."
+ - Error sin respuesta del servidor (texto nuevo del frontend, solo si el error no viene de la API): "No pudimos desvincular tu cuenta. Intentá de nuevo."
+ - Icono de alerta de la campana: texto alternativo "Requiere tu atención".
+DETALLE TECNICO:
+ - DataContext: funcion nueva desvincularMercadoPago() -> DELETE /api/instructor/mercadopago (204 sin cuerpo).
+ - components/pago/TarjetaMercadoPago.tsx: estados confirmando, desvinculando y errorDesvincular; el dialogo usa el componente Modal (portal a document.body). Al desvincular bien cierra el dialogo y vuelve a pedir GET /api/instructor/mercadopago, de modo que la tarjeta refleja el estado real que devuelve el backend (DESVINCULADA). Ante un ApiError muestra err.message tal cual viene. Mientras procesa, el dialogo no se puede cerrar.
+ - lib/notificaciones.ts: funcion nueva esAlerta(tipo), verdadera para MERCADOPAGO_TOKEN_VENCIDO y CAPTURA_PAGO_FALLIDA. components/NotificationBell.tsx la usa para dibujar el icono (triangulo de advertencia) en lugar del punto. Hasta ahora la campana no distinguia ningun tipo de notificacion; el campo tipo llegaba pero no se usaba.
+ESTADO: IMPLEMENTADO. PROBADO solo con pruebas automatizadas de lib/notificaciones (ver PRUEBAS). La verificacion en el navegador de los criterios de KAN-67 NO se ejecuto: PENDIENTE.
+HISTORIAS DE USUARIO Y CRITERIOS: sin historia de usuario del documento original; es parte de la desviacion 01 (KAN-2, Mercado Pago real). Criterios de KAN-67: 1 (vinculada sin pagos pendientes -> confirmar -> la tarjeta muestra "Vincular") - IMPLEMENTADO, verificacion en navegador PENDIENTE; 2 (con pagos retenidos se muestra el 409 y la tarjeta sigue igual) - IMPLEMENTADO, verificacion PENDIENTE; 3 (con TOKEN_VENCIDO tambien se ofrece desvincular) - IMPLEMENTADO, verificacion PENDIENTE; 4 (MERCADOPAGO_TOKEN_VENCIDO con su icono y sin link) - IMPLEMENTADO y PROBADO automatizado (esAlerta y rutaNotificacion), verificacion visual PENDIENTE; 5 (textos en la bitacora) - hecho en esta entrada.
+PANTALLAS: E2I (Panel del instructor) - cambia la tarjeta "Cobros con Mercado Pago" y se agrega un dialogo de confirmacion. Campana de notificaciones (compartida por los tres roles) - icono de alerta.
+REGLAS DE NEGOCIO: sin cambios (se aplica en pantalla la RN-21 propuesta en la ENTRADA 030).
+MODULOS: 8 Reservas y Pagos; 6 Instructor.
+CASOS DE USO: sin cambios en el backend. Total 117.
+ENTIDADES Y MIGRACIONES: sin cambios. Total V1 a V32.
+TECNOLOGIAS: sin cambios
+COSTOS: sin impacto
+RIESGOS: R02 (integracion con Mercado Pago) - mitigado parcialmente - evidencia: el instructor ya puede cortar la vinculacion sin pedirlo al equipo.
+SEGURIDAD: sin cambios. El endpoint exige sesion y el permiso mercadopago.vincular; el frontend no recibe ni muestra tokens.
+PRUEBAS: automatizadas nuevas en el frontend: 3, en el archivo nuevo src/lib/notificaciones.test.ts (esAlerta marca los dos tipos de alerta; esAlerta deja el resto como avisos comunes; una notificacion MERCADOPAGO_TOKEN_VENCIDO con destino NINGUNO no tiene ruta). Comando: npx vitest run; salida literal: "Test Files  18 passed (18)" - "Tests  153 passed (153)". Archivos de prueba del frontend: 18 (comando: find src -name "*.test.*" | wc -l). El backend no se toco. Manuales: ninguna.
+ANALISIS ESTATICO: ESLint 0 errores / 11 advertencias, sin cambios (comando: npx eslint src; salida literal: "11 problems (0 errors, 11 warnings)"). Typecheck: sin errores (comando: npx tsc -p tsconfig.app.json --noEmit).
+DESPLIEGUE Y CONFIGURACION: sin cambios
+DECISIONES:
+ - El 409 se muestra dentro del dialogo y no en la tarjeta: el instructor lo ve justo donde confirmo, y la tarjeta queda igual, que es lo que pide el criterio 2.
+ - Despues de desvincular se vuelve a pedir el estado al backend en lugar de suponerlo: si la cuenta ya estaba desvinculada (DELETE idempotente) la tarjeta queda igual de correcta.
+ - El icono de alerta se usa tambien para CAPTURA_PAGO_FALLIDA (administrador, ENTRADA 024), que tampoco tenia estilo propio y tambien pide una accion. Alternativa descartada: un mapeo de icono para los 22 tipos, que excede la tarea.
+ERRORES DETECTADOS: sin errores nuevos
+CAPTURAS SUGERIDAS:
+ tarjeta-mp-desvincular.png - Panel del instructor con la tarjeta "Cobros con Mercado Pago" y el boton "Desvincular".
+ dialogo-desvincular-mp.png - dialogo "¿Desvincular tu cuenta de Mercado Pago?".
+ dialogo-desvincular-mp-409.png - el mismo dialogo con el mensaje de pagos pendientes.
+ campana-alerta-mp.png - campana con la notificacion de vinculacion vencida y el icono de alerta.
+PENDIENTE QUE QUEDA: verificar en el navegador los criterios 1 a 4 de KAN-67 (con una cuenta de instructor de prueba: desvincular sin pagos pendientes, intentar con un pago Retenido, y con la cuenta en TOKEN_VENCIDO, que se puede forzar en la base).
+=== FIN ENTRADA 031 ===

@@ -471,7 +471,7 @@ Reemplazó a `MockPaymentGateway`, que ya no existe. **No hay modo mock**: en de
 **Variables de entorno:** `MP_CLIENT_ID`, `MP_CLIENT_SECRET`, `MP_REDIRECT_URI`, `MP_TOKEN_ENCRYPTION_KEY`, `MP_WEBHOOK_SECRET`, `MP_SANDBOX_PAYER_EMAIL` (solo sandbox), `MP_LOG_LEVEL` y `FRONTEND_URL` (a dónde vuelve el navegador después del OAuth). `MP_ACCESS_TOKEN` se lee pero **ningún código la usa**. Todas están en `.env.example`, sin valores.
 
 **Pendiente:**
-- **KAN-55, lo que queda:** la prueba manual de la renovación (forzar `expires_at` en el pasado y esperar al job) y el botón "Desvincular" en la tarjeta del Panel del frontend.
+- **KAN-55, lo que queda:** la prueba manual de la renovación (forzar `expires_at` en el pasado y esperar al job). El botón "Desvincular" del frontend se hizo en KAN-67.
 - **Pruebas manuales en sandbox** (KAN-62, KAN-63, KAN-66 y la matriz de KAN-64).
 - **Despliegue:** el webhook necesita una URL pública registrada en el panel de la aplicación.
 
