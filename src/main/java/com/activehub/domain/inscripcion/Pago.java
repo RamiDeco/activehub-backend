@@ -74,6 +74,10 @@ public class Pago {
     @Column(name = "capturado_at")
     private Instant capturadoAt;
 
+    /** Capturas fallidas en MP (KAN-61). Se reintenta en cada corrida; ver {@link VentanaPagos#MAX_INTENTOS_CAPTURA}. */
+    @Column(name = "intentos_captura", nullable = false)
+    private int intentosCaptura;
+
     /** Header X-Idempotency-Key enviado a MP: evita crear dos ordenes por un reintento. */
     @Column(name = "idempotency_key", length = 100, unique = true)
     private String idempotencyKey;

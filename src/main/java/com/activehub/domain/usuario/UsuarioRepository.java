@@ -74,4 +74,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     boolean existsByDniAndIdNotAndDeletedFalse(String dni, UUID id);
 
     List<Usuario> findAllByOrderByCreatedAtDesc();
+
+    /** KAN-61: ids de las cuentas activas con alguno de esos roles (avisos a la administración). */
+    @Query("SELECT u.id FROM Usuario u WHERE u.estado = com.activehub.domain.usuario.EstadoUsuario.ACTIVO AND u.rol.id IN :rolIds")
+    List<UUID> findIdsActivosPorRol(List<UUID> rolIds);
 }

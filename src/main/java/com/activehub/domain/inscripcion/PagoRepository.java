@@ -34,4 +34,14 @@ public interface PagoRepository extends JpaRepository<Pago, UUID> {
             + "JOIN FETCH a.instructor WHERE p.estado = :estado AND p.mpOrderId IS NOT NULL "
             + "AND p.capturadoAt IS NULL AND c.estado = :estadoClase")
     List<Pago> findSinCapturarDeClasesEn(EstadoPago estado, EstadoClase estadoClase);
+
+    /**
+     * KAN-61: pagos de Mercado Pago autorizados, sin capturar, cuya autorizacion vence antes de
+     * {@code limite}, en clases que todavia no finalizaron. Las Finalizadas ya las trae
+     * {@link #findSinCapturarDeClasesEn}; las Canceladas ya se reintegraron.
+     */
+    @Query("SELECT p FROM Pago p JOIN FETCH p.inscripcion i JOIN FETCH i.clase c JOIN FETCH c.actividad a "
+            + "JOIN FETCH a.instructor WHERE p.estado = :estado AND p.mpOrderId IS NOT NULL "
+            + "AND p.capturadoAt IS NULL AND p.autorizadoHasta < :limite AND c.estado IN :estadosClase")
+    List<Pago> findSinCapturarPorVencer(EstadoPago estado, java.time.Instant limite, List<EstadoClase> estadosClase);
 }

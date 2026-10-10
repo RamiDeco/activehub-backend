@@ -33,5 +33,8 @@ public enum TipoNotificacion {
     DENUNCIA_DESESTIMADA,
     NUEVA_INSCRIPCION,
     ALUMNO_CANCELO_INSCRIPCION,
-    NUEVA_RESENIA
+    NUEVA_RESENIA,
+
+    // Administrador
+    CAPTURA_PAGO_FALLIDA
 }

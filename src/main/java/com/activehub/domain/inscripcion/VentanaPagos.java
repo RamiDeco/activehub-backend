@@ -25,6 +25,20 @@ public final class VentanaPagos {
      */
     public static final Duration VIGENCIA_AUTORIZACION = Duration.ofDays(5);
 
+    /**
+     * KAN-61: si a una autorizacion le falta menos que esto para vencer, se captura aunque la
+     * clase todavia no haya finalizado. En el flujo normal no pasa (la inscripcion abre 4 dias
+     * antes y se captura al empezar la clase), pero si el scheduler estuvo caido o la clase se
+     * corrio de fecha, esperar a que finalice es perder el cobro.
+     */
+    public static final Duration MARGEN_CAPTURA_ANTICIPADA = Duration.ofHours(24);
+
+    /**
+     * KAN-61: a la cantidad de capturas fallidas de un mismo pago se avisa a la administracion.
+     * Con el scheduler cada 5 minutos, 6 intentos es media hora fallando: ya no es un tropiezo.
+     */
+    public static final int MAX_INTENTOS_CAPTURA = 6;
+
     private VentanaPagos() {
     }
 }

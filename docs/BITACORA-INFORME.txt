@@ -35,15 +35,15 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-10-09, despues de la ENTRADA 022) ===
+=== ESTADO GENERAL (actualizado: 2026-10-10, despues de la ENTRADA 024) ===
 Casos de uso implementados en el backend: 115
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
 
-Pruebas automatizadas del backend: 205 archivos / 962 pruebas / resultado: 960 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
+Pruebas automatizadas del backend: 205 archivos / 971 pruebas / resultado: 969 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
 (comando de conteo de archivos: find src/test -name "*Test.java" | wc -l)
-(comando de ejecucion: JAVA_HOME=C:\Users\Facundo\.jdks\corretto-21.0.10 ./mvnw -o test)
-(salida literal: "Tests run: 842, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS")
+(comando de ejecucion: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw test)
+(salida literal: "Tests run: 971, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS")
 
 Pruebas automatizadas del frontend: 17 archivos / 145 pruebas / resultado: 145 correctas, 0 fallidas (ENTRADA 011)
 (comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  17)
@@ -51,8 +51,8 @@ Pruebas automatizadas del frontend: 17 archivos / 145 pruebas / resultado: 145 c
 Cobertura sobre los archivos alcanzados: 75.25% de sentencias, 66.86% de ramas, 69.23% de funciones, 78.17% de lineas (comando: npm run test:coverage).
 Cubren lib/ completo salvo nominatim, notificaciones y resaltado, mas las dos pantallas publicas (Ayuda y Manual). Las pantallas de Alumno, Instructor y Administrador todavia no tienen pruebas.
 
-Migraciones Flyway: V1 a V31 (ultima: V31__pago_en_revision, ENTRADA 016)
-(comando: ls src/main/resources/db/migration | wc -l  ->  31)
+Migraciones Flyway: V1 a V32 (ultima: V32__pago_intentos_captura, ENTRADA 023)
+(comando: ls src/main/resources/db/migration | wc -l  ->  32)
 
 ESLint del frontend: 0 errores / 11 advertencias
 (comando: npx eslint .  en activehub-frontend; salida literal: "11 problems (0 errors, 11 warnings)")
@@ -82,7 +82,7 @@ Estado por modulo (los 15):
 15. Ayuda y Soporte al Usuario - PARCIAL - pantalla Ayuda, reportes de soporte y asistente con modelo de lenguaje (Groq) sobre el manual de usuario, los tres PROBADOS (ENTRADAS 006 y 007); el manual de usuario ya es una pantalla de la plataforma (/manual, ENTRADA 009), IMPLEMENTADO pero todavia no probado en el navegador.
 
 Pendientes conocidos:
-1 (integracion real con Mercado Pago) - PENDIENTE - hoy MockPaymentGateway. Avance: modelo de datos del marketplace (ENTRADA 012, KAN-52 / MP-03) y pasarela real MercadoPagoGateway con autorizar/capturar/cancelar/reembolsar/consultar; la inscripcion con Mercado Pago ya autoriza de verdad con el token del instructor (ENTRADA 013, KAN-53 / MP-04). MockPaymentGateway RETIRADO. OAuth del instructor en el backend (ENTRADA 014, KAN-54 / MP-05). Captura, cancelacion y reembolso reales (ENTRADA 017, KAN-65). Webhook con firma (ENTRADA 021, KAN-60). Falta: pantalla del frontend para vincular y prueba del ciclo completo en sandbox.
+1 (integracion real con Mercado Pago) - PENDIENTE - hoy MockPaymentGateway. Avance: modelo de datos del marketplace (ENTRADA 012, KAN-52 / MP-03) y pasarela real MercadoPagoGateway con autorizar/capturar/cancelar/reembolsar/consultar; la inscripcion con Mercado Pago ya autoriza de verdad con el token del instructor (ENTRADA 013, KAN-53 / MP-04). MockPaymentGateway RETIRADO. OAuth del instructor en el backend (ENTRADA 014, KAN-54 / MP-05). Captura, cancelacion y reembolso reales (ENTRADA 017, KAN-65). Webhook con firma (ENTRADA 021, KAN-60). Captura anticipada, registro de capturas fallidas y aviso a la administracion (ENTRADAS 023 y 024, KAN-61; falta su prueba en sandbox). Falta: pantalla del frontend para vincular y prueba del ciclo completo en sandbox.
 2 (recuperacion de contrasenia por correo) - PROBADO (ENTRADA 002).
 3 (asistente con modelo de lenguaje y chatbot con Groq) - PROBADO. PENDIENTE 3: PARCIAL -> PROBADO (ENTRADA 007: verificado contra Groq con el modelo openai/gpt-oss-120b — preguntas legitimas respondidas con el manual, siete intentos de prompt injection rechazados, informe de beneficios generado para una cuenta de alumno de demostracion, y el aviso de cuota agotada con tiempo de espera funcionando). El codigo es de la ENTRADA 006 (2 casos de uso) mas las defensas y el manejo de cuota de la 007; en total 62 pruebas automatizadas. Queda como verificacion visual pendiente probar las dos pantallas en el navegador. El motor de recomendaciones adaptativo, que era la tercera parte de este pendiente, quedo PROBADO en la ENTRADA 004.
 4 (imagenes en Supabase Storage) - PROBADO - bucket creado, 15 archivos migrados y lectura verificada contra el proyecto real (ENTRADA 003). PENDIENTE 4: PARCIAL -> PROBADO. Queda aparte la optimizacion de imagenes, que nunca se implemento.
@@ -1579,3 +1579,67 @@ ERRORES DETECTADOS: sin cambios
 CAPTURAS SUGERIDAS: sin capturas
 PENDIENTE QUE QUEDA: verificar una notificacion real desde el panel de Mercado Pago; la dependencia sdk-java sin uso.
 === FIN ENTRADA 022 ===
+
+=== ENTRADA 023 ===
+FECHA: 2026-10-09
+REPOSITORIO: backend
+RAMA Y COMMITS: feat/mp-integration - sin commitear al cierre de esta entrada - sin Pull Request
+TIPO: CAMBIO FUNCIONAL
+TITULO: Captura anticipada de autorizaciones por vencer y registro de capturas fallidas en Mercado Pago (KAN-61 / MP-12, PARCIAL)
+QUE CAMBIA PARA EL USUARIO: Administrador: en Auditoria aparecen dos acciones nuevas sobre pagos. El resto de los roles no ve cambios. El instructor cobra tambien en el caso borde en que la autorizacion de Mercado Pago iba a vencer antes de que la clase finalizara (por ejemplo, si el proceso automatico estuvo detenido).
+TEXTOS DE INTERFAZ (literales): descripciones nuevas de la columna Detalle de Auditoria:
+ "El sistema cobró en Mercado Pago un pago antes de que finalizara la clase, porque la autorización estaba por vencer."
+ "Falló el cobro en Mercado Pago de un pago autorizado: se reintenta en la próxima corrida."
+DETALLE TECNICO: KAN-65 (ENTRADA 017) ya habia resuelto los puntos 1, 2 y 5 del ticket: la captura real ocurre al finalizar la clase, desde FinalizarClasesVencidasService.capturarPagosPendientes, sin transaccion comun para que un pago fallido no revierta a los demas. Esta entrada agrega:
+ a) Captura anticipada (punto 3): ademas de los pagos Retenido sin capturar de clases Finalizadas, el proceso toma los de clases Programadas o Habilitadas cuya autorizacion vence dentro de VentanaPagos.MARGEN_CAPTURA_ANTICIPADA (24 h), con la consulta nueva PagoRepository.findSinCapturarPorVencer. Si la captura entra, se audita PAGO_CAPTURA_ANTICIPADA con la fecha de vencimiento en la metadata. Si despues hay una denuncia o la clase se cancela, el reintegro de un pago capturado ya es un reembolso (OperacionesPagoMercadoPago.reintegrar, ENTRADA 017). En el flujo normal este caso no ocurre: la inscripcion abre 4 dias antes y la autorizacion dura 5.
+ b) Registro de la falla (punto 4, primera mitad): una captura fallida incrementa pago.intentos_captura, se guarda y se audita PAGO_CAPTURA_FALLIDA con la metadata "intento N · <tipo de excepcion>" (sin el mensaje de la excepcion, que puede traer partes de la respuesta de Mercado Pago). El pago sigue Retenido y se reintenta en la siguiente corrida (cada 5 minutos).
+ c) Al llegar a VentanaPagos.MAX_INTENTOS_CAPTURA (6 intentos, media hora) se invoca avisarAdministracion, que hoy solo escribe un log de error: el envio de la notificacion a los administradores queda PENDIENTE y asignado al usuario, con una guia paso a paso en docs/guia-KAN-61-aviso-admin.md y un test ya escrito y deshabilitado.
+ESTADO: a) y b) IMPLEMENTADOS y PROBADOS con pruebas automatizadas. c) PENDIENTE (aviso a la administracion). Criterio 4 del ticket (prueba en el sandbox de Mercado Pago) PENDIENTE.
+HISTORIAS DE USUARIO Y CRITERIOS: sin cambios en las historias del catalogo; cubre los criterios 1, 2 y 3 del ticket KAN-61 con pruebas automatizadas (el 1 ya lo cubria LiberarPagosServiceTest).
+PANTALLAS: sin cambios
+REGLAS DE NEGOCIO: RN-04 (retencion y liberacion del pago): se suma la excepcion de la captura anticipada cuando la autorizacion vence en menos de 24 h.
+MODULOS: 4 Auditoria y Trazabilidad; 8 Reservas y Pagos.
+CASOS DE USO: sin nuevos. Modificado: finalizarclasesvencidas. Modificado indirectamente: listarauditoria (dos descripciones nuevas).
+ENTIDADES Y MIGRACIONES: V32__pago_intentos_captura (pago.intentos_captura INTEGER NOT NULL DEFAULT 0, idempotente). Pago.intentosCaptura. AuditAccion: PAGO_CAPTURA_ANTICIPADA, PAGO_CAPTURA_FALLIDA. VentanaPagos: MARGEN_CAPTURA_ANTICIPADA, MAX_INTENTOS_CAPTURA. La migracion ya quedo aplicada en la base de Supabase al ejecutar la suite.
+TECNOLOGIAS: sin cambios
+COSTOS: sin impacto
+RIESGOS: R02 (integracion con Mercado Pago) - mitigado parcialmente - evidencia: una autorizacion ya no se pierde por esperar a que finalice la clase, y las capturas fallidas quedan registradas en Auditoria.
+SEGURIDAD: la metadata de auditoria de una captura fallida guarda solo el tipo de excepcion, no su mensaje.
+PRUEBAS: 3 pruebas nuevas en FinalizarClasesVencidasServiceTest (falla suma intento, audita y sigue Retenido; autorizacion por vencer se captura con Clock.fixed aunque la clase no finalizo; autorizacion ya vencida no se audita como anticipada) mas 1 deshabilitada a proposito (aviso a la administracion, parte del usuario). Suite completa: "Tests run: 968, Failures: 0, Errors: 0, Skipped: 3" - "BUILD SUCCESS", 01:20 min (comando: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw test). Las 3 omitidas: las 2 de sandbox (ENTRADA 013) y la deshabilitada de esta entrada.
+ANALISIS ESTATICO: sin cambios
+DESPLIEGUE Y CONFIGURACION: sin variables de entorno nuevas. Migracion V32 nueva.
+DECISIONES: 1) La captura anticipada se aplica con margen de 24 h y se audita aparte para distinguirla de la normal. 2) El aviso a la administracion se dispara una sola vez, al llegar exactamente al tope de intentos, y no en cada corrida posterior. 3) El criterio de sandbox del ticket menciona la comision descontada; hoy pago.comision es siempre 0 por la decision de MP-01 (la plataforma no cobra comision), asi que esa parte del criterio no aplica.
+ERRORES DETECTADOS: sin cambios
+CAPTURAS SUGERIDAS: auditoria-captura-fallida.png - pantalla Auditoria con una fila "Falló el cobro en Mercado Pago de un pago autorizado: se reintenta en la próxima corrida."
+PENDIENTE QUE QUEDA: aviso a la administracion al llegar al tope de intentos (guia en docs/guia-KAN-61-aviso-admin.md); prueba del criterio 4 en el sandbox de Mercado Pago.
+=== FIN ENTRADA 023 ===
+
+=== ENTRADA 024 ===
+FECHA: 2026-10-10
+REPOSITORIO: backend
+RAMA Y COMMITS: feat/mp-integration - el commit de KAN-61 incluye las ENTRADAS 023 y 024 - sin Pull Request
+TIPO: NUEVA FUNCIONALIDAD
+TITULO: Aviso a la administracion cuando un pago de Mercado Pago no se puede capturar (KAN-61 / MP-12, cierre del punto 4)
+QUE CAMBIA PARA EL USUARIO: Administrador (todo usuario cuyo rol tenga el permiso auditoria.ver): cuando el cobro de un mismo pago falla 6 veces seguidas (media hora, con el proceso automatico cada 5 minutos), recibe una notificacion en la campana. Llega una sola vez por pago y no es clickeable (el administrador no tiene una pantalla de pagos a la que llevarlo). El resto de los roles no ve cambios.
+TEXTOS DE INTERFAZ (literales): notificacion nueva (los corchetes indican datos variables):
+ "No se pudo cobrar en Mercado Pago un pago de la clase de [nombre de la actividad] del [fecha y hora de la clase] después de 6 intentos. Revisá que el instructor tenga su cuenta de Mercado Pago vinculada."
+DETALLE TECNICO: FinalizarClasesVencidasService.avisarAdministracion, que en la ENTRADA 023 solo escribia un log, ahora busca los roles con el permiso auditoria.ver (ConfiguracionRolRepository.rolesConPermiso), los usuarios activos de esos roles (consulta nueva UsuarioRepository.findIdsActivosPorRol) y le envia a cada uno una notificacion de tipo nuevo CAPTURA_PAGO_FALLIDA, con entidadId = id del pago (el mismo de la fila PAGO_CAPTURA_FALLIDA de Auditoria) y destino NINGUNO. Si ningun rol tiene el permiso no se consulta ni se notifica. Se elige por permiso y no por nombre de rol (RN-19). Ademas, el registro de la falla y el aviso quedan protegidos: una excepcion al guardar el contador, al auditar o al notificar se registra en el log y no corta la corrida, para que el resto de los pagos se siga intentando (punto 5 del ticket). La implementacion de avisarAdministracion, la consulta y el tipo de notificacion los escribio el usuario siguiendo docs/guia-KAN-61-aviso-admin.md; la revision corrigio el destino nulo (que provocaba un NullPointerException y no guardaba la notificacion), el texto del mensaje (actividad y fecha con NotificacionMensajes.formatFechaHora, regla de toda notificacion sobre una clase) y la proteccion de errores.
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas. KAN-61: puntos 1 a 5 IMPLEMENTADOS; criterio 4 (prueba en el sandbox de Mercado Pago) PENDIENTE.
+HISTORIAS DE USUARIO Y CRITERIOS: sin cambios en las historias del catalogo; cierra el punto 4 del ticket KAN-61.
+PANTALLAS: sin cambios. La notificacion se muestra en la campana existente de la barra lateral del administrador.
+REGLAS DE NEGOCIO: RN-19 (permisos): el destinatario del aviso se resuelve por el permiso auditoria.ver.
+MODULOS: 4 Auditoria y Trazabilidad; 8 Reservas y Pagos.
+CASOS DE USO: sin nuevos. Modificado: finalizarclasesvencidas.
+ENTIDADES Y MIGRACIONES: sin migraciones nuevas (la columna tipo de notificacion no tiene CHECK). TipoNotificacion: CAPTURA_PAGO_FALLIDA. UsuarioRepository.findIdsActivosPorRol.
+TECNOLOGIAS: sin cambios
+COSTOS: sin impacto
+RIESGOS: R02 (integracion con Mercado Pago) - mitigado parcialmente - evidencia: un cobro que no entra ya no queda solo en el log del servidor.
+SEGURIDAD: el mensaje de la notificacion no incluye datos del alumno ni el monto.
+PRUEBAS: FinalizarClasesVencidasServiceTest pasa de 12 a 15 pruebas: el aviso se envia a cada administrador con el texto exacto y destino NINGUNO; despues del tope no se vuelve a avisar; sin roles con el permiso no se consultan usuarios ni se notifica; si el aviso falla, el resto de los pagos de la corrida se sigue intentando. La prueba que estaba deshabilitada en la ENTRADA 023 ahora se ejecuta. La consulta nueva quedo validada al levantar el contexto en ActivehubApiApplicationTests. Suite completa: "Tests run: 971, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS", 01:01 min (comando: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw test).
+ANALISIS ESTATICO: sin cambios
+DESPLIEGUE Y CONFIGURACION: sin cambios
+DECISIONES: 1) El aviso lo reciben quienes tienen auditoria.ver, porque desde esa pantalla se ven las fallas de captura; se descarto crear una clave nueva (pagos.supervisar), que no gatearia ningun endpoint y haria fallar GuardasDePermisoTest. 2) Destino NINGUNO: no hay pantalla de pagos del administrador.
+ERRORES DETECTADOS: sintoma: con destino nulo, la notificacion no se guardaba y la excepcion cortaba la corrida de capturas. Causa: el constructor de Notificacion lee destino.tipo(). Correccion: Destino.ninguno(). Como se detecto: revision de codigo; la prueba con NotificacionService simulado no lo detectaba porque no ejecuta el constructor.
+CAPTURAS SUGERIDAS: campana-admin-captura-fallida.png - campana del administrador con la notificacion "No se pudo cobrar en Mercado Pago un pago de la clase de ..."
+PENDIENTE QUE QUEDA: prueba del criterio 4 de KAN-61 en el sandbox de Mercado Pago.
+=== FIN ENTRADA 024 ===
