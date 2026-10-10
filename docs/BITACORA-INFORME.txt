@@ -35,19 +35,19 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-10-10, despues de la ENTRADA 027) ===
+=== ESTADO GENERAL (actualizado: 2026-10-10, despues de la ENTRADA 028) ===
 Casos de uso implementados en el backend: 115
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
 
-Pruebas automatizadas del backend: 206 archivos / 980 pruebas / resultado: 978 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
+Pruebas automatizadas del backend: 206 archivos / 982 pruebas / resultado: 980 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
 (comando de conteo de archivos: find src/test -name "*Test.java" | wc -l)
 (comando de ejecucion: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw test)
-(salida literal: "Tests run: 980, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS")
+(salida literal: "Tests run: 982, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS")
 
-Pruebas automatizadas del frontend: 17 archivos / 145 pruebas / resultado: 145 correctas, 0 fallidas (ENTRADA 011)
+Pruebas automatizadas del frontend: 17 archivos / 150 pruebas / resultado: 150 correctas, 0 fallidas (ENTRADA 028)
 (comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  17)
-(comando de ejecucion: npm test; salida literal: "Test Files  17 passed (17)" - "Tests  145 passed (145)")
+(comando de ejecucion: npm test; salida literal: "Test Files  17 passed (17)" - "Tests  150 passed (150)")
 Cobertura sobre los archivos alcanzados: 75.25% de sentencias, 66.86% de ramas, 69.23% de funciones, 78.17% de lineas (comando: npm run test:coverage).
 Cubren lib/ completo salvo nominatim, notificaciones y resaltado, mas las dos pantallas publicas (Ayuda y Manual). Las pantallas de Alumno, Instructor y Administrador todavia no tienen pruebas.
 
@@ -1742,3 +1742,56 @@ ERRORES DETECTADOS: el de la ENTRADA 025 (corregido aca) y el de la entidad desc
 CAPTURAS SUGERIDAS: auditoria-reembolso-una-fila.png - Auditoria con una sola fila "Se reembolsó en Mercado Pago un pago ya cobrado." despues de resolver una denuncia con Reintegrar.
 PENDIENTE QUE QUEDA: prueba en sandbox de KAN-66: repetir el caso 2 de la ENTRADA 025 (pago capturado, denuncia resuelta con Reintegrar) y verificar una sola fila en Auditoria.
 === FIN ENTRADA 027 ===
+
+=== ENTRADA 028 ===
+FECHA: 2026-10-10
+REPOSITORIO: ambos
+RAMA Y COMMITS: backend feat/mp-integration, frontend integracion - commits de KAN-63 indicados en ESTADO GENERAL o en la entrada siguiente - sin Pull Request
+TIPO: INTERFAZ
+TITULO: Estados de pago visibles y explicados para el alumno y el instructor (KAN-63 / MP-14)
+QUE CAMBIA PARA EL USUARIO:
+ - Alumno, pantalla Mis pagos (E3A): la columna "Estado pago" muestra una etiqueta y, debajo, una frase que explica que paso con su plata. Distingue un pago reservado en la tarjeta (todavia no cobrado) de uno ya cobrado, y una devolucion por Mercado Pago de un pago en efectivo cancelado. Antes los pagos Rechazado, Reembolsado y En revision se mostraban con la etiqueta verde "Disponible" (estilo por defecto), porque la pantalla no conocia esos estados.
+ - Alumno, totales de Mis pagos: "Total pagado" suma tambien los pagos ya cobrados que esperan el periodo de denuncias; "Retenido (Mercado Pago)" suma solo lo reservado y todavia no cobrado; "Reintegrado" suma lo reembolsado y las reservas liberadas de Mercado Pago (no los pagos en efectivo cancelados, que devuelve el instructor en mano).
+ - Instructor, detalle de una clase (lista "Alumnos inscriptos"): dos columnas nuevas, "Pago" (etiqueta y frase que explica si la plata ya es suya) y "A recibir" (lo que recibe por ese alumno, sin la comision de la plataforma), y al pie "Total a recibir por esta clase".
+TEXTOS DE INTERFAZ (literales):
+ Mis pagos (alumno), etiqueta / frase:
+  "Retenido hasta la clase" / "Reservado en tu tarjeta: todavía no se te cobró."
+  "Cobrado" / "Se cobró al dictarse la clase."
+  "Efectivo" / "Se paga en mano al instructor."
+  "En revisión" / "Mercado Pago está revisando el pago."
+  "Rechazado" / "Mercado Pago no aprobó el pago: no se te cobró."
+  "Reembolsado" / "Se te devolvió por Mercado Pago."
+  "Retención liberada" / "No se te cobró: se liberó la reserva de tu tarjeta."
+  "Pago cancelado" / "Coordiná con el instructor la devolución de lo que pagaste."
+ Mis pagos, recuadro informativo (reemplaza al anterior): "Con Mercado Pago, el pago queda reservado en tu tarjeta hasta que se dicta la clase y recién ahí se te cobra. Si la clase se cancela antes, la reserva se libera y no se te cobra nada; si ya se te había cobrado, se te reembolsa."
+ Texto retirado: "En Mercado Pago el dinero queda Retenido hasta que la clase se dicta; luego pasa a Liberado. Si la clase se cancela, se reintegra."
+ Detalle de clase (instructor), columnas: "Pago", "A recibir". Pie: "Total a recibir por esta clase:". Etiqueta / frase:
+  "Retenido" / "Se cobra al dictarse la clase."
+  "Cobrado" / "Se libera 24 h después de la clase si no hay denuncias."
+  "Liberado" / "Acreditado en tu cuenta."
+  "Efectivo" / "Se cobra en mano."
+  "En revisión" / "Mercado Pago todavía no lo aprobó."
+  "Rechazado" / "Mercado Pago no aprobó el pago."
+  "Reintegrado" / "Se le devolvió al alumno." (pago reembolsado) - "Reintegrado" / "No se cobró." (pago cancelado)
+DETALLE TECNICO: backend: listarmispagos devuelve capturado (si Mercado Pago ya cobro el pago) y listarrosterclase devuelve por alumno pagoEstado, pagoMetodo, pagoCapturado y pagoNeto (monto_instructor si esta calculado; si no, monto menos comision). Frontend: EstadoPago suma Rechazado, Reembolsado y EnRevision; StatusBadge suma el tipo "reembolsado"; lib/status.ts suma explicarPagoAlumno y explicarPagoInstructor (etiqueta, tipo de badge y frase segun estado, metodo y capturado); MisPagos.tsx y GestionClase.tsx las usan. La frase "24 h" del instructor replica VentanaPagos.PERIODO_DENUNCIAS del backend.
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas (backend y frontend). PENDIENTE la verificacion visual en el navegador con datos de sandbox (criterio del ticket).
+HISTORIAS DE USUARIO Y CRITERIOS: E3A (historial de pagos del alumno) y E2I (listado de alumnos de una clase): el estado del pago se muestra con el significado real del ciclo de Mercado Pago.
+PANTALLAS: Mis pagos del alumno y Detalle de clase del instructor (sin pantallas nuevas).
+REGLAS DE NEGOCIO: RN-04 (retencion y liberacion del pago) visible para los dos roles.
+MODULOS: 5 Alumno; 6 Instructor; 8 Reservas y Pagos.
+CASOS DE USO: sin nuevos. Modificados: listarmispagos, listarrosterclase.
+ENTIDADES Y MIGRACIONES: sin cambios
+TECNOLOGIAS: sin cambios
+COSTOS: sin impacto
+RIESGOS: R05 (inconsistencias documentacion-sistema) - mitigado parcialmente - evidencia: la pantalla deja de mostrar "Disponible" para estados de pago que no conocia.
+SEGURIDAD: sin cambios. El roster solo lo ve el instructor dueno de la clase (regla existente).
+PRUEBAS: backend: 2 pruebas nuevas (ListarMisPagosServiceTest, un Retenido capturado se informa como capturado; ListarRosterClaseServiceTest, pago y neto por alumno, con y sin monto del instructor calculado y sin pago) y 1 ajustada. Suite completa: "Tests run: 982, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS" (comando: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw test). Frontend: 5 pruebas nuevas en src/lib/status.test.ts. Comando npm test: "Test Files  17 passed (17)" - "Tests  150 passed (150)".
+ANALISIS ESTATICO: ESLint del frontend: "11 problems (0 errors, 11 warnings)", sin cambios (comando: npx eslint .). Typecheck sin errores (comando: npx tsc -b). Build de produccion correcto (comando: npm run build; "built in 275ms"; la advertencia de tamano de chunk es preexistente).
+DESPLIEGUE Y CONFIGURACION: sin cambios
+DECISIONES: el texto que explica cada estado se arma en el frontend (lib/status.ts) y no en el backend, porque depende de quien mira (alumno o instructor) y el backend manda el dato (estado, metodo, capturado). La comision sigue en 0 (decision de MP-01), asi que hoy "A recibir" coincide con el precio pagado.
+ERRORES DETECTADOS: sintoma: en Mis pagos, un pago Reembolsado, Rechazado o En revision aparecia con la etiqueta verde "Disponible". Causa: pagoStatusType no contemplaba esos estados y StatusBadge cae al tipo por defecto. Correccion: esta entrada. Como se detecto: revision de KAN-63.
+CAPTURAS SUGERIDAS:
+ mis-pagos-estados.png - Mis pagos del alumno con un pago "Retenido hasta la clase", uno "Cobrado" y uno "Reembolsado".
+ detalle-clase-a-recibir.png - Detalle de clase del instructor con las columnas "Pago" y "A recibir" y el total al pie.
+PENDIENTE QUE QUEDA: verificacion visual en el navegador con datos de sandbox (KAN-63).
+=== FIN ENTRADA 028 ===

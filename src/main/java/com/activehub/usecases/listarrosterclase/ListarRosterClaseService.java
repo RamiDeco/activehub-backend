@@ -3,9 +3,12 @@ package com.activehub.usecases.listarrosterclase;
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.actividad.ClaseRepository;
 import com.activehub.domain.inscripcion.EstadoInscripcion;
+import com.activehub.domain.inscripcion.Inscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
+import com.activehub.domain.inscripcion.Pago;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
+import java.math.BigDecimal;
 import java.util.List;
 import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.util.UUID;
@@ -45,15 +48,7 @@ public class ListarRosterClaseService {
 
         var inscripciones = inscripcionRepository.findByClaseIdAndEstadoInOrderByCreatedAtAsc(claseId, ESTADOS_ROSTER);
 
-        var alumnos = inscripciones.stream()
-                .map(i -> new ListarRosterClaseResponse.Alumno(
-                        i.getId(),
-                        i.getAlumno().getId(),
-                        i.getAlumno().getNombre(),
-                        i.getAlumno().getApellido(),
-                        i.getAlumno().getTelefono(),
-                        i.getEstado().getEtiqueta()))
-                .toList();
+        var alumnos = inscripciones.stream().map(ListarRosterClaseService::aAlumno).toList();
 
         int cantidadInscripto = (int) inscripciones.stream().filter(i -> i.getEstado() == EstadoInscripcion.INSCRIPTO).count();
         int cantidadPagoPendiente = (int) inscripciones.stream().filter(i -> i.getEstado() == EstadoInscripcion.PAGO_PENDIENTE).count();
@@ -70,5 +65,29 @@ public class ListarRosterClaseService {
                 cantidadPreInscripcion,
                 alumnos
         );
+    }
+
+    private static ListarRosterClaseResponse.Alumno aAlumno(Inscripcion i) {
+        Pago pago = i.getPago();
+        return new ListarRosterClaseResponse.Alumno(
+                i.getId(),
+                i.getAlumno().getId(),
+                i.getAlumno().getNombre(),
+                i.getAlumno().getApellido(),
+                i.getAlumno().getTelefono(),
+                i.getEstado().getEtiqueta(),
+                pago != null ? pago.getEstado().name() : null,
+                pago != null ? pago.getMetodo().getEtiqueta() : null,
+                pago != null && pago.getCapturadoAt() != null,
+                pago != null ? neto(pago) : null);
+    }
+
+    /** Lo que recibe el instructor: el monto ya calculado si lo hay, si no monto menos comision. */
+    private static BigDecimal neto(Pago pago) {
+        if (pago.getMontoInstructor() != null) {
+            return pago.getMontoInstructor();
+        }
+        BigDecimal comision = pago.getComision() != null ? pago.getComision() : BigDecimal.ZERO;
+        return pago.getMonto().subtract(comision);
     }
 }

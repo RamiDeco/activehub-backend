@@ -1,5 +1,10 @@
 package com.activehub.usecases.listarrosterclase;
 
+import static org.mockito.ArgumentMatchers.any;
+import java.math.BigDecimal;
+import com.activehub.domain.inscripcion.MetodoPago;
+import com.activehub.domain.inscripcion.EstadoPago;
+import com.activehub.domain.inscripcion.Pago;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
@@ -90,6 +95,43 @@ class ListarRosterClaseServiceTest {
         assertThat(response.cantidadPreInscripcion()).isEqualTo(4);
         assertThat(response.alumnos()).hasSize(2);
         assertThat(response.cuposLibres()).isEqualTo(7);
+    }
+
+    @Test
+    void listar_incluyeElPagoDeCadaAlumnoYElNetoQueRecibeElInstructor() {
+        // KAN-63: el instructor ve en que estado esta la plata de cada alumno y cuanto le queda.
+        Inscripcion conMp = inscripcionCon(EstadoInscripcion.INSCRIPTO);
+        Pago mp = new Pago();
+        mp.setEstado(EstadoPago.Retenido);
+        mp.setMetodo(MetodoPago.MERCADO_PAGO);
+        mp.setMonto(new BigDecimal("5000"));
+        mp.setComision(new BigDecimal("500"));
+        mp.setCapturadoAt(java.time.Instant.parse("2026-10-10T12:00:00Z"));
+        conMp.setPago(mp);
+        Inscripcion conMontoCalculado = inscripcionCon(EstadoInscripcion.INSCRIPTO);
+        Pago calculado = new Pago();
+        calculado.setEstado(EstadoPago.Liberado);
+        calculado.setMetodo(MetodoPago.MERCADO_PAGO);
+        calculado.setMonto(new BigDecimal("5000"));
+        calculado.setMontoInstructor(new BigDecimal("4700"));
+        conMontoCalculado.setPago(calculado);
+        Inscripcion sinPago = inscripcionCon(EstadoInscripcion.PAGO_PENDIENTE);
+
+        when(claseRepository.findById(claseId)).thenReturn(Optional.of(clase));
+        when(inscripcionRepository.findByClaseIdAndEstadoInOrderByCreatedAtAsc(any(), any()))
+                .thenReturn(List.of(conMp, conMontoCalculado, sinPago));
+
+        var alumnos = service.listar(claseId, instructorId).alumnos();
+
+        assertThat(alumnos.get(0).pagoEstado()).isEqualTo("Retenido");
+        assertThat(alumnos.get(0).pagoMetodo()).isEqualTo("Mercado Pago");
+        assertThat(alumnos.get(0).pagoCapturado()).isTrue();
+        assertThat(alumnos.get(0).pagoNeto()).isEqualByComparingTo("4500");
+        // Si el pago ya trae el monto del instructor calculado, manda ese.
+        assertThat(alumnos.get(1).pagoNeto()).isEqualByComparingTo("4700");
+        assertThat(alumnos.get(2).pagoEstado()).isNull();
+        assertThat(alumnos.get(2).pagoNeto()).isNull();
+        assertThat(alumnos.get(2).pagoCapturado()).isFalse();
     }
 
     @Test

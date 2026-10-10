@@ -88,6 +88,22 @@ class ListarMisPagosServiceTest {
         assertThat(r.metodo()).isEqualTo(MetodoPago.MERCADO_PAGO.getEtiqueta());
         assertThat(r.monto()).isEqualByComparingTo("3500");
         assertThat(r.createdAt()).isEqualTo(Instant.parse("2026-05-28T09:00:05Z"));
+        assertThat(r.capturado()).isFalse();
+    }
+
+    @Test
+    void listar_retenidoYaCapturado_loInformaParaQueLaPantallaDigaCobrado() {
+        // KAN-63: Retenido con capturadoAt es plata ya cobrada que espera el periodo de denuncias.
+        UUID alumnoId = UUID.randomUUID();
+        Pago capturado = pago(EstadoPago.Retenido, MetodoPago.MERCADO_PAGO, "3500");
+        capturado.setCapturadoAt(Instant.parse("2026-05-30T10:00:00Z"));
+        when(inscripcionRepository.findByAlumnoIdConDetalle(alumnoId, null))
+                .thenReturn(List.of(inscripcion(EstadoInscripcion.INSCRIPTO, EstadoClase.Finalizada, capturado)));
+
+        var r = service.listar(alumnoId).get(0);
+
+        assertThat(r.estado()).isEqualTo("Retenido");
+        assertThat(r.capturado()).isTrue();
     }
 
     @Test

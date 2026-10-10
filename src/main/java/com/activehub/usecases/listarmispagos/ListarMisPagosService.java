@@ -47,6 +47,7 @@ public class ListarMisPagosService {
                 clase.getEstado().name(),
                 i.getEstado().getEtiqueta(),
                 pago.getEstado().name(),
+                pago.getCapturadoAt() != null,
                 pago.getMetodo().getEtiqueta(),
                 pago.getMonto(),
                 pago.getCreatedAt());
