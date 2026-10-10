@@ -95,6 +95,48 @@ class MercadoPagoOAuthClientTest {
     }
 
     @Test
+    void renovar_ok_mandaElRefreshTokenYDevuelveElParNuevo() {
+        server.expect(requestTo(BASE + "/oauth/token"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(jsonPath("$.grant_type").value("refresh_token"))
+                .andExpect(jsonPath("$.refresh_token").value("TG-rt-viejo"))
+                .andExpect(jsonPath("$.client_id").value("123456"))
+                .andExpect(jsonPath("$.client_secret").value("secreto"))
+                .andExpect(jsonPath("$.code").doesNotExist())
+                .andRespond(withSuccess("""
+                        {"access_token":"APP_USR-at2","token_type":"Bearer","expires_in":15552000,
+                         "user_id":987654,"refresh_token":"TG-rt2","public_key":"APP_USR-pk"}
+                        """, MediaType.APPLICATION_JSON));
+
+        var c = client.renovar("TG-rt-viejo");
+
+        assertThat(c.accessToken()).isEqualTo("APP_USR-at2");
+        assertThat(c.refreshToken()).isEqualTo("TG-rt2");
+        assertThat(c.expiresIn()).isEqualTo(15552000L);
+        server.verify();
+    }
+
+    @Test
+    void renovar_rechazadoPorMP_lanzaRenovacionRechazada() {
+        server.expect(requestTo(BASE + "/oauth/token"))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST).contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"error\":\"invalid_grant\",\"message\":\"invalid refresh_token\"}"));
+
+        assertThatThrownBy(() -> client.renovar("TG-revocado"))
+                .isInstanceOf(MercadoPagoOAuthClient.RenovacionRechazadaException.class);
+    }
+
+    @Test
+    void renovar_errorDelServidorDeMP_esTransitorioYNoRechazo() {
+        server.expect(requestTo(BASE + "/oauth/token"))
+                .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+
+        assertThatThrownBy(() -> client.renovar("TG-rt"))
+                .isInstanceOf(PagoException.class)
+                .isNotInstanceOf(MercadoPagoOAuthClient.RenovacionRechazadaException.class);
+    }
+
+    @Test
     void sinConfiguracion_noLlamaAMercadoPago() {
         props.setClientSecret("");
 

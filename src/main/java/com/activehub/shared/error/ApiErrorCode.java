@@ -26,6 +26,8 @@ public enum ApiErrorCode {
     PAGO_RECHAZADO(HttpStatus.UNPROCESSABLE_ENTITY),
     /** El instructor no tiene cuenta de Mercado Pago vigente: su clase solo acepta efectivo. */
     MERCADOPAGO_NO_VINCULADO(HttpStatus.CONFLICT),
+    /** El instructor quiere desvincular su cuenta con pagos de MP que todavia dependen de su token. */
+    MERCADOPAGO_CON_PAGOS_PENDIENTES(HttpStatus.CONFLICT),
     /**
      * El modelo de lenguaje no esta configurado o no respondio. 503 y no 500: no hay nada roto
      * adentro, hay un servicio externo que ahora no esta, y el frontend lo usa como senal para

@@ -34,6 +34,7 @@ public enum TipoNotificacion {
     NUEVA_INSCRIPCION,
     ALUMNO_CANCELO_INSCRIPCION,
     NUEVA_RESENIA,
+    MERCADOPAGO_TOKEN_VENCIDO,
 
     // Administrador
     CAPTURA_PAGO_FALLIDA

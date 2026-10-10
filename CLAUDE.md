@@ -18,7 +18,7 @@ API REST de ActiveHub: plataforma de gestión de actividades deportivas/recreati
 - Sin deploy: todo corre en local (`./mvnw spring-boot:run`) contra la base de Supabase. Render/Vercel siguen pendientes.
 - Archivos subidos: interfaz `AlmacenamientoArchivos` (`shared/storage/`) con dos implementaciones — **disco** (por defecto) y **Supabase Storage** (se activa solo si hay credenciales). Ver "Almacenamiento de archivos" más abajo.
 - IA: interfaz `ModeloLenguaje` (`shared/ia/`) con **Groq Cloud** (plan gratuito, API compatible con OpenAI) si hay `GROQ_API_KEY`, y una implementación que responde 503 si no. Ver "IA: el asistente del manual y el informe de beneficios" más abajo.
-- Tamaño actual: **115 casos de uso**, **32 migraciones** (V1 a V32), **19 claves de permiso** (al 2026-10-10; los números salen de contar directorios de `usecases/`, archivos de `db/migration/` y claves distintas en los `INSERT INTO permiso`).
+- Tamaño actual: **117 casos de uso**, **32 migraciones** (V1 a V32), **19 claves de permiso** (al 2026-10-10; los números salen de contar directorios de `usecases/`, archivos de `db/migration/` y claves distintas en los `INSERT INTO permiso`).
 
 ## Arquitectura — POR CASOS DE USO (vertical slice). NO negociable.
 - **Cada caso de uso = un paquete bajo `com.activehub.usecases.<verbo+sustantivo>/`** con exactamente: `XxxController`, `XxxService`, `XxxRequest` (DTO in, cuando aplica), `XxxResponse` (DTO out).
@@ -447,6 +447,9 @@ Reemplazó a `MockPaymentGateway`, que ya no existe. **No hay modo mock**: en de
 
 **Modelo: marketplace.** La plata no pasa por una cuenta de la plataforma: cada instructor vincula **su** cuenta de MP y los cobros se hacen con su token.
 - **Vinculación por OAuth** (KAN-54): `iniciarvinculacionmercadopago` → MP → `completarvinculacionmercadopago` (callback **público**, `state` firmado con HMAC) y `obtenercuentamercadopago`. Permiso `mercadopago.vincular` (V29). La tarjeta "Mercado Pago" del Panel del instructor es la pantalla.
+- **La vinculación se renueva sola y se puede desvincular** (KAN-55):
+  - `renovartokensmercadopago` (scheduler, cada 1 h) renueva con el `refresh_token` las cuentas `VINCULADA` que vencen dentro de 7 días (`VENTANA_RENOVACION`), incluidas las ya vencidas. **Guarda el par nuevo**: MP invalida el refresh token viejo. Un 4xx de MP (`RenovacionRechazadaException`) es definitivo → `TOKEN_VENCIDO`, tokens borrados y notificación `MERCADOPAGO_TOKEN_VENCIDO` al instructor (sin destino: el Panel no tiene `DestinoNotificacion`). Un 5xx o sin conexión es transitorio y no toca nada. Sin `@Transactional` y cargando cuenta por cuenta a partir de ids: un token ilegible no corta la corrida.
+  - `desvincularcuentamp` (`DELETE /api/instructor/mercadopago`, 204) deja la fila en `DESVINCULADA` sin tokens, con un `UPDATE` que no descifra nada. **Bloquea con 409 `MERCADOPAGO_CON_PAGOS_PENDIENTES`** si el instructor tiene pagos de MP `Retenido` (capturados o no) o `EnRevision`: los dos todavía necesitan su token para capturar, reembolsar o consultar la orden. Idempotente con una cuenta ya desvinculada.
 - **Los tokens se guardan cifrados** (`CuentaMercadoPagoInstructor` + `TokenCifradoConverter`, AES-256 con `MP_TOKEN_ENCRYPTION_KEY`). Si esa clave cambia, los tokens guardados no se pueden leer y hay que volver a vincular.
 - **Sin cuenta vinculada, la clase sólo acepta efectivo** (KAN-57): `CuentaMercadoPagoGuard` → 409 `MERCADOPAGO_NO_VINCULADO`. El detalle de la actividad expone `aceptaMercadoPago` y la **public key del instructor** (nunca tokens), y el frontend inicializa el SDK de MP con esa clave.
 
@@ -468,7 +471,7 @@ Reemplazó a `MockPaymentGateway`, que ya no existe. **No hay modo mock**: en de
 **Variables de entorno:** `MP_CLIENT_ID`, `MP_CLIENT_SECRET`, `MP_REDIRECT_URI`, `MP_TOKEN_ENCRYPTION_KEY`, `MP_WEBHOOK_SECRET`, `MP_SANDBOX_PAYER_EMAIL` (solo sandbox), `MP_LOG_LEVEL` y `FRONTEND_URL` (a dónde vuelve el navegador después del OAuth). `MP_ACCESS_TOKEN` se lee pero **ningún código la usa**. Todas están en `.env.example`, sin valores.
 
 **Pendiente:**
-- **KAN-55:** renovar los tokens antes de que venzan y desvincular la cuenta. Hoy, cuando vence el access token, `CuentaMercadoPagoGuard` deja de considerar vinculada la cuenta y el instructor pasa a cobrar sólo en efectivo, sin aviso.
+- **KAN-55, lo que queda:** la prueba manual de la renovación (forzar `expires_at` en el pasado y esperar al job) y el botón "Desvincular" en la tarjeta del Panel del frontend.
 - **Pruebas manuales en sandbox** (KAN-62, KAN-63, KAN-66 y la matriz de KAN-64).
 - **Despliegue:** el webhook necesita una URL pública registrada en el panel de la aplicación.
 
@@ -564,7 +567,7 @@ Reportado: *"en TODAS las búsquedas del sistema, que no distinga entre tildes y
 - **Zona horaria:** todo se guarda como `Instant` (UTC), pero cuando hay que pasar a calendario ("qué día de la semana es", "venció hoy") la respuesta depende de la zona **del negocio**, no del servidor: usar `shared/time/Zonas.AR`. La constante estaba duplicada en tres servicios; la última copia que quedaba (`LevantarSuspensionesVencidasService`) también se sacó.
 
 ## Tests
-Cada slice "andando" = test de Service (regla + caso de error, ej. duplicado/en-uso/no-encontrado/sin-permiso) y test de Controller (status + shape del DTO) en verde. Antes de dar por terminado un cambio, correr la suite completa, no solo el paquete tocado. **Al 2026-10-10: 982 tests en 206 archivos `*Test.java`, 2 omitidos a propósito (`MercadoPagoGatewaySandboxTest`, prueba manual contra el sandbox), y ningún caso de uso sin test de Service.**
+Cada slice "andando" = test de Service (regla + caso de error, ej. duplicado/en-uso/no-encontrado/sin-permiso) y test de Controller (status + shape del DTO) en verde. Antes de dar por terminado un cambio, correr la suite completa, no solo el paquete tocado. **Al 2026-10-10: 1004 tests en 209 archivos `*Test.java`, 2 omitidos a propósito (`MercadoPagoGatewaySandboxTest`, prueba manual contra el sandbox), y ningún caso de uso sin test de Service.**
 
 **`./mvnw test` SÍ necesita la base.** La mayoría de los tests son unitarios con mocks o `@WebMvcTest` y no la tocan, pero los `@SpringBootTest` (`ActivehubApiApplicationTests`, `CatalogoPublicoTest`, `BusquedaSinTildesTest`) levantan el contexto completo contra Supabase — ver la sección "Los tests corren contra la base REAL". Sin conexión, la suite no pasa.
 

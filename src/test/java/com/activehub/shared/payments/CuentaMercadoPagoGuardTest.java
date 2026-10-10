@@ -40,6 +40,7 @@ class CuentaMercadoPagoGuardTest {
 
     private static ResumenCuenta resumen(EstadoCuentaMercadoPago estado, Instant expira, String publicKey) {
         return new ResumenCuenta() {
+            public UUID getId() { return UUID.randomUUID(); }
             public String getMpUserId() { return "987654"; }
             public EstadoCuentaMercadoPago getEstado() { return estado; }
             public Instant getActualizadaEl() { return AHORA; }

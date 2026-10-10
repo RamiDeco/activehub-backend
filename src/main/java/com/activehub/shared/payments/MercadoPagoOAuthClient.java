@@ -81,10 +81,59 @@ public class MercadoPagoOAuthClient {
         return credenciales;
     }
 
+    /**
+     * KAN-55: renueva el access token con el {@code refresh_token} ({@code grant_type=refresh_token}).
+     * MP devuelve un par nuevo: el refresh token viejo deja de servir, asi que hay que guardar
+     * los dos.
+     *
+     * @throws RenovacionRechazadaException si MP rechaza el refresh token (4xx: vencido, revocado
+     *         porque el instructor quito el permiso a la aplicacion, de otra app). Es definitivo:
+     *         reintentar no lo arregla, el instructor tiene que volver a vincular.
+     * @throws PagoException si MP no responde o responde 5xx: es transitorio, se reintenta
+     */
+    public CredencialesOAuth renovar(String refreshToken) {
+        exigirConfiguracion();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("client_id", properties.getClientId());
+        body.put("client_secret", properties.getClientSecret());
+        body.put("grant_type", "refresh_token");
+        body.put("refresh_token", refreshToken);
+
+        CredencialesOAuth credenciales;
+        try {
+            credenciales = mpRestClient.post()
+                    .uri("/oauth/token")
+                    .body(body)
+                    .retrieve()
+                    .body(CredencialesOAuth.class);
+        } catch (RestClientResponseException ex) {
+            log.warn("Mercado Pago rechazo la renovacion del token OAuth [{}]: {}", ex.getStatusCode(),
+                    ex.getResponseBodyAsString());
+            if (ex.getStatusCode().is4xxClientError()) {
+                throw new RenovacionRechazadaException();
+            }
+            throw new PagoException("Mercado Pago no pudo renovar la vinculación. Se reintenta más tarde.");
+        } catch (ResourceAccessException ex) {
+            log.error("Sin conexion o timeout con Mercado Pago al renovar el token OAuth: {}", ex.getMessage());
+            throw new PagoException("No se pudo conectar con Mercado Pago. Se reintenta más tarde.");
+        }
+        if (credenciales == null || credenciales.accessToken() == null || credenciales.refreshToken() == null) {
+            throw new PagoException("Mercado Pago devolvió una respuesta incompleta al renovar la vinculación.");
+        }
+        return credenciales;
+    }
+
     private void exigirConfiguracion() {
         if (!properties.oauthConfigurado()) {
             log.error("OAuth de Mercado Pago sin configurar: faltan MP_CLIENT_ID, MP_CLIENT_SECRET o MP_REDIRECT_URI");
             throw new PagoException("La vinculación con Mercado Pago no está disponible en este momento.");
+        }
+    }
+
+    /** MP rechazo el refresh token: la vinculacion no se puede renovar, hay que volver a hacerla. */
+    public static class RenovacionRechazadaException extends PagoException {
+        public RenovacionRechazadaException() {
+            super("Mercado Pago rechazó la renovación de la vinculación.");
         }
     }
 

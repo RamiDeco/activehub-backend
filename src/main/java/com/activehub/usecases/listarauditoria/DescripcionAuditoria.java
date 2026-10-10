@@ -87,6 +87,9 @@ final class DescripcionAuditoria {
             case INSCRIPCION_CANCELADA -> actor + " canceló una inscripción.";
             case COBRO_EFECTIVO_CONFIRMADO -> actor + " confirmó el cobro en efectivo de una inscripción.";
             case MERCADOPAGO_VINCULADA -> actor + " vinculó su cuenta de Mercado Pago.";
+            case MERCADOPAGO_DESVINCULADA -> actor + " desvinculó su cuenta de Mercado Pago.";
+            case MERCADOPAGO_TOKEN_RENOVADO -> "El sistema renovó la vinculación con Mercado Pago de un instructor antes de que venciera.";
+            case MERCADOPAGO_TOKEN_VENCIDO -> "Mercado Pago rechazó la renovación de la vinculación de un instructor: tiene que volver a vincular su cuenta.";
             case PAGO_LIBERADO -> "El sistema liberó un pago al instructor: la clase finalizó y pasó el período de denuncias.";
             case PAGO_CAPTURADO -> "El sistema cobró en Mercado Pago un pago autorizado: la clase finalizó.";
             case PAGO_CAPTURA_ANTICIPADA -> "El sistema cobró en Mercado Pago un pago antes de que finalizara la clase, porque la autorización estaba por vencer.";

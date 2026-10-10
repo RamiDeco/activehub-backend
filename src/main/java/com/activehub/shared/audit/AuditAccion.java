@@ -38,6 +38,11 @@ public enum AuditAccion {
     INSCRIPCION_CANCELADA,
     COBRO_EFECTIVO_CONFIRMADO,
     MERCADOPAGO_VINCULADA,
+    MERCADOPAGO_DESVINCULADA,
+    /** El sistema renovo con el refresh token el access token de un instructor (KAN-55). */
+    MERCADOPAGO_TOKEN_RENOVADO,
+    /** MP rechazo la renovacion: la cuenta queda TOKEN_VENCIDO y el instructor tiene que volver a vincular. */
+    MERCADOPAGO_TOKEN_VENCIDO,
     PAGO_LIBERADO,
     PAGO_CAPTURADO,
     PAGO_CAPTURA_ANTICIPADA,

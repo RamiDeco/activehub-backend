@@ -19,6 +19,15 @@ public interface PagoRepository extends JpaRepository<Pago, UUID> {
     java.util.Optional<Pago> findConDetalleByMpOrderId(String mpOrderId);
 
     /**
+     * KAN-55: pagos de Mercado Pago del instructor que todavia necesitan su token (para
+     * capturarlos, reembolsarlos o, en revision, consultarlos desde el webhook). Con alguno,
+     * no puede desvincular la cuenta.
+     */
+    @Query("SELECT COUNT(p) FROM Pago p JOIN p.inscripcion i JOIN i.clase c JOIN c.actividad a "
+            + "WHERE a.instructor.id = :instructorId AND p.mpOrderId IS NOT NULL AND p.estado IN :estados")
+    long countDeMercadoPagoDeInstructorEn(java.util.UUID instructorId, List<EstadoPago> estados);
+
+    /**
      * KAN-66: la fila del pago con {@code SELECT ... FOR UPDATE}. El webhook la pide antes de
      * decidir nada: si en ese momento hay un reintegro en curso desde ActiveHub (que bloquea la
      * misma fila antes de llamar a MP), espera a que termine y recien entonces lee el estado.
