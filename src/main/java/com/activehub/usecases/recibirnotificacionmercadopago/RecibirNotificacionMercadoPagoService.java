@@ -101,12 +101,14 @@ public class RecibirNotificacionMercadoPagoService {
             return Resultado.IGNORADA;
         }
 
-        Pago pago = pagoRepository.findConDetalleByMpOrderId(req.dataId()).orElse(null);
-        if (pago == null) {
+        // KAN-66: primero la fila con bloqueo. Si hay un reintegro de ActiveHub en curso sobre este
+        // pago, se espera a que confirme y el estado que se lee despues ya es el final.
+        if (pagoRepository.bloquearPorMpOrderId(req.dataId()).isEmpty()) {
             // Puede ser una orden de otra integracion o la simulacion del panel de MP.
             log.info("Webhook de Mercado Pago: la orden {} no corresponde a ningun pago", req.dataId());
             return Resultado.IGNORADA;
         }
+        Pago pago = pagoRepository.findConDetalleByMpOrderId(req.dataId()).orElseThrow();
 
         UUID instructorId = pago.getInscripcion().getClase().getActividad().getInstructor().getId();
         String token = cuentaGuard.exigirCuentaVinculada(instructorId);

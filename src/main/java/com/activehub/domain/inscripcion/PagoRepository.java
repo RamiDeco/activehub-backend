@@ -19,6 +19,18 @@ public interface PagoRepository extends JpaRepository<Pago, UUID> {
     java.util.Optional<Pago> findConDetalleByMpOrderId(String mpOrderId);
 
     /**
+     * KAN-66: la fila del pago con {@code SELECT ... FOR UPDATE}. El webhook la pide antes de
+     * decidir nada: si en ese momento hay un reintegro en curso desde ActiveHub (que bloquea la
+     * misma fila antes de llamar a MP), espera a que termine y recien entonces lee el estado.
+     * Sin esto, leia el pago todavia Retenido y tomaba nuestro propio reembolso por uno hecho
+     * desde el panel de MP, con una segunda auditoria. Solo bloquea {@code pago}: con los JOIN
+     * del detalle, el FOR UPDATE bloquearia tambien la inscripcion, la clase y la actividad.
+     */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Pago p WHERE LOWER(p.mpOrderId) = LOWER(:mpOrderId)")
+    java.util.Optional<Pago> bloquearPorMpOrderId(String mpOrderId);
+
+    /**
      * Pagos en un estado dado, con la inscripcion y la clase ya cargadas: lo usa el
      * scheduler de liberacion, que necesita mirar el estado de la clase y su fechaHora.
      */

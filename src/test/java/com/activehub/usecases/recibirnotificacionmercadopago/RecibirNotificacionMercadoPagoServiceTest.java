@@ -104,6 +104,7 @@ class RecibirNotificacionMercadoPagoServiceTest {
 
     private void stubOrdenEnMp(String status, String detail) {
         when(firma.esValida("ts=1,v1=abc", "req-1", ORDEN)).thenReturn(true);
+        when(pagoRepository.bloquearPorMpOrderId(ORDEN)).thenReturn(Optional.of(pago));
         when(pagoRepository.findConDetalleByMpOrderId(ORDEN)).thenReturn(Optional.of(pago));
         when(cuentaGuard.exigirCuentaVinculada(instructorId)).thenReturn(TOKEN);
         when(paymentGateway.consultar(TOKEN, ORDEN)).thenReturn(new ResultadoPago(ORDEN, status, detail));
@@ -205,10 +206,36 @@ class RecibirNotificacionMercadoPagoServiceTest {
     @Test
     void ordenQueNoEsNuestra_seIgnoraSinConsultarAMp() {
         when(firma.esValida(any(), any(), any())).thenReturn(true);
-        when(pagoRepository.findConDetalleByMpOrderId(ORDEN)).thenReturn(Optional.empty());
+        when(pagoRepository.bloquearPorMpOrderId(ORDEN)).thenReturn(Optional.empty());
 
         assertThat(service.procesar(AVISO)).isEqualTo(Resultado.IGNORADA);
         verifyNoInteractions(paymentGateway, auditService);
+    }
+
+    @Test
+    void bloqueaLaFilaDelPagoAntesDeLeerloYDeConsultarAMp() {
+        // KAN-66: si hay un reintegro de ActiveHub en curso, el bloqueo hace esperar al webhook.
+        stubOrdenEnMp("action_required", "waiting_capture");
+
+        service.procesar(AVISO);
+
+        var orden = org.mockito.Mockito.inOrder(pagoRepository, paymentGateway);
+        orden.verify(pagoRepository).bloquearPorMpOrderId(ORDEN);
+        orden.verify(pagoRepository).findConDetalleByMpOrderId(ORDEN);
+        orden.verify(paymentGateway).consultar(TOKEN, ORDEN);
+    }
+
+    @Test
+    void ordenReembolsadaCuyoPagoYaFiguraReembolsado_noAuditaDeNuevo() {
+        // KAN-66: el caso que duplicaba la auditoria, visto despues de esperar el bloqueo: el
+        // reembolso lo pidio ActiveHub y ya quedo registrado.
+        pago.setEstado(EstadoPago.Reembolsado);
+        stubOrdenEnMp("refunded", "refunded");
+
+        assertThat(service.procesar(AVISO)).isEqualTo(Resultado.PROCESADA);
+
+        verifyNoInteractions(auditService);
+        verify(pagoRepository, never()).save(any());
     }
 
     @Test

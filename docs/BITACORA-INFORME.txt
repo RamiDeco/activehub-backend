@@ -35,15 +35,15 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-10-10, despues de la ENTRADA 026) ===
+=== ESTADO GENERAL (actualizado: 2026-10-10, despues de la ENTRADA 027) ===
 Casos de uso implementados en el backend: 115
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
 
-Pruebas automatizadas del backend: 206 archivos / 974 pruebas / resultado: 972 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
+Pruebas automatizadas del backend: 206 archivos / 980 pruebas / resultado: 978 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
 (comando de conteo de archivos: find src/test -name "*Test.java" | wc -l)
 (comando de ejecucion: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw test)
-(salida literal: "Tests run: 974, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS")
+(salida literal: "Tests run: 980, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS")
 
 Pruebas automatizadas del frontend: 17 archivos / 145 pruebas / resultado: 145 correctas, 0 fallidas (ENTRADA 011)
 (comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  17)
@@ -72,7 +72,7 @@ Estado por modulo (los 15):
 5. Alumno - PROBADO.
 6. Instructor - PROBADO.
 7. Actividades - PROBADO - alta, edicion, taxonomia, niveles, fotos (ahora en Supabase Storage), geolocalizacion.
-8. Reservas y Pagos - PARCIAL - la pasarela simulada se retiro (ENTRADA 013); la inscripcion autoriza contra Mercado Pago real (probado en sandbox, KAN-58); la captura al finalizar la clase y el reembolso de un pago capturado estan PROBADOS en sandbox (ENTRADA 025); la cancelacion de una autorizacion sin capturar sigue sin prueba en sandbox. Error abierto: auditoria duplicada del reembolso (KAN-66).
+8. Reservas y Pagos - PARCIAL - la pasarela simulada se retiro (ENTRADA 013); la inscripcion autoriza contra Mercado Pago real (probado en sandbox, KAN-58); la captura al finalizar la clase y el reembolso de un pago capturado estan PROBADOS en sandbox (ENTRADA 025); la cancelacion de una autorizacion sin capturar sigue sin prueba en sandbox. Auditoria duplicada del reembolso corregida (KAN-66, ENTRADA 027), pendiente de verificar en sandbox.
 9. Historial y Calificaciones - PROBADO.
 10. Busqueda y Filtrado - PROBADO - filtrado tradicional en Explorar y, desde esta actualizacion, motor de recomendaciones con puntaje en el Home del alumno.
 11. Administracion y Soporte - PROBADO.
@@ -82,7 +82,7 @@ Estado por modulo (los 15):
 15. Ayuda y Soporte al Usuario - PARCIAL - pantalla Ayuda, reportes de soporte y asistente con modelo de lenguaje (Groq) sobre el manual de usuario, los tres PROBADOS (ENTRADAS 006 y 007); el manual de usuario ya es una pantalla de la plataforma (/manual, ENTRADA 009), IMPLEMENTADO pero todavia no probado en el navegador.
 
 Pendientes conocidos:
-1 (integracion real con Mercado Pago) - PARCIAL - Avance: modelo de datos del marketplace (ENTRADA 012, KAN-52 / MP-03) y pasarela real MercadoPagoGateway con autorizar/capturar/cancelar/reembolsar/consultar; la inscripcion con Mercado Pago ya autoriza de verdad con el token del instructor (ENTRADA 013, KAN-53 / MP-04). MockPaymentGateway RETIRADO. OAuth del instructor en el backend (ENTRADA 014, KAN-54 / MP-05). Captura, cancelacion y reembolso reales (ENTRADA 017, KAN-65). Webhook con firma (ENTRADA 021, KAN-60). Captura anticipada, registro de capturas fallidas y aviso a la administracion (ENTRADAS 023 y 024, KAN-61). Captura y reembolso probados en sandbox (ENTRADA 025). Error abierto: KAN-66 (auditoria duplicada del reembolso). La vinculacion de la cuenta del instructor desde su Panel se uso en la prueba de la ENTRADA 025. Falta: corregir KAN-66 y probar en sandbox la cancelacion de una autorizacion sin capturar y el paso a Liberado.
+1 (integracion real con Mercado Pago) - PARCIAL - Avance: modelo de datos del marketplace (ENTRADA 012, KAN-52 / MP-03) y pasarela real MercadoPagoGateway con autorizar/capturar/cancelar/reembolsar/consultar; la inscripcion con Mercado Pago ya autoriza de verdad con el token del instructor (ENTRADA 013, KAN-53 / MP-04). MockPaymentGateway RETIRADO. OAuth del instructor en el backend (ENTRADA 014, KAN-54 / MP-05). Captura, cancelacion y reembolso reales (ENTRADA 017, KAN-65). Webhook con firma (ENTRADA 021, KAN-60). Captura anticipada, registro de capturas fallidas y aviso a la administracion (ENTRADAS 023 y 024, KAN-61). Captura y reembolso probados en sandbox (ENTRADA 025). KAN-66 (auditoria duplicada del reembolso) corregido en la ENTRADA 027, pendiente de verificar en sandbox. La vinculacion de la cuenta del instructor desde su Panel se uso en la prueba de la ENTRADA 025. Falta: verificar KAN-66 en sandbox y probar en sandbox la cancelacion de una autorizacion sin capturar y el paso a Liberado.
 2 (recuperacion de contrasenia por correo) - PROBADO (ENTRADA 002).
 3 (asistente con modelo de lenguaje y chatbot con Groq) - PROBADO. PENDIENTE 3: PARCIAL -> PROBADO (ENTRADA 007: verificado contra Groq con el modelo openai/gpt-oss-120b — preguntas legitimas respondidas con el manual, siete intentos de prompt injection rechazados, informe de beneficios generado para una cuenta de alumno de demostracion, y el aviso de cuota agotada con tiempo de espera funcionando). El codigo es de la ENTRADA 006 (2 casos de uso) mas las defensas y el manejo de cuota de la 007; en total 62 pruebas automatizadas. Queda como verificacion visual pendiente probar las dos pantallas en el navegador. El motor de recomendaciones adaptativo, que era la tercera parte de este pendiente, quedo PROBADO en la ENTRADA 004.
 4 (imagenes en Supabase Storage) - PROBADO - bucket creado, 15 archivos migrados y lectura verificada contra el proyecto real (ENTRADA 003). PENDIENTE 4: PARCIAL -> PROBADO. Queda aparte la optimizacion de imagenes, que nunca se implemento.
@@ -1710,3 +1710,35 @@ ERRORES DETECTADOS: sintoma: un alumno al que se le reembolsaba un pago ya cobra
 CAPTURAS SUGERIDAS: notificacion-reintegro-reserva-liberada.png - campana del alumno con "Se liberó la reserva del pago en tu tarjeta: no se te va a cobrar."
 PENDIENTE QUE QUEDA: prueba en sandbox de KAN-62: inscribirse con Mercado Pago y que el instructor cancele la clase antes de que termine; en Mercado Pago la autorizacion tiene que figurar cancelada.
 === FIN ENTRADA 026 ===
+
+=== ENTRADA 027 ===
+FECHA: 2026-10-10
+REPOSITORIO: backend
+RAMA Y COMMITS: feat/mp-integration - commit de KAN-66 indicado en ESTADO GENERAL o en la entrada siguiente - sin Pull Request
+TIPO: CORRECCION DE ERROR
+TITULO: Un reembolso pedido desde ActiveHub ya no se audita dos veces (KAN-66)
+QUE CAMBIA PARA EL USUARIO: Administrador: al devolver un pago de Mercado Pago desde ActiveHub (cancelar una clase, resolver una denuncia con Reintegrar, una suspension), en Auditoria queda una sola fila del reembolso, con quien lo pidio como actor. Antes aparecia una segunda fila del Sistema que decia, falsamente, que el reembolso se habia hecho desde el panel de Mercado Pago (error detectado en la ENTRADA 025). El resto de los roles no ve cambios.
+TEXTOS DE INTERFAZ (literales): sin cambios
+DETALLE TECNICO: la causa probable descrita en la ENTRADA 025 era una carrera entre la transaccion que pide el reembolso y el webhook que Mercado Pago envia enseguida. Correccion con bloqueo de fila en PostgreSQL (SELECT ... FOR UPDATE):
+ a) OperacionesPagoMercadoPago.reintegrar, antes de llamar a Mercado Pago, toma el bloqueo de la fila del pago y lo relee de la base (EntityManager.refresh con PESSIMISTIC_WRITE si el pago esta gestionado; EntityManager.find por id con el mismo bloqueo si esta desconectado). El bloqueo dura hasta que confirma la transaccion del llamador. Si al releerlo el pago ya figuraba Cancelado o Reembolsado (el webhook llego antes), no se le pide nada a Mercado Pago ni se audita de nuevo.
+ b) RecibirNotificacionMercadoPagoService pide la fila con bloqueo (PagoRepository.bloquearPorMpOrderId) antes de leer el pago y consultar a Mercado Pago. Si hay un reintegro en curso, espera a que confirme, lee el estado Reembolsado y no hace nada. Un reembolso hecho de verdad desde el panel de Mercado Pago se sigue reflejando como antes.
+ Durante la correccion se detecto y evito un error que la propia correccion habria introducido: cancelarinscripcion llama a ClaseRepository.liberarCupo (consulta de modificacion con clearAutomatically) justo antes de reintegrar, lo que desconecta el pago; EntityManager.refresh sobre una entidad desconectada lanza IllegalArgumentException y habria impedido cancelar una inscripcion pagada con Mercado Pago. Por eso el camino de la entidad desconectada usa find por id. Las pruebas con objetos simulados no lo detectaban; quedo cubierto por una prueba especifica.
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas. La espera real del webhook sobre el bloqueo de PostgreSQL no se ejercita con pruebas automatizadas (usan objetos simulados): PENDIENTE la prueba en sandbox (repetir la de la ENTRADA 025 y ver una sola fila en Auditoria).
+HISTORIAS DE USUARIO Y CRITERIOS: RN-14 (auditoria de movimientos de dinero): el registro vuelve a ser fiel.
+PANTALLAS: sin cambios
+REGLAS DE NEGOCIO: sin cambios
+MODULOS: 4 Auditoria y Trazabilidad; 8 Reservas y Pagos.
+CASOS DE USO: sin nuevos. Modificado: recibirnotificacionmercadopago. Modificados indirectamente (via OperacionesPagoMercadoPago.reintegrar): cancelarclase, cancelarinscripcion, notificarausenciaprofesor, resolverdenuncia, crearpenalizacion.
+ENTIDADES Y MIGRACIONES: sin migraciones. PagoRepository.bloquearPorMpOrderId (consulta con bloqueo PESSIMISTIC_WRITE).
+TECNOLOGIAS: sin cambios (bloqueo pesimista de JPA sobre PostgreSQL).
+COSTOS: sin impacto
+RIESGOS: R02 (integracion con Mercado Pago) - mitigado parcialmente - evidencia: se elimina una carrera entre ActiveHub y las notificaciones de Mercado Pago.
+SEGURIDAD: sin cambios
+PRUEBAS: 6 pruebas nuevas. OperacionesPagoMercadoPagoTest: el bloqueo se toma antes de llamar a Mercado Pago; si al releer ya estaba Reembolsado no se llama a Mercado Pago ni se audita; con el pago desconectado se bloquea con find y no con refresh; desconectado y ya Reembolsado en la base, no se llama a Mercado Pago. RecibirNotificacionMercadoPagoServiceTest: el webhook bloquea antes de leer el pago y de consultar a Mercado Pago; una orden reembolsada cuyo pago ya figura Reembolsado no se audita de nuevo. La consulta con bloqueo y la inyeccion del EntityManager quedaron validadas al levantar el contexto (ActivehubApiApplicationTests). Suite completa: "Tests run: 980, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS" (comando: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw test).
+ANALISIS ESTATICO: sin cambios
+DESPLIEGUE Y CONFIGURACION: sin cambios. El backend que este corriendo tiene que reiniciarse para tomar la correccion.
+DECISIONES: bloqueo pesimista de la fila del pago en lugar de deduplicar la auditoria: deduplicar habria escondido el sintoma y dejado al webhook decidiendo con un estado viejo. Se bloquea solo la tabla pago (no las relacionadas). Todo llamador de reintegrar debe ser transaccional (hoy lo son los siete).
+ERRORES DETECTADOS: el de la ENTRADA 025 (corregido aca) y el de la entidad desconectada descrito en DETALLE TECNICO (evitado antes de llegar al codigo commiteado).
+CAPTURAS SUGERIDAS: auditoria-reembolso-una-fila.png - Auditoria con una sola fila "Se reembolsó en Mercado Pago un pago ya cobrado." despues de resolver una denuncia con Reintegrar.
+PENDIENTE QUE QUEDA: prueba en sandbox de KAN-66: repetir el caso 2 de la ENTRADA 025 (pago capturado, denuncia resuelta con Reintegrar) y verificar una sola fila en Auditoria.
+=== FIN ENTRADA 027 ===

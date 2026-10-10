@@ -18,6 +18,8 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.CuentaMercadoPagoNoVinculadaException;
 import com.activehub.shared.error.PagoException;
 import com.activehub.shared.payments.PaymentGateway.ResultadoPago;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -41,6 +43,7 @@ class OperacionesPagoMercadoPagoTest {
     @Mock private CuentaMercadoPagoGuard cuentaGuard;
     @Mock private PagoRepository pagoRepository;
     @Mock private AuditService auditService;
+    @Mock private EntityManager entityManager;
 
     private OperacionesPagoMercadoPago operaciones;
     private UUID instructorId;
@@ -50,7 +53,7 @@ class OperacionesPagoMercadoPagoTest {
     @BeforeEach
     void setUp() {
         operaciones = new OperacionesPagoMercadoPago(
-                paymentGateway, cuentaGuard, pagoRepository, auditService, Clock.fixed(AHORA, ZoneOffset.UTC));
+                paymentGateway, cuentaGuard, pagoRepository, auditService, Clock.fixed(AHORA, ZoneOffset.UTC), entityManager);
         instructorId = UUID.randomUUID();
         actorId = UUID.randomUUID();
 
@@ -152,6 +155,73 @@ class OperacionesPagoMercadoPagoTest {
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Reembolsado);
         verify(paymentGateway, never()).cancelarAutorizacion(any(), any(), any());
         verify(auditService).registrar(eq(actorId), eq(AuditAccion.PAGO_REEMBOLSADO), eq("Pago"), eq(pago.getId()), isNull());
+    }
+
+    @Test
+    void reintegrar_bloqueaLaFilaDelPagoAntesDeLlamarAMercadoPago() {
+        // KAN-66: el bloqueo tiene que estar tomado cuando MP manda el webhook, o sea antes del pedido.
+        pago.setCapturadoAt(AHORA.minus(Duration.ofHours(3)));
+        when(cuentaGuard.exigirCuentaVinculada(instructorId)).thenReturn(TOKEN);
+        when(paymentGateway.reembolsar(TOKEN, ORDEN, "idem-1:refund"))
+                .thenReturn(new ResultadoPago(ORDEN, "refunded", "refunded"));
+
+        when(entityManager.contains(pago)).thenReturn(true);
+
+        operaciones.reintegrar(pago, instructorId, actorId);
+
+        var orden = org.mockito.Mockito.inOrder(entityManager, paymentGateway);
+        orden.verify(entityManager).refresh(pago, LockModeType.PESSIMISTIC_WRITE);
+        orden.verify(paymentGateway).reembolsar(TOKEN, ORDEN, "idem-1:refund");
+    }
+
+    @Test
+    void reintegrar_siAlReleerYaEstabaReembolsado_noLlamaAMercadoPagoNiAuditaDeNuevo() {
+        // KAN-66: el webhook confirmo el reembolso antes de que esta transaccion tomara el bloqueo.
+        pago.setCapturadoAt(AHORA.minus(Duration.ofHours(3)));
+        when(entityManager.contains(pago)).thenReturn(true);
+        org.mockito.Mockito.doAnswer(inv -> {
+            pago.setEstado(EstadoPago.Reembolsado);
+            return null;
+        }).when(entityManager).refresh(pago, LockModeType.PESSIMISTIC_WRITE);
+
+        EstadoPago estado = operaciones.reintegrar(pago, instructorId, actorId);
+
+        assertThat(estado).isEqualTo(EstadoPago.Reembolsado);
+        verifyNoInteractions(paymentGateway, cuentaGuard, auditService);
+        verify(pagoRepository, never()).save(any());
+    }
+
+    @Test
+    void reintegrar_pagoDesconectado_bloqueaBuscandoLaFilaPorIdEnVezDeRefrescar() {
+        // KAN-66: cancelarinscripcion llama a liberarCupo (clearAutomatically) antes de reintegrar,
+        // y refresh sobre una entidad desconectada lanza IllegalArgumentException.
+        when(entityManager.contains(pago)).thenReturn(false);
+        Pago enBase = new Pago();
+        enBase.setEstado(EstadoPago.Retenido);
+        when(entityManager.find(Pago.class, pago.getId(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(enBase);
+        when(cuentaGuard.exigirCuentaVinculada(instructorId)).thenReturn(TOKEN);
+        when(paymentGateway.cancelarAutorizacion(TOKEN, ORDEN, "idem-1:cancel"))
+                .thenReturn(new ResultadoPago(ORDEN, "canceled", "canceled"));
+
+        EstadoPago estado = operaciones.reintegrar(pago, instructorId, actorId);
+
+        assertThat(estado).isEqualTo(EstadoPago.Cancelado);
+        verify(entityManager, never()).refresh(any(), any(LockModeType.class));
+        verify(pagoRepository).save(pago);
+    }
+
+    @Test
+    void reintegrar_pagoDesconectadoQueEnLaBaseYaFiguraReembolsado_noLlamaAMercadoPago() {
+        when(entityManager.contains(pago)).thenReturn(false);
+        Pago enBase = new Pago();
+        enBase.setEstado(EstadoPago.Reembolsado);
+        when(entityManager.find(Pago.class, pago.getId(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(enBase);
+
+        EstadoPago estado = operaciones.reintegrar(pago, instructorId, actorId);
+
+        assertThat(estado).isEqualTo(EstadoPago.Reembolsado);
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Reembolsado);
+        verifyNoInteractions(paymentGateway, auditService);
     }
 
     @Test
