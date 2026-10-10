@@ -196,8 +196,7 @@ class OperacionesPagoMercadoPagoTest {
         // KAN-66: cancelarinscripcion llama a liberarCupo (clearAutomatically) antes de reintegrar,
         // y refresh sobre una entidad desconectada lanza IllegalArgumentException.
         when(entityManager.contains(pago)).thenReturn(false);
-        Pago enBase = new Pago();
-        enBase.setEstado(EstadoPago.Retenido);
+        Pago enBase = copiaEnBase(pago);
         when(entityManager.find(Pago.class, pago.getId(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(enBase);
         when(cuentaGuard.exigirCuentaVinculada(instructorId)).thenReturn(TOKEN);
         when(paymentGateway.cancelarAutorizacion(TOKEN, ORDEN, "idem-1:cancel"))
@@ -207,7 +206,47 @@ class OperacionesPagoMercadoPagoTest {
 
         assertThat(estado).isEqualTo(EstadoPago.Cancelado);
         verify(entityManager, never()).refresh(any(), any(LockModeType.class));
-        verify(pagoRepository).save(pago);
+        // Se guarda la instancia gestionada y el objeto del llamador queda con el mismo estado.
+        verify(pagoRepository).save(enBase);
+        assertThat(enBase.getEstado()).isEqualTo(EstadoPago.Cancelado);
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
+        assertThat(pago.getAutorizadoHasta()).isNull();
+    }
+
+    @Test
+    void reintegrar_pagoDesconectadoConDatosViejos_decideConLaFilaReleidaYNoLaPisa() {
+        // El objeto del llamador se leyo antes de que el pago se capturara: en la base ya figura
+        // capturado, asi que hay que reembolsar (cancelar la autorizacion daria error en MP) y
+        // no hay que guardar el objeto viejo, que borraria capturado_at.
+        when(entityManager.contains(pago)).thenReturn(false);
+        Pago enBase = copiaEnBase(pago);
+        enBase.setCapturadoAt(AHORA.minus(Duration.ofHours(3)));
+        when(entityManager.find(Pago.class, pago.getId(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(enBase);
+        when(cuentaGuard.exigirCuentaVinculada(instructorId)).thenReturn(TOKEN);
+        when(paymentGateway.reembolsar(TOKEN, ORDEN, "idem-1:refund"))
+                .thenReturn(new ResultadoPago(ORDEN, "refunded", "refunded"));
+
+        EstadoPago estado = operaciones.reintegrar(pago, instructorId, actorId);
+
+        assertThat(estado).isEqualTo(EstadoPago.Reembolsado);
+        verify(paymentGateway, never()).cancelarAutorizacion(any(), any(), any());
+        verify(pagoRepository).save(enBase);
+        verify(pagoRepository, never()).save(pago);
+        assertThat(enBase.getCapturadoAt()).isNotNull();
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Reembolsado);
+        verify(auditService).registrar(actorId, AuditAccion.PAGO_REEMBOLSADO, "Pago", pago.getId(), null);
+    }
+
+    /** La misma fila leida de nuevo por el EntityManager: otra instancia con los mismos datos. */
+    private static Pago copiaEnBase(Pago original) {
+        Pago copia = new Pago();
+        ReflectionTestUtils.setField(copia, "id", original.getId());
+        copia.setEstado(original.getEstado());
+        copia.setMpOrderId(original.getMpOrderId());
+        copia.setIdempotencyKey(original.getIdempotencyKey());
+        copia.setAutorizadoHasta(original.getAutorizadoHasta());
+        copia.setCapturadoAt(original.getCapturadoAt());
+        return copia;
     }
 
     @Test

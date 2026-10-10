@@ -35,16 +35,16 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-10-10, despues de la ENTRADA 031) ===
+=== ESTADO GENERAL (actualizado: 2026-10-10, despues de la ENTRADA 032) ===
 Casos de uso implementados en el backend: 117
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Los dos ultimos son desvincularcuentamp y renovartokensmercadopago (ENTRADA 030, KAN-55).
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
 
-Pruebas automatizadas del backend: 209 archivos / 1004 pruebas / resultado: 1002 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
+Pruebas automatizadas del backend: 209 archivos / 1005 pruebas / resultado: 1003 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
 (comando de conteo de archivos: find src/test -name "*Test.java" | wc -l)
 (comando de ejecucion: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw test)
-(salida literal: "Tests run: 1004, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS", ejecutada el 2026-10-10 en la ENTRADA 030)
+(salida literal: "Tests run: 1005, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS", ejecutada el 2026-10-10 en la ENTRADA 032)
 
 Pruebas automatizadas del frontend: 18 archivos / 153 pruebas / resultado: 153 correctas, 0 fallidas (ENTRADA 031)
 (comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  18)
@@ -73,7 +73,7 @@ Estado por modulo (los 15):
 5. Alumno - PROBADO.
 6. Instructor - PROBADO.
 7. Actividades - PROBADO - alta, edicion, taxonomia, niveles, fotos (ahora en Supabase Storage), geolocalizacion.
-8. Reservas y Pagos - PARCIAL - la pasarela simulada se retiro (ENTRADA 013); la inscripcion autoriza contra Mercado Pago real (probado en sandbox, KAN-58); la captura al finalizar la clase y el reembolso de un pago capturado estan PROBADOS en sandbox (ENTRADA 025); la cancelacion de una autorizacion sin capturar sigue sin prueba en sandbox. Auditoria duplicada del reembolso corregida (KAN-66, ENTRADA 027), pendiente de verificar en sandbox. Renovacion automatica de la vinculacion y desvinculacion de la cuenta (KAN-55, ENTRADA 030) IMPLEMENTADAS y con pruebas automatizadas; la prueba manual con la base (vencimiento forzado) esta PENDIENTE. Boton "Desvincular" en el Panel del instructor (KAN-67, ENTRADA 031) IMPLEMENTADO, sin verificar en el navegador.
+8. Reservas y Pagos - PARCIAL - la pasarela simulada se retiro (ENTRADA 013); la inscripcion autoriza contra Mercado Pago real (probado en sandbox, KAN-58); la captura al finalizar la clase y el reembolso de un pago capturado estan PROBADOS en sandbox (ENTRADA 025); la cancelacion de una autorizacion sin capturar sigue sin prueba en sandbox. Auditoria duplicada del reembolso corregida (KAN-66, ENTRADAS 027 y 032), pendiente de verificar en sandbox. Renovacion automatica de la vinculacion y desvinculacion de la cuenta (KAN-55, ENTRADA 030) IMPLEMENTADAS y con pruebas automatizadas; la prueba manual con la base (vencimiento forzado) esta PENDIENTE. Boton "Desvincular" en el Panel del instructor (KAN-67, ENTRADA 031) IMPLEMENTADO, sin verificar en el navegador.
 9. Historial y Calificaciones - PROBADO.
 10. Busqueda y Filtrado - PROBADO - filtrado tradicional en Explorar y, desde esta actualizacion, motor de recomendaciones con puntaje en el Home del alumno.
 11. Administracion y Soporte - PROBADO.
@@ -1927,3 +1927,35 @@ CAPTURAS SUGERIDAS:
  campana-alerta-mp.png - campana con la notificacion de vinculacion vencida y el icono de alerta.
 PENDIENTE QUE QUEDA: verificar en el navegador los criterios 1 a 4 de KAN-67 (con una cuenta de instructor de prueba: desvincular sin pagos pendientes, intentar con un pago Retenido, y con la cuenta en TOKEN_VENCIDO, que se puede forzar en la base).
 === FIN ENTRADA 031 ===
+
+=== ENTRADA 032 ===
+FECHA: 2026-10-10
+REPOSITORIO: backend (en el frontend solo se actualiza esta copia espejo)
+RAMA Y COMMITS: backend feat/mp-integration - commit "KAN-66" posterior a 3e4c6d9 - sin Pull Request. Frontend integracion - commit de la bitacora.
+TIPO: CORRECCION DE ERROR
+TITULO: Reintegro de Mercado Pago con el pago desconectado: se decide y se guarda con la fila releida con bloqueo (KAN-66, complemento de la ENTRADA 027)
+QUE CAMBIA PARA EL USUARIO: sin cambios visibles en el caso normal. Cubre una carrera poco probable: si un alumno cancela su inscripcion justo cuando el sistema captura su pago por adelantado (autorizacion por vencer, ENTRADA 023), antes se intentaba cancelar en Mercado Pago una autorizacion ya capturada (MP lo rechaza y la cancelacion de la inscripcion fallaba con un error) y se podia pisar en la base la marca de "capturado". Ahora se detecta que el pago ya fue cobrado y se reembolsa.
+TEXTOS DE INTERFAZ (literales): sin cambios
+DETALLE TECNICO:
+ - Revision de los llamadores de OperacionesPagoMercadoPago.reintegrar pedida por KAN-66: son siete (cancelarclase, cancelarinscripcion, notificarausenciaprofesor, resolverdenuncia con REINTEGRAR y con SUSPENDER, crearpenalizacion y el webhook al aprobar tarde un pago en revision), los siete corren dentro de un metodo @Transactional y ninguno modifica el pago antes de reintegrarlo. La compensacion de inscribirse (afterCompletion) no pasa por reintegrar: llama al gateway directo, sin bloqueo, asi que el riesgo que nombraba la tarea no aplica.
+ - Hallazgo: cuando el pago llega desconectado (cancelarinscripcion, despues de liberarCupo con clearAutomatically), la ENTRADA 027 tomaba el bloqueo buscando la fila por id, pero seguia decidiendo con el objeto viejo del llamador (estado y capturado_at leidos antes del bloqueo) y guardaba ese objeto, cuyo merge podia pisar la fila con datos viejos.
+ - Correccion: reintegrar decide (estado, si esta capturado, orden, clave de idempotencia) y escribe sobre la instancia releida con PESSIMISTIC_WRITE, guarda esa instancia, y despues copia estado, autorizado_hasta y status_detail al objeto del llamador, que los sigue usando para el aviso al alumno. Con el pago gestionado (los demas llamadores) las dos instancias son la misma y el comportamiento no cambia.
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas. La verificacion en sandbox de KAN-66 (denuncia con REINTEGRAR sobre un pago capturado, una sola fila de auditoria) sigue PENDIENTE.
+HISTORIAS DE USUARIO Y CRITERIOS: sin historia de usuario del documento original; desviacion 01 (KAN-2). Criterios de KAN-66: 1 (test de la carrera / bloqueo) - PROBADO automatizado (ENTRADA 027); 2 (una sola fila PAGO_REEMBOLSADO con el actor que lo pidio) - PROBADO automatizado; 3 (reembolso desde el panel de MP sigue reflejandose) - PROBADO automatizado; 4 (sandbox) - PENDIENTE.
+PANTALLAS: sin cambios
+REGLAS DE NEGOCIO: sin cambios
+MODULOS: 8 Reservas y Pagos
+CASOS DE USO: sin cambios. Total 117 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l).
+ENTIDADES Y MIGRACIONES: sin cambios. Total V1 a V32.
+TECNOLOGIAS: sin cambios
+COSTOS: sin impacto
+RIESGOS: R02 (integracion con Mercado Pago) - mitigado - evidencia: prueba nueva reintegrar_pagoDesconectadoConDatosViejos_decideConLaFilaReleidaYNoLaPisa.
+SEGURIDAD: sin cambios
+PRUEBAS: automatizadas: 1 nueva (OperacionesPagoMercadoPagoTest.reintegrar_pagoDesconectadoConDatosViejos_decideConLaFilaReleidaYNoLaPisa) y 1 ajustada (reintegrar_pagoDesconectado_bloqueaBuscandoLaFilaPorIdEnVezDeRefrescar: ahora verifica que se guarda la instancia releida y que el objeto del llamador queda Cancelado). Suite completa ejecutada el 2026-10-10 con "JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw test": "Tests run: 1005, Failures: 0, Errors: 0, Skipped: 2", "BUILD SUCCESS". Archivos de prueba: 209 (sin cambios). Manuales: ninguna.
+ANALISIS ESTATICO: sin cambios (no se toco el frontend).
+DESPLIEGUE Y CONFIGURACION: sin cambios
+DECISIONES: se mantiene la busqueda por id para el pago desconectado (ENTRADA 027) en lugar de volver a cargar el pago en cancelarinscripcion: la correccion queda en el unico lugar por el que pasan todos los reintegros.
+ERRORES DETECTADOS: el descripto en DETALLE TECNICO (corregido en esta entrada).
+CAPTURAS SUGERIDAS: suite-backend-1005.png - consola con "Tests run: 1005, Failures: 0, Errors: 0, Skipped: 2" y "BUILD SUCCESS".
+PENDIENTE QUE QUEDA: verificacion en sandbox de KAN-66: reiniciar el backend, pago capturado -> denuncia -> el administrador resuelve con REINTEGRAR -> en Auditoria una sola fila "Se reembolsó en Mercado Pago un pago ya cobrado." con el administrador como actor.
+=== FIN ENTRADA 032 ===

@@ -100,30 +100,40 @@ public class OperacionesPagoMercadoPago {
      * @return el estado en que quedo el pago
      */
     public EstadoPago reintegrar(Pago pago, UUID instructorId, UUID actorId) {
-        EstadoPago enBase = bloquearYReleer(pago).getEstado();
+        // Se decide y se escribe sobre la fila releida con el bloqueo, no sobre el objeto del
+        // llamador: si llego desconectado, sus datos pueden ser viejos (por ejemplo, no saber que
+        // el pago se capturo mientras tanto) y guardarlo pisaria la fila con ellos.
+        Pago actual = bloquearYReleer(pago);
+        EstadoPago enBase = actual.getEstado();
         if (enBase == EstadoPago.Cancelado || enBase == EstadoPago.Reembolsado) {
             log.info("El pago {} ya estaba {} al reintegrarlo: no se le pide nada a Mercado Pago", pago.getId(), enBase);
             pago.setEstado(enBase);
             return enBase;
         }
-        if (!pago.getEstado().reservadoEnMercadoPago()) {
-            throw new IllegalStateException("Solo se reintegra un pago Retenido o EnRevision, no " + pago.getEstado());
+        if (!enBase.reservadoEnMercadoPago()) {
+            throw new IllegalStateException("Solo se reintegra un pago Retenido o EnRevision, no " + enBase);
         }
-        EstadoPago destino = pago.getCapturadoAt() == null ? EstadoPago.Cancelado : EstadoPago.Reembolsado;
+        EstadoPago destino = actual.getCapturadoAt() == null ? EstadoPago.Cancelado : EstadoPago.Reembolsado;
 
-        if (pago.getMpOrderId() != null) {
+        if (actual.getMpOrderId() != null) {
             if (destino == EstadoPago.Cancelado) {
-                cancelarAutorizacion(pago, instructorId);
+                cancelarAutorizacion(actual, instructorId);
             } else {
                 String token = cuentaGuard.exigirCuentaVinculada(instructorId);
-                var resultado = paymentGateway.reembolsar(token, pago.getMpOrderId(), clave(pago, "refund"));
-                pago.setStatusDetail(resultado.statusDetail());
+                var resultado = paymentGateway.reembolsar(token, actual.getMpOrderId(), clave(actual, "refund"));
+                actual.setStatusDetail(resultado.statusDetail());
             }
         }
 
-        pago.setEstado(destino);
-        pago.setAutorizadoHasta(null);
-        pagoRepository.save(pago);
+        actual.setEstado(destino);
+        actual.setAutorizadoHasta(null);
+        pagoRepository.save(actual);
+        if (actual != pago) {
+            // El llamador sigue usando su objeto (por ejemplo, para el aviso al alumno).
+            pago.setEstado(destino);
+            pago.setAutorizadoHasta(null);
+            pago.setStatusDetail(actual.getStatusDetail());
+        }
         if (destino == EstadoPago.Reembolsado) {
             auditService.registrar(actorId, AuditAccion.PAGO_REEMBOLSADO, "Pago", pago.getId(), null);
         }
@@ -132,10 +142,10 @@ public class OperacionesPagoMercadoPago {
 
     /**
      * KAN-66: toma el bloqueo de la fila y devuelve el pago tal como esta en la base. Si el objeto
-     * del llamador esta gestionado, se lo refresca. Si esta desconectado (pasa despues de un
-     * {@code @Modifying(clearAutomatically = true)}: {@code cancelarinscripcion} llama a
-     * {@code liberarCupo} justo antes), {@code refresh} lanzaria, asi que se busca la fila por id;
-     * los cambios se siguen haciendo sobre el objeto del llamador y {@code save} los fusiona.
+     * del llamador esta gestionado, se lo refresca y es el mismo. Si esta desconectado (pasa
+     * despues de un {@code @Modifying(clearAutomatically = true)}: {@code cancelarinscripcion}
+     * llama a {@code liberarCupo} justo antes), {@code refresh} lanzaria, asi que se busca la fila
+     * por id y se devuelve esa instancia gestionada, que es la que se modifica y se guarda.
      */
     private Pago bloquearYReleer(Pago pago) {
         if (entityManager.contains(pago)) {
