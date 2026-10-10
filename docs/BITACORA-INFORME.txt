@@ -35,7 +35,7 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-10-10, despues de la ENTRADA 028) ===
+=== ESTADO GENERAL (actualizado: 2026-10-10, despues de la ENTRADA 029) ===
 Casos de uso implementados en el backend: 115
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
@@ -1795,3 +1795,39 @@ CAPTURAS SUGERIDAS:
  detalle-clase-a-recibir.png - Detalle de clase del instructor con las columnas "Pago" y "A recibir" y el total al pie.
 PENDIENTE QUE QUEDA: verificacion visual en el navegador con datos de sandbox (KAN-63).
 === FIN ENTRADA 028 ===
+
+=== ENTRADA 029 ===
+FECHA: 2026-10-10
+REPOSITORIO: ambos
+RAMA Y COMMITS: backend feat/mp-integration, frontend integracion - commits de documentacion de KAN-64 indicados en ESTADO GENERAL o en la entrada siguiente - sin Pull Request
+TIPO: DOCUMENTACION
+TITULO: Documentacion de la integracion con Mercado Pago y matriz de pruebas en sandbox (KAN-64 / MP-15, parte de documentacion)
+QUE CAMBIA PARA EL USUARIO: sin cambios en la aplicacion. Cambia la documentacion para quien instala, prueba o mantiene el sistema.
+TEXTOS DE INTERFAZ (literales): sin cambios
+DETALLE TECNICO:
+ - Backend, .env.example (NUEVO, versionado): todas las variables de entorno que lee la aplicacion, agrupadas y comentadas, sin valores secretos; los valores por defecto se verificaron contra application.yml. Hasta ahora no existia, aunque el .gitignore estaba preparado para versionarlo.
+ - Backend, CLAUDE.md: la linea de pagos del stack dice que la integracion es real (antes decia "MockPaymentGateway activo"); seccion nueva "Mercado Pago: el marketplace real (epica KAN-2)" con el modelo marketplace, la vinculacion por OAuth, el cifrado de tokens, el ciclo del pago (autorizar, capturar, liberar, reintegrar, webhook), las decisiones de MP-01, lo no obvio del sandbox, las variables de entorno y lo pendiente; tamano actualizado (115 casos de uso, 32 migraciones, 19 claves de permiso) y estado de la suite (982 pruebas, 206 archivos).
+ - Backend, README.md: referencia a .env.example, subseccion de variables de Mercado Pago y como probar en sandbox; se corrigieron datos desactualizados (DATABASE_URL ya no tiene valor por defecto y es obligatoria; JWT_EXPIRATION_MIN es 30 y no 120; los tests SI necesitan la base; los pagos ya no son simulados).
+ - Backend, docs/PRUEBAS-SANDBOX-MERCADOPAGO.md (NUEVO): preparacion, como simular el paso del tiempo, consulta de verificacion y la matriz de 14 casos (los 12 de KAN-64 mas las verificaciones de KAN-63 y KAN-66), cada uno con resultado esperado y estado con evidencia: probados 1 (ENTRADA 019) y 7 (ENTRADA 025); parcial el 2 (captura probada, paso a Liberado no ejecutado); el resto pendiente. Los casos 3 y 4 (tarjetas OTHE y CONT) figuran pendientes porque la ENTRADA 020 los dejo asi y no hay registro posterior de su ejecucion.
+ - Frontend, CLAUDE.md: seccion nueva "Pagos con Mercado Pago" (SDK cargado en index.html, public key del instructor, sin variable de entorno, Card Payment Brick, vinculacion desde el Panel, estados de pago y sus textos); se corrigio la nota que decia que el pago hablaba con MockPaymentGateway.
+ - Frontend, README.md: se aclara que pagar no requiere variables en el frontend; la tabla del roadmap marcaba como pendientes items ya hechos (recomendaciones, geolocalizacion, imagenes, IA, dashboards de instructor y alumno, analitica sin datos simulados) y se corrigio; Mercado Pago figura "Implementada, en prueba".
+ - Hallazgos documentados sin cambiar codigo: la variable MP_ACCESS_TOKEN se lee en la configuracion pero ningun codigo la usa (cada cobro va con el token del instructor); VITE_MERCADOPAGO_PUBLIC_KEY esta declarada en el frontend pero no se usa.
+ESTADO: documentacion IMPLEMENTADA. KAN-64: la matriz de pruebas manuales sigue PENDIENTE (casos indicados arriba) y el cierre de KAN-2 depende de esa matriz y de KAN-55.
+HISTORIAS DE USUARIO Y CRITERIOS: sin cambios
+PANTALLAS: sin cambios
+REGLAS DE NEGOCIO: sin cambios
+MODULOS: 8 Reservas y Pagos; 14 Configuracion y Parametros (variables de entorno documentadas).
+CASOS DE USO: sin cambios
+ENTIDADES Y MIGRACIONES: sin cambios
+TECNOLOGIAS: sin cambios
+COSTOS: sin impacto
+RIESGOS: R05 (inconsistencias entre documentacion y sistema) - mitigado - evidencia: se corrigieron los documentos que describian pagos simulados y datos de configuracion viejos. R07 (perdida de documentacion) - mitigado parcialmente - evidencia: .env.example versionado.
+SEGURIDAD: .env.example solo tiene nombres de variables y valores por defecto no secretos; ninguna credencial.
+PRUEBAS: sin cambios de codigo; ultima suite completa en la ENTRADA 028 (982 pruebas backend, 150 frontend).
+ANALISIS ESTATICO: sin cambios
+DESPLIEGUE Y CONFIGURACION: .env.example nuevo en el backend con todas las variables, incluidas las de Mercado Pago (MP_CLIENT_ID, MP_CLIENT_SECRET, MP_REDIRECT_URI, MP_TOKEN_ENCRYPTION_KEY, MP_WEBHOOK_SECRET, MP_SANDBOX_PAYER_EMAIL, MP_LOG_LEVEL, MP_ACCESS_TOKEN sin uso) y FRONTEND_URL.
+DECISIONES: no se quito MP_ACCESS_TOKEN ni VITE_MERCADOPAGO_PUBLIC_KEY del codigo: es un cambio de codigo fuera del alcance de la documentacion; queda anotado.
+ERRORES DETECTADOS: documentacion desactualizada (descrita en DETALLE TECNICO).
+CAPTURAS SUGERIDAS: sin capturas
+PENDIENTE QUE QUEDA: ejecutar la matriz de docs/PRUEBAS-SANDBOX-MERCADOPAGO.md; KAN-55; cerrar KAN-64 y KAN-2.
+=== FIN ENTRADA 029 ===

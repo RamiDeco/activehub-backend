@@ -13,12 +13,12 @@ API REST de ActiveHub: plataforma de gestión de actividades deportivas/recreati
 - DB: **PostgreSQL 16 en Supabase**. El `.env` del repo apunta al pooler de Supabase y ésa es la base que usan todos los integrantes y los `@SpringBootTest` — ver "Los tests corren contra la base REAL" y "Migraciones" más abajo. El README documenta además un `docker run` de Postgres local (`activehub-postgres`, 5433 → 5432) como alternativa para trabajo aislado; si lo usás, cambiá `DATABASE_URL` en tu `.env`.
 - Correo: `spring-boot-starter-mail` contra Gmail SMTP (verificación de dirección por código). Sin credenciales, `EmailSender` cae a modo log.
 - Identidad federada: Google Identity Services, con el ID token validado localmente (ver "Continuar con Google").
-- Pagos: interfaz `PaymentGateway` con **MockPaymentGateway** activo (sin integración real con Mercado Pago todavía — ítem 12 del roadmap).
+- Pagos: **Mercado Pago real** (Orders API, marketplace: cada instructor cobra con su propia cuenta vinculada por OAuth). `PaymentGateway` tiene una sola implementación, `MercadoPagoGateway`; el mock se retiró y los tests usan Mockito. Ver "Mercado Pago: el marketplace real" más abajo.
 - **Redis quedó descartado, no diferido.** Su única función prevista era el bloqueo temporal de cupo; el control de concurrencia se resolvió con un `UPDATE` condicional atómico en Postgres (ver `ClaseRepository.ocuparCupo`), que es más simple y no agrega un segundo almacén que pueda desincronizarse. No volver a proponerlo sin un caso de uso nuevo que lo justifique.
 - Sin deploy: todo corre en local (`./mvnw spring-boot:run`) contra la base de Supabase. Render/Vercel siguen pendientes.
 - Archivos subidos: interfaz `AlmacenamientoArchivos` (`shared/storage/`) con dos implementaciones — **disco** (por defecto) y **Supabase Storage** (se activa solo si hay credenciales). Ver "Almacenamiento de archivos" más abajo.
 - IA: interfaz `ModeloLenguaje` (`shared/ia/`) con **Groq Cloud** (plan gratuito, API compatible con OpenAI) si hay `GROQ_API_KEY`, y una implementación que responde 503 si no. Ver "IA: el asistente del manual y el informe de beneficios" más abajo.
-- Tamaño actual: **111 casos de uso**, **27 migraciones** (V1 a V27), **18 claves de permiso**.
+- Tamaño actual: **115 casos de uso**, **32 migraciones** (V1 a V32), **19 claves de permiso** (al 2026-10-10; los números salen de contar directorios de `usecases/`, archivos de `db/migration/` y claves distintas en los `INSERT INTO permiso`).
 
 ## Arquitectura — POR CASOS DE USO (vertical slice). NO negociable.
 - **Cada caso de uso = un paquete bajo `com.activehub.usecases.<verbo+sustantivo>/`** con exactamente: `XxxController`, `XxxService`, `XxxRequest` (DTO in, cuando aplica), `XxxResponse` (DTO out).
@@ -78,7 +78,7 @@ Los dos consumen un modelo de lenguaje de verdad: `preguntaralasistente` (la bur
 **Ítem 8 — Motor de recomendaciones: HECHO.** Ver "Recomendaciones" más abajo. El filtrado de `/alumno/explorar` sigue siendo tradicional a propósito (texto sin tildes, categoría, tipo en cascada, nivel, precio, cupos, fecha, franja horaria, radio, instructor, orden): ahí el alumno está buscando algo concreto. Lo que se recomienda es el Home.
 
 **Pendientes de verdad:**
-- **12. Mercado Pago real** — al final, según lo acordado con el usuario. `PaymentGateway` ya tiene el contrato listo para enchufar el SDK real sin tocar los usecases que lo usan; toda la máquina de estados (`Retenido` → `Liberado`/`Cancelado`), la acreditación automática y los reintegros ya funcionan contra el mock.
+- **12. Mercado Pago real** — **implementado** (épica KAN-2, subtareas KAN-50 a KAN-66): vinculación por OAuth, autorización al inscribirse, captura al finalizar la clase, reintegros, webhook con firma y estados visibles en las pantallas. Probado en sandbox: autorización, captura y reembolso por denuncia. Lo que falta está en "Mercado Pago: el marketplace real" → Pendiente.
 - **Deploy** (Render/Vercel) — la aplicación ya está lista (puerto, DB, CORS, secreto JWT, credenciales externas y ahora el bucket de Supabase Storage son variables de entorno), pero el despliegue no se hizo.
 
 **Recuperación de contraseña por olvido: HECHA** (ver la sección propia más abajo). Era el único camino de credenciales que faltaba; el usuario autenticado ya podía cambiar su contraseña y su correo.
@@ -441,6 +441,37 @@ Cuando se topa la cuota —la del proveedor (429 de Groq, por minuto o por día)
 
 **Contra el proveedor real ya se ejecutó** (instancia aislada en 8091): preguntas legítimas del chat respondidas con el manual y citando sus secciones, los siete ataques rechazados, un informe generado para una cuenta de alumno del seed (afinidad "Alta", prevenciones no clínicas) y el 429 de cuota con su mensaje y su tiempo de espera. Lo que **no** se hizo es probarlo en el navegador: eso queda del lado del usuario.
 
+## Mercado Pago: el marketplace real (épica KAN-2)
+
+Reemplazó a `MockPaymentGateway`, que ya no existe. **No hay modo mock**: en desarrollo se usa el sandbox de Mercado Pago, y los tests usan Mockito o `MockRestServiceServer`.
+
+**Modelo: marketplace.** La plata no pasa por una cuenta de la plataforma: cada instructor vincula **su** cuenta de MP y los cobros se hacen con su token.
+- **Vinculación por OAuth** (KAN-54): `iniciarvinculacionmercadopago` → MP → `completarvinculacionmercadopago` (callback **público**, `state` firmado con HMAC) y `obtenercuentamercadopago`. Permiso `mercadopago.vincular` (V29). La tarjeta "Mercado Pago" del Panel del instructor es la pantalla.
+- **Los tokens se guardan cifrados** (`CuentaMercadoPagoInstructor` + `TokenCifradoConverter`, AES-256 con `MP_TOKEN_ENCRYPTION_KEY`). Si esa clave cambia, los tokens guardados no se pueden leer y hay que volver a vincular.
+- **Sin cuenta vinculada, la clase sólo acepta efectivo** (KAN-57): `CuentaMercadoPagoGuard` → 409 `MERCADOPAGO_NO_VINCULADO`. El detalle de la actividad expone `aceptaMercadoPago` y la **public key del instructor** (nunca tokens), y el frontend inicializa el SDK de MP con esa clave.
+
+**Ciclo del pago** (las reglas de cada paso están en "Reglas de negocio clave"):
+1. **Inscribirse autoriza, no cobra** (KAN-53/58): orden de la Orders API con captura manual; el pago queda `Retenido` con `autorizado_hasta` (5 días). Si MP deja la orden en revisión, el pago queda `EnRevision` y la inscripción `PagoPendiente` hasta que la resuelve el webhook. Si la transacción de `inscribirse` hace rollback después de autorizar, se cancela la autorización en `afterCompletion`.
+2. **Se captura al finalizar la clase** (KAN-65/61), en `finalizarclasesvencidas`, con captura anticipada si la autorización está por vencer y aviso a la administración si falla 6 veces.
+3. **`Liberado` es interno**: pasa a las 24 h si no hay denuncias abiertas; no llama a MP.
+4. **Devolver plata pasa siempre por `OperacionesPagoMercadoPago.reintegrar`**: sin capturar cancela la autorización (`Cancelado`), capturado reembolsa (`Reembolsado`). Bloquea la fila del pago antes de llamar a MP (KAN-66). El aviso al alumno dice cuál de las dos cosas pasó (`NotificacionMensajes.detalleReintegro`, KAN-62).
+5. **Webhook** (KAN-60): `POST /api/instructor/mercadopago/webhook`, **público**. Valida `x-signature` con `MP_WEBHOOK_SECRET` (`FirmaWebhookMercadoPago`, en tiempo constante), **consulta la orden en MP en vez de creerle al cuerpo**, resuelve los pagos en revisión, refleja los reembolsos hechos desde el panel y registra contracargos.
+
+**Decisiones de MP-01 (KAN-50), vigentes:** Orders API (por eso `mp_order_id`), captura diferida, **la plataforma no cobra comisión** (`pago.comision` existe pero vale 0, así que el neto del instructor es el precio), sólo tarjeta de crédito, **sin 3DS** (en la Orders API es opcional y está apagado; activarlo es una tarea aparte).
+
+**Sandbox, lo que no es obvio:**
+- La Orders API **rechaza las credenciales `TEST-`** (401). Se prueba con **cuentas de prueba** y credenciales `APP_USR-`, y en un marketplace **las cuatro partes son de prueba, la aplicación incluida**: `MP_CLIENT_ID`/`MP_CLIENT_SECRET` de una aplicación creada por un usuario de prueba "Integrador". Con una aplicación de una cuenta real, MP responde 422/2034 "Invalid users involved".
+- `MP_SANDBOX_PAYER_EMAIL` es el correo del comprador de prueba, que viaja como pagador de las órdenes. Como el alumno paga como invitado (Checkout API, sin iniciar sesión en MP), **los movimientos aparecen en la cuenta del vendedor y no en la del comprador**: es lo esperable.
+- `MP_LOG_LEVEL=DEBUG` loguea cada pedido y respuesta de MP con los secretos recortados.
+- La matriz de pruebas manuales y su estado está en `docs/PRUEBAS-SANDBOX-MERCADOPAGO.md`.
+
+**Variables de entorno:** `MP_CLIENT_ID`, `MP_CLIENT_SECRET`, `MP_REDIRECT_URI`, `MP_TOKEN_ENCRYPTION_KEY`, `MP_WEBHOOK_SECRET`, `MP_SANDBOX_PAYER_EMAIL` (solo sandbox), `MP_LOG_LEVEL` y `FRONTEND_URL` (a dónde vuelve el navegador después del OAuth). `MP_ACCESS_TOKEN` se lee pero **ningún código la usa**. Todas están en `.env.example`, sin valores.
+
+**Pendiente:**
+- **KAN-55:** renovar los tokens antes de que venzan y desvincular la cuenta. Hoy, cuando vence el access token, `CuentaMercadoPagoGuard` deja de considerar vinculada la cuenta y el instructor pasa a cobrar sólo en efectivo, sin aviso.
+- **Pruebas manuales en sandbox** (KAN-62, KAN-63, KAN-66 y la matriz de KAN-64).
+- **Despliegue:** el webhook necesita una URL pública registrada en el panel de la aplicación.
+
 ## Almacenamiento de archivos: una interfaz, disco o Supabase Storage
 
 `shared/storage/AlmacenamientoArchivos` es la misma clase de costura que `PaymentGateway`: los **nueve** usecases que suben o leen archivos (`subirfotoperfil`, `verfotoperfil`, `subirfotoactividad`, `verfotoactividad`, `agregarimagenactividad`, `eliminarimagenactividad`, `verimagenactividad`, `subirdocumento`, `descargardocumentoinstructor`, más `registrarinstructor`) **ya no conocen el filesystem**. Ninguno vuelve a importar `java.nio.file`.
@@ -533,7 +564,7 @@ Reportado: *"en TODAS las búsquedas del sistema, que no distinga entre tildes y
 - **Zona horaria:** todo se guarda como `Instant` (UTC), pero cuando hay que pasar a calendario ("qué día de la semana es", "venció hoy") la respuesta depende de la zona **del negocio**, no del servidor: usar `shared/time/Zonas.AR`. La constante estaba duplicada en tres servicios; la última copia que quedaba (`LevantarSuspensionesVencidasService`) también se sacó.
 
 ## Tests
-Cada slice "andando" = test de Service (regla + caso de error, ej. duplicado/en-uso/no-encontrado/sin-permiso) y test de Controller (status + shape del DTO) en verde. Antes de dar por terminado un cambio, correr la suite completa, no solo el paquete tocado. **Hoy: 842 tests en verde en 189 clases (187 archivos `*Test.java`), y ningún caso de uso sin test de Service.**
+Cada slice "andando" = test de Service (regla + caso de error, ej. duplicado/en-uso/no-encontrado/sin-permiso) y test de Controller (status + shape del DTO) en verde. Antes de dar por terminado un cambio, correr la suite completa, no solo el paquete tocado. **Al 2026-10-10: 982 tests en 206 archivos `*Test.java`, 2 omitidos a propósito (`MercadoPagoGatewaySandboxTest`, prueba manual contra el sandbox), y ningún caso de uso sin test de Service.**
 
 **`./mvnw test` SÍ necesita la base.** La mayoría de los tests son unitarios con mocks o `@WebMvcTest` y no la tocan, pero los `@SpringBootTest` (`ActivehubApiApplicationTests`, `CatalogoPublicoTest`, `BusquedaSinTildesTest`) levantan el contexto completo contra Supabase — ver la sección "Los tests corren contra la base REAL". Sin conexión, la suite no pasa.
 
@@ -542,6 +573,8 @@ Cada slice "andando" = test de Service (regla + caso de error, ej. duplicado/en-
 ```
 JAVA_HOME="$HOME/.jdks/corretto-21.0.10" ./mvnw test
 ```
+
+(La ruta depende de la máquina: en la de Ramiro el JDK 21 es `$HOME/.jdks/ms-21.0.7`.)
 
 Sin eso, `mvnw` falla con `release version 21 not supported`, y si en `target/` quedaron clases de una corrida con 21, el error que se ve es otro y despista: `UnsupportedClassVersionError … class file version 65.0` desde surefire.
 
