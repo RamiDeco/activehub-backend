@@ -141,6 +141,10 @@ class CancelarInscripcionServiceTest {
 
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         verify(operacionesPago).reintegrar(argThat(p -> "ref-123".equals(p.getReferenciaExterna())), any(), any());
+        // KAN-62: el aviso al alumno dice que no se le va a cobrar (el pago no estaba capturado).
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CANCELADA),
+                org.mockito.ArgumentMatchers.endsWith("Se liberó la reserva del pago en tu tarjeta: no se te va a cobrar."),
+                eq(inscripcionId), eq(Destino.inscripcion(inscripcionId)));
     }
 
     @Test

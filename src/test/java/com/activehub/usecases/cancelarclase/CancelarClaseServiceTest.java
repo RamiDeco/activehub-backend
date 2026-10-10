@@ -129,7 +129,32 @@ class CancelarClaseServiceTest {
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         verify(operacionesPago).reintegrar(argThat(p -> "ref-abc".equals(p.getReferenciaExterna())), any(), any());
         verify(notificacionService).notificar(
-                eq(inscripto.getAlumno().getId()), eq(TipoNotificacion.CLASE_CANCELADA), any(), eq(claseId), eq(Destino.clase(claseId)));
+                eq(inscripto.getAlumno().getId()), eq(TipoNotificacion.CLASE_CANCELADA),
+                org.mockito.ArgumentMatchers.endsWith("Se liberó la reserva del pago en tu tarjeta: no se te va a cobrar."),
+                eq(claseId), eq(Destino.clase(claseId)));
+    }
+
+    @Test
+    void cancelar_pagoYaCapturado_elAvisoDiceQueSeReembolsa() {
+        Pago pago = new Pago();
+        pago.setEstado(EstadoPago.Retenido);
+        pago.setMetodo(MetodoPago.MERCADO_PAGO);
+        pago.setMonto(new BigDecimal("4500"));
+        pago.setCapturadoAt(Instant.parse("2026-08-31T13:00:00Z"));
+        Inscripcion inscripto = inscripcionCon(EstadoInscripcion.INSCRIPTO, pago);
+        // KAN-62: capturado, OperacionesPagoMercadoPago reembolsa en vez de cancelar.
+        org.mockito.Mockito.doReturn(EstadoPago.Reembolsado).when(operacionesPago).reintegrar(any(), any(), any());
+
+        when(claseRepository.findById(claseId)).thenReturn(Optional.of(clase));
+        when(inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA))
+                .thenReturn(List.of(inscripto));
+
+        service.cancelar(claseId, instructorId);
+
+        verify(notificacionService).notificar(
+                eq(inscripto.getAlumno().getId()), eq(TipoNotificacion.CLASE_CANCELADA),
+                org.mockito.ArgumentMatchers.contains("Te reembolsamos el pago por Mercado Pago"),
+                eq(claseId), eq(Destino.clase(claseId)));
     }
 
     @Test

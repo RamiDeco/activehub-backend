@@ -35,15 +35,15 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-10-10, despues de la ENTRADA 025) ===
+=== ESTADO GENERAL (actualizado: 2026-10-10, despues de la ENTRADA 026) ===
 Casos de uso implementados en el backend: 115
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
 
-Pruebas automatizadas del backend: 205 archivos / 971 pruebas / resultado: 969 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
+Pruebas automatizadas del backend: 206 archivos / 974 pruebas / resultado: 972 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
 (comando de conteo de archivos: find src/test -name "*Test.java" | wc -l)
 (comando de ejecucion: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw test)
-(salida literal: "Tests run: 971, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS")
+(salida literal: "Tests run: 974, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS")
 
 Pruebas automatizadas del frontend: 17 archivos / 145 pruebas / resultado: 145 correctas, 0 fallidas (ENTRADA 011)
 (comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  17)
@@ -1678,3 +1678,35 @@ CAPTURAS SUGERIDAS:
  auditoria-reembolso-duplicado.png - las dos filas "Se reembolsó en Mercado Pago un pago ya cobrado." (evidencia de KAN-66).
 PENDIENTE QUE QUEDA: KAN-66 (auditoria duplicada del reembolso). Probar en sandbox el paso a Liberado y el aviso a la administracion por capturas fallidas, si se quiere evidencia manual de esos dos comportamientos.
 === FIN ENTRADA 025 ===
+
+=== ENTRADA 026 ===
+FECHA: 2026-10-10
+REPOSITORIO: backend
+RAMA Y COMMITS: feat/mp-integration - commit de KAN-62 indicado en la entrada siguiente o en ESTADO GENERAL - sin Pull Request
+TIPO: CAMBIO FUNCIONAL
+TITULO: El aviso al alumno distingue si su pago de Mercado Pago se libero o se reembolso (KAN-62 / MP-13)
+QUE CAMBIA PARA EL USUARIO: Alumno: cuando la plataforma le devuelve un pago de Mercado Pago, la notificacion ahora dice que paso con su plata. Si el pago todavia no se habia cobrado (autorizacion sin capturar), dice que se libero la reserva y no se le va a cobrar; si ya se habia cobrado (capturado al finalizar la clase), dice que se le reembolsa. Antes decia siempre "Se reintegra el pago retenido.", incluso para un pago ya cobrado. Aplica a: cancelacion de la clase por el instructor, cancelacion de la inscripcion por el propio alumno (que antes no mencionaba el pago), aviso de ausencia del profesor (que antes no mencionaba el pago), denuncia resuelta con Reintegrar, y clases canceladas por una suspension (resolver denuncia con Suspender o alta manual de penalizacion). Los pagos en efectivo conservan su texto.
+TEXTOS DE INTERFAZ (literales): textos que se agregan al final de la notificacion del alumno:
+ Pago sin cobrar: "Se liberó la reserva del pago en tu tarjeta: no se te va a cobrar."
+ Pago ya cobrado: "Te reembolsamos el pago por Mercado Pago; según tu banco, puede tardar unos días en verse en tu tarjeta."
+ Texto retirado: "Se reintegra el pago retenido."
+DETALLE TECNICO: NotificacionMensajes.detalleReintegro(EstadoPago) arma el texto a partir del estado que devuelve OperacionesPagoMercadoPago.reintegrar (Cancelado o Reembolsado). La usan cancelarclase, cancelarinscripcion, notificarausenciaprofesor, resolverdenuncia (REINTEGRAR y SUSPENDER) y crearpenalizacion. El resto de KAN-62 ya estaba resuelto desde KAN-65 (ENTRADA 017): los cinco casos de uso devuelven la plata por reintegrar, que cancela la autorizacion o reembolsa segun el pago este capturado, y si Mercado Pago falla la operacion entera se revierte (no se marca devuelto algo que sigue cobrado).
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas. KAN-62: el reembolso por denuncia ya se probo en sandbox (ENTRADA 025); queda PENDIENTE la prueba en sandbox de cancelar una clase con un pago sin capturar.
+HISTORIAS DE USUARIO Y CRITERIOS: E2I-HU08 criterio 5 (reintegro al cancelar la clase): el aviso describe el reintegro real.
+PANTALLAS: sin cambios. Las notificaciones se ven en la campana existente.
+REGLAS DE NEGOCIO: sin cambios
+MODULOS: 8 Reservas y Pagos.
+CASOS DE USO: sin nuevos. Modificados: cancelarclase, cancelarinscripcion, notificarausenciaprofesor, resolverdenuncia, crearpenalizacion.
+ENTIDADES Y MIGRACIONES: sin cambios
+TECNOLOGIAS: sin cambios
+COSTOS: sin impacto
+RIESGOS: sin cambios
+SEGURIDAD: sin cambios
+PRUEBAS: 3 pruebas nuevas (NotificacionMensajesTest con los dos textos; CancelarClaseServiceTest con un pago ya capturado cuyo aviso dice que se reembolsa) y 3 ajustadas para verificar el texto (cancelar clase, cancelar inscripcion y ausencia del profesor con un pago sin capturar). Suite completa: "Tests run: 974, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS" (comando: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw test).
+ANALISIS ESTATICO: sin cambios
+DESPLIEGUE Y CONFIGURACION: sin cambios
+DECISIONES: el texto se arma en un solo lugar (NotificacionMensajes) para que los cinco casos digan lo mismo.
+ERRORES DETECTADOS: sintoma: un alumno al que se le reembolsaba un pago ya cobrado leia "Se reintegra el pago retenido.", que describe otra cosa; al cancelar su propia inscripcion o ante la ausencia del profesor, el aviso no mencionaba el pago. Causa: texto fijo anterior a la captura real (KAN-65). Correccion: esta entrada. Como se detecto: revision de los criterios de KAN-62.
+CAPTURAS SUGERIDAS: notificacion-reintegro-reserva-liberada.png - campana del alumno con "Se liberó la reserva del pago en tu tarjeta: no se te va a cobrar."
+PENDIENTE QUE QUEDA: prueba en sandbox de KAN-62: inscribirse con Mercado Pago y que el instructor cancele la clase antes de que termine; en Mercado Pago la autorizacion tiene que figurar cancelada.
+=== FIN ENTRADA 026 ===

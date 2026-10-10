@@ -14,6 +14,7 @@ import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.notificacion.Destino;
+import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
 import com.activehub.shared.payments.OperacionesPagoMercadoPago;
@@ -70,14 +71,15 @@ public class NotificarAusenciaProfesorService {
         int notificados = 0;
         for (Inscripcion inscripcion : inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA)) {
             Pago pago = inscripcion.getPago();
+            String detallePago = "";
             if (pago != null && pago.getEstado().reservadoEnMercadoPago()) {
-                operacionesPago.reintegrar(pago, instructorId, instructorId);
+                detallePago = NotificacionMensajes.detalleReintegro(operacionesPago.reintegrar(pago, instructorId, instructorId));
             }
             inscripcion.setEstado(EstadoInscripcion.CANCELADA);
             inscripcionRepository.save(inscripcion);
 
             notificacionService.notificar(
-                    inscripcion.getAlumno().getId(), TipoNotificacion.AUSENCIA_PROFESOR, request.mensaje(), claseId,
+                    inscripcion.getAlumno().getId(), TipoNotificacion.AUSENCIA_PROFESOR, request.mensaje() + detallePago, claseId,
                     Destino.clase(claseId));
             notificados++;
         }

@@ -225,8 +225,8 @@ public class CrearPenalizacionService {
                 Pago pago = inscripcion.getPago();
                 String detallePago = "";
                 if (pago != null && pago.getEstado().reservadoEnMercadoPago()) {
-                    operacionesPago.reintegrar(pago, instructor.getId(), actorId);
-                    detallePago = " Se reintegra el pago retenido.";
+                    detallePago = NotificacionMensajes.detalleReintegro(
+                            operacionesPago.reintegrar(pago, instructor.getId(), actorId));
                 } else if (pago != null && pago.getEstado() == EstadoPago.Efectivo) {
                     pago.setEstado(EstadoPago.Cancelado);
                     pagoRepository.save(pago);

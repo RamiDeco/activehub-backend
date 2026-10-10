@@ -129,7 +129,10 @@ class NotificarAusenciaProfesorServiceTest {
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         verify(operacionesPago).reintegrar(argThat(p -> "ref-abc".equals(p.getReferenciaExterna())), any(), any());
         verify(notificacionService).notificar(
-                eq(alumnoId), eq(TipoNotificacion.AUSENCIA_PROFESOR), eq(request.mensaje()), eq(claseId), eq(Destino.clase(claseId)));
+                eq(alumnoId), eq(TipoNotificacion.AUSENCIA_PROFESOR),
+                // KAN-62: el texto del instructor, mas que paso con el pago de este alumno.
+                eq(request.mensaje() + " Se liberó la reserva del pago en tu tarjeta: no se te va a cobrar."),
+                eq(claseId), eq(Destino.clase(claseId)));
     }
 
     @Test

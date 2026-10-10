@@ -81,8 +81,8 @@ public class CancelarClaseService {
             // ya se cobraron en Efectivo; ambos quedan en Cancelado. Antes el efectivo no se
             // tocaba y el alumno seguía viendo su pago como válido para una clase que no existe.
             if (pago != null && pago.getEstado().reservadoEnMercadoPago()) {
-                operacionesPago.reintegrar(pago, instructorId, instructorId);
-                detallePago = " Se reintegra el pago retenido.";
+                detallePago = NotificacionMensajes.detalleReintegro(
+                        operacionesPago.reintegrar(pago, instructorId, instructorId));
             } else if (pago != null && pago.getEstado() == EstadoPago.Efectivo) {
                 // No hay gateway al que pedirle nada: la plata la cobró el instructor en mano.
                 // El registro queda Cancelado y la devolución se arregla con él.

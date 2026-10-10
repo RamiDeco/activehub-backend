@@ -77,8 +77,9 @@ public class CancelarInscripcionService {
             claseRepository.liberarCupo(inscripcion.getClase().getId());
         }
 
+        String detallePago = "";
         if (pago != null && pago.getEstado().reservadoEnMercadoPago()) {
-            operacionesPago.reintegrar(pago, instructorId, alumnoId);
+            detallePago = NotificacionMensajes.detalleReintegro(operacionesPago.reintegrar(pago, instructorId, alumnoId));
         }
 
         inscripcion.setEstado(EstadoInscripcion.CANCELADA);
@@ -86,7 +87,7 @@ public class CancelarInscripcionService {
 
         String contexto = "la clase de \"" + actividadNombre + "\" del " + NotificacionMensajes.formatFechaHora(fechaHoraClase);
         notificacionService.notificar(
-                alumnoId, TipoNotificacion.INSCRIPCION_CANCELADA, "Cancelaste tu inscripción a " + contexto + ".",
+                alumnoId, TipoNotificacion.INSCRIPCION_CANCELADA, "Cancelaste tu inscripción a " + contexto + "." + detallePago,
                 inscripcion.getId(), Destino.inscripcion(inscripcion.getId()));
         notificacionService.notificar(
                 instructorId, TipoNotificacion.ALUMNO_CANCELO_INSCRIPCION,
