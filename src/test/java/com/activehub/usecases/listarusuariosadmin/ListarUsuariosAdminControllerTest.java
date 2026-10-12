@@ -31,8 +31,8 @@ class ListarUsuariosAdminControllerTest {
     void listar_devuelve200() {
         when(listarUsuariosAdminService.listar()).thenReturn(List.of(
                 new ListarUsuariosAdminResponse(
-                        UUID.randomUUID(), "Ana", "Lopez", "ana@example.com", "111",
-                        "ALUMNO", "ACTIVO", 0, Instant.now())));
+                        UUID.randomUUID(), "Ana", "Lopez", "ana@example.com", "30123456", "111",
+                        "ALUMNO", "ACTIVO", 0, Instant.now(), false)));
 
         var authentication = new UsernamePasswordAuthenticationToken(UUID.randomUUID(), null, List.of());
 

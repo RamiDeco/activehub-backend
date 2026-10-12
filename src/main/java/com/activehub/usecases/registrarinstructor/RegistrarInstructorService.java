@@ -1,29 +1,34 @@
 package com.activehub.usecases.registrarinstructor;
 
+import com.activehub.domain.usuario.AuthProveedor;
 import com.activehub.domain.usuario.DocumentoInstructor;
 import com.activehub.domain.usuario.DocumentoInstructorRepository;
 import com.activehub.domain.usuario.EstadoUsuario;
 import com.activehub.domain.usuario.PerfilInstructor;
 import com.activehub.domain.usuario.PerfilInstructorRepository;
+import com.activehub.domain.usuario.PropositoVerificacion;
 import com.activehub.domain.usuario.RolNombre;
 import com.activehub.domain.usuario.RolRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.error.DniEnUsoException;
 import com.activehub.shared.error.EmailEnUsoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.email.VerificacionEmailService;
+import com.activehub.shared.security.GoogleIdTokenVerifier;
 import com.activehub.shared.security.JwtService;
+import com.activehub.shared.storage.AlmacenamientoArchivos;
+import com.activehub.shared.storage.AlmacenamientoException;
+import com.activehub.shared.storage.CarpetaArchivos;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,7 +63,9 @@ public class RegistrarInstructorService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuditService auditService;
-    private final String directorioAlmacenamiento;
+    private final VerificacionEmailService verificacionEmailService;
+    private final GoogleIdTokenVerifier googleIdTokenVerifier;
+    private final AlmacenamientoArchivos almacenamiento;
 
     public RegistrarInstructorService(
             UsuarioRepository usuarioRepository,
@@ -68,7 +75,9 @@ public class RegistrarInstructorService {
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
             AuditService auditService,
-            @Value("${app.storage.documentos-instructor-dir}") String directorioAlmacenamiento
+            VerificacionEmailService verificacionEmailService,
+            GoogleIdTokenVerifier googleIdTokenVerifier,
+            AlmacenamientoArchivos almacenamiento
     ) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
@@ -77,29 +86,65 @@ public class RegistrarInstructorService {
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.auditService = auditService;
-        this.directorioAlmacenamiento = directorioAlmacenamiento;
+        this.verificacionEmailService = verificacionEmailService;
+        this.googleIdTokenVerifier = googleIdTokenVerifier;
+        this.almacenamiento = almacenamiento;
     }
 
     @Transactional
     public RegistrarInstructorResponse registrar(RegistrarInstructorRequest request, List<MultipartFile> documentos) {
         validarDocumentos(documentos);
 
-        if (usuarioRepository.existsByEmailIgnoreCaseAndDeletedFalse(request.email())) {
+        // Igual que en el alta de alumno: bloquea el correo CONFIRMADO, no el tipeado (V26).
+        if (usuarioRepository.existsVerificadoConEmail(request.email(), null)) {
             throw new EmailEnUsoException();
+        }
+
+        // Precondición de E1A-HU04: mismo correo *o DNI*.
+        String dni = request.dni() != null && !request.dni().isBlank() ? request.dni().trim() : null;
+        if (dni != null && usuarioRepository.existsByDniAndDeletedFalse(dni)) {
+            throw new DniEnUsoException();
         }
 
         var rolInstructor = rolRepository.findByNombre(RolNombre.INSTRUCTOR)
                 .orElseThrow(() -> new IllegalStateException("Rol INSTRUCTOR no encontrado, revisar la migracion V2."));
 
+        // "Continuar con Google" para instructor: Google prueba la identidad, pero la cuenta
+        // se crea recién acá, cuando llega la documentación (RN-12). El token se vuelve a
+        // verificar: entre la precarga del formulario y este request no se guardó estado, y
+        // dar por bueno un "ya lo validamos" del cliente sería confiar en el cliente.
+        boolean conGoogle = request.googleIdToken() != null && !request.googleIdToken().isBlank();
+        if (conGoogle) {
+            var datos = googleIdTokenVerifier.verificar(request.googleIdToken());
+            // El correo lo fija Google, no el formulario: si no, el token de una casilla
+            // serviría para registrar cualquier otra ya verificada.
+            if (!datos.email().equalsIgnoreCase(request.email().trim())) {
+                throw new ValidacionException(
+                        "El correo no coincide con el de tu cuenta de Google.",
+                        java.util.Map.of("email", "Tiene que ser el mismo correo de tu cuenta de Google."));
+            }
+        } else if (request.password() == null || request.password().isBlank()) {
+            throw new ValidacionException("La contraseña es obligatoria.",
+                    java.util.Map.of("password", "La contraseña es obligatoria."));
+        }
+
         Usuario usuario = new Usuario();
         usuario.setNombre(request.nombre());
         usuario.setApellido(request.apellido());
         usuario.setEmail(request.email().trim().toLowerCase());
-        usuario.setPasswordHash(passwordEncoder.encode(request.password()));
+        usuario.setDni(dni);
+        // Sin contraseña utilizable cuando entra por Google (ver `IniciarSesionGoogleService`).
+        usuario.setPasswordHash(passwordEncoder.encode(
+                conGoogle ? passwordInutilizable() : request.password()));
         usuario.setTelefono(request.telefono());
         usuario.setFechaNacimiento(request.fechaNacimiento());
         usuario.setRol(rolInstructor);
         usuario.setEstado(EstadoUsuario.ACTIVO);
+        if (conGoogle) {
+            usuario.setAuthProveedor(AuthProveedor.GOOGLE);
+            usuario.setEmailVerificado(true);
+            usuario.setEmailVerificadoAt(java.time.Instant.now());
+        }
         usuario = usuarioRepository.saveAndFlush(usuario);
 
         PerfilInstructor perfilInstructor = new PerfilInstructor(
@@ -110,20 +155,34 @@ public class RegistrarInstructorService {
 
         auditService.registrar(usuario.getId(), AuditAccion.REGISTRO_INSTRUCTOR, "Usuario", usuario.getId(), null);
 
-        String token = jwtService.emitir(usuario.getId(), usuario.getEmail(), RolNombre.INSTRUCTOR);
+        // El codigo de 6 digitos. Si el SMTP falla el alta NO se pierde (ver RegistrarAlumnoService).
+        // Con Google no hace falta: esa direccion ya la verifico Google.
+        boolean mailEnviado = !conGoogle
+                && verificacionEmailService.emitir(usuario, usuario.getEmail(), PropositoVerificacion.REGISTRO);
 
-        return new RegistrarInstructorResponse(token, new RegistrarInstructorResponse.Usuario(
+        String token = jwtService.emitir(usuario.getId(), usuario.getEmail(), RolNombre.INSTRUCTOR.name(), usuario.isEmailVerificado());
+
+        return new RegistrarInstructorResponse(token, mailEnviado, new RegistrarInstructorResponse.Usuario(
                 usuario.getId(),
                 usuario.getNombre(),
                 usuario.getApellido(),
                 usuario.getEmail(),
                 usuario.getTelefono(),
                 usuario.getFechaNacimiento(),
-                rolInstructor.getNombre().name(),
+                rolInstructor.getNombre(),
                 usuario.getEstado().name(),
                 usuario.getCantidadPenalizaciones(),
-                usuario.getCreatedAt()
+                usuario.getCreatedAt(),
+                usuario.isEmailVerificado(),
+                usuario.getAuthProveedor().name()
         ));
+    }
+
+    /** Contraseña aleatoria para una cuenta de Google: `password_hash` es NOT NULL. */
+    private String passwordInutilizable() {
+        byte[] bytes = new byte[32];
+        new java.security.SecureRandom().nextBytes(bytes);
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     private void validarDocumentos(List<MultipartFile> documentos) {
@@ -144,20 +203,21 @@ public class RegistrarInstructorService {
     }
 
     private void guardarDocumentos(List<MultipartFile> documentos, PerfilInstructor perfil, UUID actorId) {
-        List<Path> escritos = new ArrayList<>();
+        List<String> escritos = new ArrayList<>();
         registrarLimpiezaSiHayRollback(escritos);
 
-        Path directorio = Path.of(directorioAlmacenamiento);
         for (MultipartFile archivo : documentos) {
             String nombreOriginal = archivo.getOriginalFilename() != null ? archivo.getOriginalFilename() : "documento";
-            String nombreEnDisco = UUID.randomUUID() + extension(nombreOriginal);
-            Path destino = directorio.resolve(nombreEnDisco);
+            String nombreGuardado = UUID.randomUUID() + extension(nombreOriginal);
 
             try {
-                Files.createDirectories(directorio);
-                Files.write(destino, archivo.getBytes());
-                escritos.add(destino);
-            } catch (IOException e) {
+                almacenamiento.guardar(
+                        CarpetaArchivos.DOCUMENTOS_INSTRUCTOR,
+                        nombreGuardado,
+                        archivo.getBytes(),
+                        archivo.getContentType());
+                escritos.add(nombreGuardado);
+            } catch (IOException | AlmacenamientoException e) {
                 // Rompe la transaccion: no queda ni Usuario ni PerfilInstructor. Se devuelve
                 // como ValidacionException para que el mensaje llegue tal cual a la pantalla.
                 log.error("Fallo al guardar la documentacion del alta de instructor", e);
@@ -167,7 +227,7 @@ public class RegistrarInstructorService {
             DocumentoInstructor documento = new DocumentoInstructor();
             documento.setPerfilInstructor(perfil);
             documento.setTipoDocumento(archivo.getContentType());
-            documento.setRutaArchivo(nombreEnDisco);
+            documento.setRutaArchivo(nombreGuardado);
             documento.setNombreArchivo(nombreOriginal);
             documento.setTamanioBytes(archivo.getSize());
             documentoInstructorRepository.save(documento);
@@ -178,10 +238,11 @@ public class RegistrarInstructorService {
     }
 
     /**
-     * El filesystem no participa de la transaccion: si la base hace rollback despues de
-     * haber escrito archivos, hay que borrarlos para no dejar huerfanos en disco.
+     * El almacenamiento no participa de la transaccion —ni el disco ni Supabase Storage—: si
+     * la base hace rollback despues de haber escrito archivos, hay que borrarlos para no dejar
+     * huerfanos.
      */
-    private void registrarLimpiezaSiHayRollback(List<Path> escritos) {
+    private void registrarLimpiezaSiHayRollback(List<String> escritos) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             return;
         }
@@ -191,12 +252,10 @@ public class RegistrarInstructorService {
                 if (status != STATUS_ROLLED_BACK) {
                     return;
                 }
-                for (Path path : escritos) {
-                    try {
-                        Files.deleteIfExists(path);
-                    } catch (IOException e) {
-                        log.warn("No se pudo borrar el documento huerfano {} tras el rollback del alta", path, e);
-                    }
+                for (String nombre : escritos) {
+                    // `borrarSiExiste` es best-effort y no lanza: despues del rollback ya no
+                    // hay a quien reportarle que quedo un archivo colgado.
+                    almacenamiento.borrarSiExiste(CarpetaArchivos.DOCUMENTOS_INSTRUCTOR, nombre);
                 }
             }
         });

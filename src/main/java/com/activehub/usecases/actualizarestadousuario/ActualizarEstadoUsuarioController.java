@@ -21,7 +21,7 @@ public class ActualizarEstadoUsuarioController {
     }
 
     @PostMapping("/{id}/estado")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('usuarios.gestionar')")
     public ActualizarEstadoUsuarioResponse actualizar(
             @PathVariable UUID id, @Valid @RequestBody ActualizarEstadoUsuarioRequest request, Authentication authentication
     ) {

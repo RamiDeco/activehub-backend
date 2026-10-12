@@ -52,6 +52,7 @@ class ListarMisResenasServiceTest {
         resenia.setPuntaje(4);
         resenia.setComentario("Buena clase");
         resenia.setEnModeracion(true);
+        resenia.setRespuestaInstructor("¡Gracias por venir!");
         ReflectionTestUtils.setField(resenia, "id", UUID.randomUUID());
 
         when(reseniaRepository.findByAlumnoIdConDetalle(alumnoId)).thenReturn(List.of(resenia));
@@ -62,5 +63,9 @@ class ListarMisResenasServiceTest {
         assertThat(response.get(0).actividadNombre()).isEqualTo("Yoga Integral");
         assertThat(response.get(0).instructorNombre()).isEqualTo("Carla Nuñez");
         assertThat(response.get(0).enModeracion()).isTrue();
+        // La respuesta del instructor viaja al alumno: es lo que abre la notificación
+        // RESENIA_RESPONDIDA, que hasta ahora lo dejaba en una lista donde no estaba.
+        assertThat(response.get(0).respuestaInstructor()).isEqualTo("¡Gracias por venir!");
+        assertThat(response.get(0).oculta()).isFalse();
     }
 }

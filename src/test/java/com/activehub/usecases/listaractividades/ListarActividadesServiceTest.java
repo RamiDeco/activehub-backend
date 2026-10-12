@@ -55,13 +55,13 @@ class ListarActividadesServiceTest {
         a.setNombre(nombre);
         a.setDescripcion("desc");
         a.setTipoActividad(tipo);
-        a.setNivelIntensidad(NivelIntensidad.FISICA_BAJA);
+        a.setNivelIntensidad(nivel("Física baja"));
         a.setInstructor(instructor);
         a.setPrecio(precio);
         a.setUbicacion("Mendoza");
         a.setPhotoTint("gradient");
         a.setRating(rating);
-        a.setCuposMax(10);
+        a.setDuracionMin(45);
         ReflectionTestUtils.setField(a, "id", UUID.randomUUID());
         return a;
     }
@@ -84,6 +84,24 @@ class ListarActividadesServiceTest {
 
         assertThat(resultado).hasSize(2);
         assertThat(resultado.get(0).proximaClase()).isNull();
+        assertThat(resultado.get(0).latitud()).isNull();
+        assertThat(resultado.get(0).longitud()).isNull();
+    }
+
+    @Test
+    void listar_actividadConCoordenadas_lasDevuelveEnElDto() {
+        Actividad a1 = actividad("Yoga", new BigDecimal("3000"), new BigDecimal("4.5"));
+        a1.setLatitud(-32.8908);
+        a1.setLongitud(-68.8272);
+        when(actividadRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Sort.class)))
+                .thenReturn(List.of(a1));
+        when(claseRepository.findByActividadIdInAndEstadoNotInOrderByFechaHoraAsc(any(), any()))
+                .thenReturn(List.of());
+
+        List<ListarActividadesResponse> resultado = service.listar(null, null, null, null, null, false, null, null);
+
+        assertThat(resultado.get(0).latitud()).isEqualTo(-32.8908);
+        assertThat(resultado.get(0).longitud()).isEqualTo(-68.8272);
     }
 
     @Test
@@ -119,5 +137,13 @@ class ListarActividadesServiceTest {
         var sortCaptor = org.mockito.ArgumentCaptor.forClass(Sort.class);
         org.mockito.Mockito.verify(actividadRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), sortCaptor.capture());
         assertThat(sortCaptor.getValue().getOrderFor("precio").getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
+
+    private static NivelIntensidad nivel(String nombre) {
+        NivelIntensidad n = new NivelIntensidad();
+        n.setNombre(nombre);
+        n.setDescripcion("desc");
+        ReflectionTestUtils.setField(n, "id", UUID.randomUUID());
+        return n;
     }
 }

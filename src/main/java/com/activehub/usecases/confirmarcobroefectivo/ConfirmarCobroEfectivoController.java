@@ -19,7 +19,7 @@ public class ConfirmarCobroEfectivoController {
     }
 
     @PostMapping("/{id}/confirmar-cobro")
-    @PreAuthorize("hasRole('INSTRUCTOR')")
+    @PreAuthorize("@permisos.puede('cobros.confirmar')")
     public ConfirmarCobroEfectivoResponse confirmar(@PathVariable UUID id, Authentication authentication) {
         UUID instructorId = (UUID) authentication.getPrincipal();
         return confirmarCobroEfectivoService.confirmar(id, instructorId);

@@ -20,7 +20,6 @@ import com.activehub.domain.inscripcion.PagoRepository;
 import com.activehub.domain.inscripcion.VentanaPagos;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
-import com.activehub.shared.payments.PaymentGateway;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -41,7 +40,6 @@ class LiberarPagosServiceTest {
 
     @Mock private PagoRepository pagoRepository;
     @Mock private DenunciaRepository denunciaRepository;
-    @Mock private PaymentGateway paymentGateway;
     @Mock private AuditService auditService;
 
     private LiberarPagosService service;
@@ -52,7 +50,7 @@ class LiberarPagosServiceTest {
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(AHORA, ZoneOffset.UTC);
-        service = new LiberarPagosService(pagoRepository, denunciaRepository, paymentGateway, auditService, clock);
+        service = new LiberarPagosService(pagoRepository, denunciaRepository, auditService, clock);
 
         claseId = UUID.randomUUID();
         clase = new Clase();
@@ -85,7 +83,6 @@ class LiberarPagosServiceTest {
 
         assertThat(liberados).isEqualTo(1);
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Liberado);
-        verify(paymentGateway).confirmarPago("ref-mock-1");
         verify(pagoRepository).save(pago);
         verify(auditService).registrar(isNull(), eq(AuditAccion.PAGO_LIBERADO), eq("Pago"), any(), isNull());
     }
@@ -99,7 +96,6 @@ class LiberarPagosServiceTest {
 
         assertThat(liberados).isZero();
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Retenido);
-        verify(paymentGateway, never()).confirmarPago(any());
     }
 
     @Test
@@ -111,7 +107,6 @@ class LiberarPagosServiceTest {
 
         assertThat(liberados).isZero();
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Retenido);
-        verify(paymentGateway, never()).confirmarPago(any());
     }
 
     @Test
@@ -134,5 +129,31 @@ class LiberarPagosServiceTest {
 
         assertThat(liberados).isZero();
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Retenido);
+    }
+
+    @Test
+    void liberar_pagoDeMercadoPagoSinCapturar_noLoLibera() {
+        // La captura fallo o todavia no corrio: liberarlo seria dar por cobrado algo que MP no cobro.
+        pago.setMpOrderId("ORD01ABC");
+        hayUnPagoRetenido();
+        when(denunciaRepository.existsByClaseIdAndEstadoNot(claseId, EstadoDenuncia.RESUELTA)).thenReturn(false);
+
+        int liberados = service.liberar();
+
+        assertThat(liberados).isZero();
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Retenido);
+    }
+
+    @Test
+    void liberar_pagoDeMercadoPagoCapturado_loLibera() {
+        pago.setMpOrderId("ORD01ABC");
+        pago.setCapturadoAt(AHORA.minus(Duration.ofHours(30)));
+        hayUnPagoRetenido();
+        when(denunciaRepository.existsByClaseIdAndEstadoNot(claseId, EstadoDenuncia.RESUELTA)).thenReturn(false);
+
+        int liberados = service.liberar();
+
+        assertThat(liberados).isEqualTo(1);
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Liberado);
     }
 }

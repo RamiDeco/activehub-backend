@@ -1,8 +1,11 @@
 package com.activehub.usecases.resolverdenuncia;
 
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.lenient;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -10,6 +13,7 @@ import static org.mockito.Mockito.when;
 import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.denuncia.Denuncia;
+import com.activehub.domain.actividad.ClaseRepository;
 import com.activehub.domain.denuncia.DenunciaRepository;
 import com.activehub.domain.denuncia.EstadoDenuncia;
 import com.activehub.domain.inscripcion.EstadoInscripcion;
@@ -19,20 +23,34 @@ import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.domain.inscripcion.MetodoPago;
 import com.activehub.domain.inscripcion.Pago;
 import com.activehub.domain.inscripcion.PagoRepository;
+import com.activehub.domain.denuncia.ResolucionDenuncia;
 import com.activehub.domain.penalizacion.PenalizacionRepository;
+import com.activehub.domain.penalizacion.TipoPenalizacion;
+import com.activehub.domain.penalizacion.VentanaPenalizacion;
+import com.activehub.domain.resenia.Resenia;
+import com.activehub.domain.resenia.ReseniaRepository;
 import com.activehub.domain.usuario.EstadoUsuario;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
-import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.notificacion.Destino;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
+import com.activehub.shared.payments.OperacionesPagoMercadoPago;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.Clock;
+import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -40,8 +58,12 @@ import org.springframework.test.util.ReflectionTestUtils;
 @ExtendWith(MockitoExtension.class)
 class ResolverDenunciaServiceTest {
 
+    private static final Instant AHORA = Instant.parse("2026-06-01T12:00:00Z");
+
     @Mock
     private DenunciaRepository denunciaRepository;
+    @Mock
+    private ClaseRepository claseRepository;
     @Mock
     private InscripcionRepository inscripcionRepository;
     @Mock
@@ -51,9 +73,13 @@ class ResolverDenunciaServiceTest {
     @Mock
     private PenalizacionRepository penalizacionRepository;
     @Mock
-    private PaymentGateway paymentGateway;
+    private OperacionesPagoMercadoPago operacionesPago;
     @Mock
     private AuditService auditService;
+    @Mock
+    private NotificacionService notificacionService;
+    @Mock
+    private ReseniaRepository reseniaRepository;
 
     private ResolverDenunciaService service;
     private UUID denunciaId;
@@ -65,9 +91,17 @@ class ResolverDenunciaServiceTest {
 
     @BeforeEach
     void setUp() {
+        // El componente real decide cancelar o reembolsar; aca solo importa que se lo llame y
+        // que el pago quede en el estado que devolveria para uno sin capturar.
+        lenient().when(operacionesPago.reintegrar(any(), any(), any())).thenAnswer(inv -> {
+            Pago p = inv.getArgument(0);
+            p.setEstado(EstadoPago.Cancelado);
+            return EstadoPago.Cancelado;
+        });
         service = new ResolverDenunciaService(
-                denunciaRepository, inscripcionRepository, pagoRepository, usuarioRepository, penalizacionRepository,
-                paymentGateway, auditService);
+                denunciaRepository, claseRepository, inscripcionRepository, pagoRepository, usuarioRepository,
+                penalizacionRepository, reseniaRepository, operacionesPago, auditService, notificacionService,
+                Clock.fixed(AHORA, ZoneOffset.UTC));
 
         instructorId = UUID.randomUUID();
         instructor = new Usuario();
@@ -75,11 +109,13 @@ class ResolverDenunciaServiceTest {
         ReflectionTestUtils.setField(instructor, "id", instructorId);
 
         Actividad actividad = new Actividad();
+        actividad.setNombre("Running");
         actividad.setInstructor(instructor);
 
         claseId = UUID.randomUUID();
         Clase clase = new Clase();
         clase.setActividad(actividad);
+        clase.setFechaHora(Instant.parse("2026-08-20T12:00:00Z"));
         ReflectionTestUtils.setField(clase, "id", claseId);
 
         alumnoId = UUID.randomUUID();
@@ -96,8 +132,10 @@ class ResolverDenunciaServiceTest {
         when(denunciaRepository.findById(denunciaId)).thenReturn(Optional.of(denuncia));
     }
 
-    private ResolverDenunciaRequest req(AccionResolucion accion) {
-        return new ResolverDenunciaRequest(accion.name());
+    private ResolverDenunciaRequest req(ResolucionDenuncia accion) {
+        // SUSPENDER exige plazo: se manda el mínimo de negocio y sin multa.
+        Integer dias = accion == ResolucionDenuncia.SUSPENDER ? VentanaPenalizacion.MINIMO_DIAS_SUSPENSION : null;
+        return new ResolverDenunciaRequest(accion.name(), null, null, dias);
     }
 
     @Test
@@ -107,48 +145,122 @@ class ResolverDenunciaServiceTest {
         pago.setMetodo(MetodoPago.MERCADO_PAGO);
         pago.setMonto(new BigDecimal("4500"));
         pago.setReferenciaExterna("ref-1");
-        Inscripcion inscripcion = new Inscripcion();
-        inscripcion.setEstado(EstadoInscripcion.INSCRIPTO);
-        inscripcion.setPago(pago);
+        Inscripcion inscripcion = inscripcionDe(alumnoId, pago);
 
-        when(inscripcionRepository.findByClaseIdAndAlumnoIdAndEstadoNot(claseId, alumnoId, EstadoInscripcion.CANCELADA))
-                .thenReturn(Optional.of(inscripcion));
+        when(inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA))
+                .thenReturn(List.of(inscripcion));
 
-        ResolverDenunciaResponse response = service.resolver(denunciaId, req(AccionResolucion.REINTEGRAR), UUID.randomUUID());
+        ResolverDenunciaResponse response = service.resolver(denunciaId, req(ResolucionDenuncia.REINTEGRAR), UUID.randomUUID());
 
         assertThat(response.estado()).isEqualTo("Resuelta");
         assertThat(inscripcion.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
-        verify(paymentGateway).cancelarPago("ref-1");
+        verify(operacionesPago).reintegrar(argThat(p -> "ref-1".equals(p.getReferenciaExterna())), any(), any());
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId), eq(Destino.denuncia(denunciaId)));
+        verify(notificacionService, never()).notificar(eq(instructorId), any(), any(), any(), any());
     }
 
+    /**
+     * Decision del usuario: el reintegro alcanza a <b>toda la clase</b>, no solo a quien
+     * denuncio. Lo que se denuncia es un hecho de la clase (el instructor falto, hubo una
+     * situacion grave), y eso afecta a todos los que pagaron. Antes esto buscaba una unica
+     * inscripcion —la del denunciante— y al resto se le liberaba el pago al instructor apenas
+     * vencia el periodo de denuncias.
+     */
     @Test
-    void resolver_reintegrarPagoEfectivo_noLlamaGateway() {
+    void resolver_reintegrar_alcanzaATodosLosInscriptosDeLaClase() {
+        UUID otroAlumnoId = UUID.randomUUID();
+
+        Pago pagoDenunciante = new Pago();
+        pagoDenunciante.setEstado(EstadoPago.Retenido);
+        pagoDenunciante.setMetodo(MetodoPago.MERCADO_PAGO);
+        pagoDenunciante.setMonto(new BigDecimal("4500"));
+        pagoDenunciante.setReferenciaExterna("ref-1");
+
+        Pago pagoOtro = new Pago();
+        pagoOtro.setEstado(EstadoPago.Retenido);
+        pagoOtro.setMetodo(MetodoPago.MERCADO_PAGO);
+        pagoOtro.setMonto(new BigDecimal("4500"));
+        pagoOtro.setReferenciaExterna("ref-2");
+
+        Inscripcion delDenunciante = inscripcionDe(alumnoId, pagoDenunciante);
+        Inscripcion deOtro = inscripcionDe(otroAlumnoId, pagoOtro);
+
+        when(inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA))
+                .thenReturn(List.of(delDenunciante, deOtro));
+
+        service.resolver(denunciaId, req(ResolucionDenuncia.REINTEGRAR), UUID.randomUUID());
+
+        assertThat(deOtro.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
+        assertThat(pagoOtro.getEstado()).isEqualTo(EstadoPago.Cancelado);
+        verify(operacionesPago).reintegrar(argThat(p -> "ref-1".equals(p.getReferenciaExterna())), any(), any());
+        verify(operacionesPago).reintegrar(argThat(p -> "ref-2".equals(p.getReferenciaExterna())), any(), any());
+        // Al que no denuncio tambien se le avisa: se le canceló una inscripción que él no pidió
+        // cancelar.
+        verify(notificacionService).notificar(
+                eq(otroAlumnoId), eq(TipoNotificacion.INSCRIPCION_CANCELADA), any(), eq(claseId), any());
+    }
+
+    /**
+     * El efectivo tambien se reintegra, con el mismo criterio que {@code cancelarclase}
+     * (decision 6): el registro queda {@code Cancelado} y al alumno se le dice que coordine la
+     * devolucion. Antes el efectivo no se tocaba y el alumno seguia viendo un pago valido por
+     * una clase cuyo reclamo la plataforma le dio la razon. La decision 6 deja el efectivo
+     * intacto <b>cuando cancela el propio alumno</b>; acá el reintegro lo ordena la plataforma.
+     */
+    @Test
+    void resolver_reintegrarPagoEfectivo_loCancelaSinLlamarAlGateway() {
         Pago pago = new Pago();
         pago.setEstado(EstadoPago.Efectivo);
         pago.setMetodo(MetodoPago.EFECTIVO);
         pago.setMonto(new BigDecimal("4500"));
-        Inscripcion inscripcion = new Inscripcion();
-        inscripcion.setEstado(EstadoInscripcion.INSCRIPTO);
-        inscripcion.setPago(pago);
+        Inscripcion inscripcion = inscripcionDe(alumnoId, pago);
 
-        when(inscripcionRepository.findByClaseIdAndAlumnoIdAndEstadoNot(claseId, alumnoId, EstadoInscripcion.CANCELADA))
-                .thenReturn(Optional.of(inscripcion));
+        when(inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA))
+                .thenReturn(List.of(inscripcion));
 
-        service.resolver(denunciaId, req(AccionResolucion.REINTEGRAR), UUID.randomUUID());
+        service.resolver(denunciaId, req(ResolucionDenuncia.REINTEGRAR), UUID.randomUUID());
 
-        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Efectivo);
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         assertThat(inscripcion.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
-        verify(paymentGateway, never()).cancelarPago(any());
+        verify(operacionesPago, never()).reintegrar(any(), any(), any());
     }
 
+    private Inscripcion inscripcionDe(UUID alumno, Pago pago) {
+        Usuario usuario = new Usuario();
+        ReflectionTestUtils.setField(usuario, "id", alumno);
+        Inscripcion inscripcion = new Inscripcion();
+        inscripcion.setAlumno(usuario);
+        inscripcion.setEstado(EstadoInscripcion.INSCRIPTO);
+        inscripcion.setPago(pago);
+        return inscripcion;
+    }
+
+    /** La suspensión ahora crea una Penalizacion, que necesita id propio para auditarse. */
+    private void penalizacionConId() {
+        when(penalizacionRepository.saveAndFlush(any())).thenAnswer(inv -> {
+            com.activehub.domain.penalizacion.Penalizacion p = inv.getArgument(0);
+            ReflectionTestUtils.setField(p, "id", UUID.randomUUID());
+            return p;
+        });
+    }
+
+    /**
+     * Suspender ya no toca {@code EstadoUsuario}: el penalizado sigue entrando a la plataforma
+     * (misma decision que en {@code crearpenalizacion}). Lo que lo frena es la vigencia de la
+     * Penalizacion, via {@code PenalizacionVigenteGuard}.
+     */
     @Test
     void resolver_suspender_afectaAlInstructorNoAlAlumno() {
-        ResolverDenunciaResponse response = service.resolver(denunciaId, req(AccionResolucion.SUSPENDER), UUID.randomUUID());
+        penalizacionConId();
+
+        ResolverDenunciaResponse response = service.resolver(denunciaId, req(ResolucionDenuncia.SUSPENDER), UUID.randomUUID());
 
         assertThat(response.estado()).isEqualTo("Resuelta");
-        assertThat(instructor.getEstado()).isEqualTo(EstadoUsuario.SUSPENDIDO);
+        assertThat(instructor.getEstado()).isEqualTo(EstadoUsuario.ACTIVO);
         verify(usuarioRepository).save(instructor);
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId), eq(Destino.denuncia(denunciaId)));
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.INSTRUCTOR_SUSPENDIDO), any(), eq(denunciaId), eq(Destino.clase(claseId)));
     }
 
     @Test
@@ -160,33 +272,37 @@ class ResolverDenunciaServiceTest {
             return p;
         });
 
-        service.resolver(denunciaId, req(AccionResolucion.PENALIZAR), UUID.randomUUID());
+        service.resolver(denunciaId, req(ResolucionDenuncia.PENALIZAR), UUID.randomUUID());
 
         assertThat(instructor.getCantidadPenalizaciones()).isEqualTo(1);
         verify(penalizacionRepository).saveAndFlush(any());
         verify(usuarioRepository).save(instructor);
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId), eq(Destino.denuncia(denunciaId)));
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.PENALIZACION_APLICADA), any(), eq(denunciaId), eq(Destino.clase(claseId)));
     }
 
     @Test
     void resolver_desestimar_soloCierraElCaso() {
-        ResolverDenunciaResponse response = service.resolver(denunciaId, req(AccionResolucion.DESESTIMAR), UUID.randomUUID());
+        ResolverDenunciaResponse response = service.resolver(denunciaId, req(ResolucionDenuncia.DESESTIMAR), UUID.randomUUID());
 
         assertThat(response.estado()).isEqualTo("Resuelta");
         assertThat(instructor.getEstado()).isEqualTo(EstadoUsuario.ACTIVO);
         assertThat(instructor.getCantidadPenalizaciones()).isEqualTo(0);
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId), eq(Destino.denuncia(denunciaId)));
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.DENUNCIA_DESESTIMADA), any(), eq(denunciaId), eq(Destino.clase(claseId)));
     }
 
     @Test
     void resolver_yaResuelta_lanzaValidacion() {
         denuncia.setEstado(EstadoDenuncia.RESUELTA);
 
-        assertThatThrownBy(() -> service.resolver(denunciaId, req(AccionResolucion.DESESTIMAR), UUID.randomUUID()))
+        assertThatThrownBy(() -> service.resolver(denunciaId, req(ResolucionDenuncia.DESESTIMAR), UUID.randomUUID()))
                 .isInstanceOf(ValidacionException.class);
     }
 
     @Test
     void resolver_accionInvalida_lanzaValidacion() {
-        assertThatThrownBy(() -> service.resolver(denunciaId, new ResolverDenunciaRequest("NO_EXISTE"), UUID.randomUUID()))
+        assertThatThrownBy(() -> service.resolver(denunciaId, new ResolverDenunciaRequest("NO_EXISTE", null, null, null), UUID.randomUUID()))
                 .isInstanceOf(ValidacionException.class);
     }
 
@@ -194,7 +310,176 @@ class ResolverDenunciaServiceTest {
     void resolver_inexistente_lanzaNoEncontrado() {
         when(denunciaRepository.findById(denunciaId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.resolver(denunciaId, req(AccionResolucion.DESESTIMAR), UUID.randomUUID()))
+        assertThatThrownBy(() -> service.resolver(denunciaId, req(ResolucionDenuncia.DESESTIMAR), UUID.randomUUID()))
                 .isInstanceOf(NoEncontradoException.class);
+    }
+
+    @Test
+    void resolver_guardaLaResolucionYElDetalle() {
+        // Antes solo se guardaba "Resuelta": el denunciante no tenía forma de saber qué se
+        // decidió (E3A-HU11 criterios 2 y 7).
+        service.resolver(
+                denunciaId, new ResolverDenunciaRequest("DESESTIMAR", "  No encontramos evidencia.  ", null, null), UUID.randomUUID());
+
+        assertThat(denuncia.getResolucion()).isEqualTo(ResolucionDenuncia.DESESTIMAR);
+        assertThat(denuncia.getDetalle()).isEqualTo("No encontramos evidencia.");
+        verify(denunciaRepository).save(denuncia);
+    }
+
+    @Test
+    void resolver_detalleVacio_quedaNulo() {
+        service.resolver(denunciaId, new ResolverDenunciaRequest("DESESTIMAR", "   ", null, null), UUID.randomUUID());
+
+        assertThat(denuncia.getDetalle()).isNull();
+    }
+
+    @Test
+    void resolver_ocultarResenia_sobreDenunciaDeClase_lanzaValidacion() {
+        assertThatThrownBy(() ->
+                service.resolver(denunciaId, req(ResolucionDenuncia.OCULTAR_RESENIA), UUID.randomUUID()))
+                .isInstanceOf(ValidacionException.class);
+    }
+
+    // --- denuncias sobre una reseña (E2I-HU11) ---------------------------------------
+
+    private Denuncia denunciaDeResenia(Resenia resenia, Usuario denunciante) {
+        Denuncia d = new Denuncia();
+        d.setResenia(resenia);
+        d.setDenunciante(denunciante);
+        d.setMotivo("Comentario agresivo");
+        ReflectionTestUtils.setField(d, "id", denunciaId);
+        when(denunciaRepository.findById(denunciaId)).thenReturn(Optional.of(d));
+        return d;
+    }
+
+    private Resenia reseniaDelAlumno(UUID autorId) {
+        Usuario autor = new Usuario();
+        ReflectionTestUtils.setField(autor, "id", autorId);
+
+        Actividad actividad = new Actividad();
+        actividad.setNombre("Running");
+        actividad.setInstructor(instructor);
+
+        Clase clase = new Clase();
+        clase.setActividad(actividad);
+        ReflectionTestUtils.setField(clase, "id", UUID.randomUUID());
+
+        Resenia r = new Resenia();
+        r.setClase(clase);
+        r.setAlumno(autor);
+        ReflectionTestUtils.setField(r, "id", UUID.randomUUID());
+        return r;
+    }
+
+    @Test
+    void resolver_ocultarResenia_laOcultaYNotificaALasDosPartes() {
+        UUID autorId = UUID.randomUUID();
+        Resenia resenia = reseniaDelAlumno(autorId);
+        denunciaDeResenia(resenia, instructor);
+
+        ResolverDenunciaResponse response =
+                service.resolver(denunciaId, req(ResolucionDenuncia.OCULTAR_RESENIA), UUID.randomUUID());
+
+        assertThat(response.resolucion()).isEqualTo("OCULTAR_RESENIA");
+        assertThat(resenia.isOculta()).isTrue();
+        verify(reseniaRepository).save(resenia);
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId), eq(Destino.resenia(resenia.getId())));
+        verify(notificacionService).notificar(eq(autorId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId), eq(Destino.resenia(resenia.getId())));
+    }
+
+    @Test
+    void resolver_desestimarDenunciaDeResenia_noLaOculta() {
+        UUID autorId = UUID.randomUUID();
+        Resenia resenia = reseniaDelAlumno(autorId);
+        denunciaDeResenia(resenia, instructor);
+
+        service.resolver(denunciaId, req(ResolucionDenuncia.DESESTIMAR), UUID.randomUUID());
+
+        assertThat(resenia.isOculta()).isFalse();
+        // Al autor de la reseña no se le avisa nada: su reseña sigue publicada.
+        verify(notificacionService, never()).notificar(eq(autorId), any(), any(), any(), any());
+    }
+
+    @Test
+    void resolver_reintegrarSobreDenunciaDeResenia_lanzaValidacion() {
+        // Sin esta guarda el switch entraba a reintegrar() y explotaba con NPE: la denuncia
+        // de reseña no tiene clase ni alumno.
+        denunciaDeResenia(reseniaDelAlumno(UUID.randomUUID()), instructor);
+
+        assertThatThrownBy(() -> service.resolver(denunciaId, req(ResolucionDenuncia.REINTEGRAR), UUID.randomUUID()))
+                .isInstanceOf(ValidacionException.class);
+
+        verify(reseniaRepository, never()).save(any());
+    }
+
+    @Test
+    void resolver_suspender_creaLaSuspensionConSuVigencia() {
+        penalizacionConId();
+
+        service.resolver(denunciaId, new ResolverDenunciaRequest("SUSPENDER", null, null, 30), UUID.randomUUID());
+
+        ArgumentCaptor<com.activehub.domain.penalizacion.Penalizacion> captor =
+                ArgumentCaptor.forClass(com.activehub.domain.penalizacion.Penalizacion.class);
+        verify(penalizacionRepository).saveAndFlush(captor.capture());
+
+        var suspension = captor.getValue();
+        assertThat(suspension.getTipo()).isEqualTo(TipoPenalizacion.SUSPENSION_TEMPORAL);
+        assertThat(suspension.getFechaInicio()).isEqualTo(LocalDate.of(2026, 6, 1));
+        assertThat(suspension.getFechaFin()).isEqualTo(LocalDate.of(2026, 7, 1));
+        // Queda atada a la denuncia que la originó: habilita el "Ver denuncia" del listado.
+        assertThat(suspension.getDenuncia()).isEqualTo(denuncia);
+        assertThat(instructor.getCantidadPenalizaciones()).isEqualTo(1);
+    }
+
+    @Test
+    void resolver_suspenderConMulta_creaDosPenalizaciones() {
+        penalizacionConId();
+
+        service.resolver(
+                denunciaId, new ResolverDenunciaRequest("SUSPENDER", null, new BigDecimal("12000"), 20),
+                UUID.randomUUID());
+
+        ArgumentCaptor<com.activehub.domain.penalizacion.Penalizacion> captor =
+                ArgumentCaptor.forClass(com.activehub.domain.penalizacion.Penalizacion.class);
+        verify(penalizacionRepository, org.mockito.Mockito.times(2)).saveAndFlush(captor.capture());
+
+        assertThat(captor.getAllValues()).extracting(p -> p.getTipo())
+                .containsExactly(TipoPenalizacion.SUSPENSION_TEMPORAL, TipoPenalizacion.ECONOMICA);
+        assertThat(captor.getAllValues().get(1).getMonto()).isEqualByComparingTo("12000");
+        assertThat(instructor.getCantidadPenalizaciones()).isEqualTo(2);
+    }
+
+    @Test
+    void resolver_suspenderConMontoCero_noCreaLaEconomica() {
+        // "Puede ser cero" = suspensión sin multa, no una multa de $0.
+        penalizacionConId();
+
+        service.resolver(
+                denunciaId, new ResolverDenunciaRequest("SUSPENDER", null, BigDecimal.ZERO, 15), UUID.randomUUID());
+
+        verify(penalizacionRepository, org.mockito.Mockito.times(1)).saveAndFlush(any());
+        assertThat(instructor.getCantidadPenalizaciones()).isEqualTo(1);
+    }
+
+    @Test
+    void resolver_suspenderSinDias_lanzaValidacion() {
+        assertThatThrownBy(() -> service.resolver(
+                denunciaId, new ResolverDenunciaRequest("SUSPENDER", null, null, null), UUID.randomUUID()))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessageContaining("días");
+
+        assertThat(instructor.getEstado()).isEqualTo(EstadoUsuario.ACTIVO);
+        verify(penalizacionRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void resolver_suspenderPorMenosDelMinimo_lanzaValidacion() {
+        assertThatThrownBy(() -> service.resolver(
+                denunciaId, new ResolverDenunciaRequest("SUSPENDER", null, null, 7), UUID.randomUUID()))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessageContaining("15 días");
+
+        assertThat(instructor.getEstado()).isEqualTo(EstadoUsuario.ACTIVO);
+        verify(denunciaRepository, never()).save(any());
     }
 }

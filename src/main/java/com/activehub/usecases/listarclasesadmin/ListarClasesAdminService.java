@@ -24,9 +24,11 @@ public class ListarClasesAdminService {
                             actividad.getId(),
                             actividad.getNombre(),
                             c.getFechaHora(),
+                            c.getHoraFin(),
                             c.getEstado().name(),
                             c.getCuposMax(),
-                            c.getCuposOcupados());
+                            c.getCuposOcupados(),
+                            c.getPrecio());
                 })
                 .toList();
     }

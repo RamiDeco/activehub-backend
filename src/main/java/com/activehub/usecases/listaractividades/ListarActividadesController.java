@@ -23,13 +23,13 @@ public class ListarActividadesController {
             @RequestParam(required = false) String texto,
             @RequestParam(required = false) UUID categoriaId,
             @RequestParam(required = false) UUID tipoActividadId,
-            @RequestParam(required = false) String nivelIntensidad,
+            @RequestParam(required = false) UUID nivelIntensidadId,
             @RequestParam(required = false) BigDecimal precioMax,
             @RequestParam(required = false, defaultValue = "false") boolean soloConCupos,
             @RequestParam(required = false) UUID instructorId,
             @RequestParam(required = false) String sort
     ) {
         return listarActividadesService.listar(
-                texto, categoriaId, tipoActividadId, nivelIntensidad, precioMax, soloConCupos, instructorId, sort);
+                texto, categoriaId, tipoActividadId, nivelIntensidadId, precioMax, soloConCupos, instructorId, sort);
     }
 }

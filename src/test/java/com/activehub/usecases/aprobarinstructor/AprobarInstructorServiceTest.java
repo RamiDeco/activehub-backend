@@ -15,6 +15,9 @@ import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
+import com.activehub.shared.notificacion.Destino;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +34,8 @@ class AprobarInstructorServiceTest {
     private PerfilInstructorRepository perfilInstructorRepository;
     @Mock
     private AuditService auditService;
+    @Mock
+    private NotificacionService notificacionService;
 
     private AprobarInstructorService service;
     private UUID usuarioId;
@@ -38,7 +43,7 @@ class AprobarInstructorServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AprobarInstructorService(perfilInstructorRepository, auditService);
+        service = new AprobarInstructorService(perfilInstructorRepository, auditService, notificacionService);
 
         usuarioId = UUID.randomUUID();
         Usuario usuario = new Usuario();
@@ -57,6 +62,7 @@ class AprobarInstructorServiceTest {
         assertThat(response.estadoVerificacion()).isEqualTo("APROBADO");
         assertThat(perfil.getMotivoRechazo()).isNull();
         verify(auditService).registrar(any(UUID.class), eq(AuditAccion.INSTRUCTOR_VALIDADO), eq("PerfilInstructor"), eq(usuarioId), isNull());
+        verify(notificacionService).notificar(eq(usuarioId), eq(TipoNotificacion.INSTRUCTOR_APROBADO), any(), eq(usuarioId), eq(Destino.perfilInstructor(usuarioId)));
     }
 
     @Test

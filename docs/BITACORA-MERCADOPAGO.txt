@@ -1,0 +1,2446 @@
+BITÁCORA DE IMPLEMENTACIÓN DE MERCADO PAGO — ActiveHub
+Repositorio: activehub-backend (incluye cambios de activehub-frontend)
+Formato: FORMATO-BITACORA-MERCADOPAGO.txt, versión 1 del 11/10/2026.
+Estructura: PARTE A (ESTADO GENERAL, se reemplaza completo en cada actualización) y PARTE B
+(ENTRADAS, solo se agregan). Al final, DUDAS ABIERTAS.
+
+================================================================================
+PARTE A — ESTADO GENERAL
+================================================================================
+
+ESTADO GENERAL
+Fecha de actualización: 12/10/2026 (después de la ENTRADA 017)
+
+Pagos
+  Proveedor en uso: Mercado Pago en entorno de pruebas (sandbox). No existe implementación
+    simulada: MockPaymentGateway se eliminó el 29/09/2026 (commit ce73500). Mercado Pago en
+    producción: no configurado.
+  Modo de integración: Checkout API sobre la Orders API de Mercado Pago (POST /v1/orders con
+    capture_mode "manual"), en modelo marketplace: cada instructor cobra con su propia cuenta de
+    Mercado Pago, vinculada a ActiveHub por OAuth. El alumno escribe la tarjeta dentro de
+    ActiveHub, en el Card Payment Brick del SDK JavaScript de Mercado Pago (v2), sin salir del
+    sistema ni iniciar sesión en Mercado Pago.
+  Flujos operativos:
+    - Vinculación de la cuenta del instructor por OAuth: implementado; usado en las pruebas en
+      sandbox del 07/10/2026 y del 10/10/2026.
+    - Inscripción con pago: el pago se autoriza sin cobrarse (Retenido). Probado en sandbox el
+      07/10/2026 (PRU-10, ENTRADA 007).
+    - Pago en revisión de Mercado Pago (EnRevision) resuelto por el webhook: implementado y con
+      pruebas automatizadas; no probado en sandbox.
+    - Retención: captura en Mercado Pago al finalizar la clase. Probado en sandbox el 10/10/2026
+      (PRU-11, ENTRADA 011).
+    - Captura anticipada cuando la autorización vence en menos de 24 h: pruebas automatizadas.
+    - Liberación (paso interno a Liberado 24 h después de la clase sin denuncias abiertas):
+      pruebas automatizadas; no ejecutada en sandbox.
+    - Reintegro total sin capturar (cancelación de la autorización): pruebas automatizadas; no
+      probado en sandbox.
+    - Reintegro total de un pago capturado (reembolso): probado en sandbox el 10/10/2026 (PRU-12,
+      ENTRADA 011).
+    - Pago en efectivo con confirmación del cobro por el instructor: existía antes; convive sin
+      cambios de flujo.
+    - Webhook con verificación de firma: pruebas automatizadas; recepción de una notificación
+      real después de la corrección de la firma: no verificada.
+    - Renovación automática de la vinculación y desvinculación de la cuenta: pruebas
+      automatizadas; prueba manual no ejecutada.
+  Flujos todavía simulados o no implementados:
+    - Ningún flujo de pago queda simulado.
+    - Reintegro parcial: no implementado (todos los reintegros son totales).
+    - Comisión de la plataforma: la columna pago.comision existe pero siempre vale 0.
+    - Validación 3DS: no implementada (apagada en la Orders API).
+    - Tarjeta de débito, prepaga, dinero en cuenta y medios de pago en efectivo fuera de línea:
+      no habilitados.
+    - Conciliación periódica de pagos en revisión cuando el aviso de Mercado Pago no llega: no
+      implementada (ver ENTRADA 017).
+    - Entorno de producción: no configurado.
+
+Backend
+  Pruebas: 1005 pruebas en 209 archivos. Comando ejecutado el 12/10/2026:
+    JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw -B test (duración total 01:07 min).
+    Conteo de archivos: find src/test -name "*Test.java" | wc -l -> 209.
+  Resultado: todas en verde. Salida literal: "Tests run: 1005, Failures: 0, Errors: 0,
+    Skipped: 2" y "BUILD SUCCESS". Las 2 omitidas son a propósito: MercadoPagoGatewaySandboxTest
+    (@Disabled, prueba manual contra el sandbox).
+  Casos de uso: 117 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1
+    -type d | wc -l).
+  Migraciones: hasta V32 (última: V32__pago_intentos_captura.sql). 32 archivos (comando:
+    ls src/main/resources/db/migration | wc -l).
+  Endpoints nuevos o modificados en este estado:
+    Nuevos:
+      GET    /api/instructor/mercadopago/vinculo      (permiso mercadopago.vincular)
+      GET    /api/instructor/mercadopago/callback     (público, en permitAll)
+      GET    /api/instructor/mercadopago              (permiso mercadopago.vincular)
+      DELETE /api/instructor/mercadopago              (permiso mercadopago.vincular)
+      POST   /api/instructor/mercadopago/webhook      (público, en permitAll, firma HMAC)
+    Modificados:
+      POST   /api/alumno/clases/{claseId}/inscripciones          (inscribirse)
+      POST   /api/instructor/inscripciones/{id}/confirmar-cobro  (confirmarcobroefectivo)
+      GET    /api/alumno/pagos                                   (listarmispagos)
+      GET    /api/instructor/clases/{claseId}/roster             (listarrosterclase)
+      GET    /api/actividades/{id}                               (obteneractividad)
+      DELETE /api/alumno/inscripciones/{id}                      (cancelarinscripcion)
+      y los demás casos de uso que reintegran pagos (cancelarclase, notificarausenciaprofesor,
+      resolverdenuncia, crearpenalizacion), sin cambio de ruta.
+    Tareas programadas que intervienen: FinalizarClasesVencidasScheduler (cada 5 min,
+      finaliza clases y captura pagos), LiberarPagosScheduler (cada 15 min),
+      RenovarTokensMercadoPagoScheduler (cada 1 h, nueva).
+
+Frontend
+  Pruebas: 153 pruebas en 18 archivos, todas en verde. Comando ejecutado el 12/10/2026:
+    npx vitest run --coverage. Salida literal: "Test Files  18 passed (18)" y "Tests  153
+    passed (153)". Conteo de archivos: find src -name "*.test.*" | wc -l -> 18.
+  Cobertura: 71,95 % de sentencias (408/567), 65,57 % de ramas, 64,14 % de funciones y
+    74,63 % de líneas, sobre los archivos alcanzados por las pruebas (proveedor v8).
+  Análisis estático: 0 errores, 11 advertencias (comando: npx eslint .; salida literal
+    "11 problems (0 errors, 11 warnings)").
+  Verificación de tipos: sin errores (comando: npx tsc -b).
+
+Integración continua
+  Estado del último flujo ejecutado: no verificado. La herramienta gh no está instalada en el
+    equipo donde se escribió esta actualización, y al 12/10/2026 los commits descriptos en esta
+    bitácora no estaban empujados al remoto (frontend: rama integracion 17 commits por delante
+    de origin/integracion; backend: rama feat/mp-integration 45 commits por delante de
+    origin/feat/mp-integration), así que el flujo no corrió sobre este código.
+  Ramas sobre las que corre: activehub-frontend, .github/workflows/ci.yml, en cada push y en
+    cada Pull Request sobre integracion y main (ESLint, tsc -b, npm test, npm run build). El
+    backend no tiene flujo de integración continua.
+
+Configuración
+  Variables de entorno requeridas (SOLO NOMBRES), según activehub-backend/.env.example:
+    Mercado Pago: MP_CLIENT_ID (alternativa: APP_ID), MP_CLIENT_SECRET, MP_REDIRECT_URI
+      (alternativa: REDIRECT_URI), MP_TOKEN_ENCRYPTION_KEY, MP_WEBHOOK_SECRET,
+      MP_SANDBOX_PAYER_EMAIL (solo sandbox), MP_LOG_LEVEL (opcional), FRONTEND_URL.
+      MP_ACCESS_TOKEN se lee en la configuración pero ningún código la usa.
+    Resto del sistema: DATABASE_URL, DATABASE_USERNAME, DATABASE_PASSWORD, DB_POOL_SIZE, PORT,
+      JWT_SECRET, JWT_EXPIRATION_MIN, CORS_ALLOWED_ORIGINS, ADMIN_SEED_EMAIL,
+      ADMIN_SEED_PASSWORD, MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
+      MAIL_FROM_NOMBRE, VERIFICACION_TTL_MIN, VERIFICACION_ESPERA_REENVIO_SEG,
+      VERIFICACION_MAX_INTENTOS, GOOGLE_CLIENT_ID, SUPABASE_STORAGE_URL,
+      SUPABASE_STORAGE_SERVICE_KEY, SUPABASE_STORAGE_BUCKET, FOTOS_PERFIL_DIR,
+      FOTOS_ACTIVIDAD_DIR, DOCUMENTOS_INSTRUCTOR_DIR, GROQ_API_KEY, GROQ_URL, GROQ_MODELO,
+      GROQ_REASONING_EFFORT, GROQ_TIMEOUT_SEG.
+    Frontend: ninguna para pagar. VITE_MERCADOPAGO_PUBLIC_KEY está declarada en
+      src/vite-env.d.ts pero no se usa.
+  Servicios externos en uso: Mercado Pago (Orders API, OAuth, webhooks y SDK JavaScript v2,
+    en sandbox); Supabase (PostgreSQL y Storage, bucket "activehub"); Groq (modelo
+    openai/gpt-oss-120b); Gmail SMTP; Google Identity Services; OpenStreetMap y Nominatim.
+
+Despliegue
+  Estado: no desplegado. Para las pruebas en sandbox el callback de OAuth se expuso con ngrok
+    desde el equipo de desarrollo.
+  URL pública del frontend: no existe.
+  URL pública del backend: no existe. El webhook de Mercado Pago necesita una URL pública
+    registrada en el panel de la aplicación de Mercado Pago.
+
+Pendientes abiertos
+  1. Ejecutar en sandbox los casos pendientes de docs/PRUEBAS-SANDBOX-MERCADOPAGO.md (3 a 6,
+     7b, 8 a 17) y el paso a Liberado del caso 2.
+  2. Verificar en sandbox la corrección de la auditoría duplicada del reembolso (KAN-66).
+  3. Prueba manual de la renovación automática de la vinculación (KAN-55, criterio 4).
+  4. Verificar en el navegador el botón "Desvincular" (KAN-67) y los estados de pago de
+     "Mis pagos" y del detalle de la clase (KAN-63).
+  5. Conciliación de pagos en revisión sin aviso de Mercado Pago (no existe).
+  6. Despliegue con URL pública y registro de la URL del webhook en Mercado Pago.
+  7. Configuración del entorno de producción (credenciales reales, aplicación real) y su
+     prueba.
+  8. Empujar las ramas, abrir los Pull Request y obtener la aprobación de otro integrante
+     (modelo de ramas del informe); verificar el flujo de integración continua.
+  9. Confirmar la comisión vigente de Mercado Pago y el plazo de acreditación (ver DUDAS
+     ABIERTAS).
+  10. Decidir si se quitan la dependencia com.mercadopago:sdk-java 3.7.0 (sin uso),
+      MP_ACCESS_TOKEN (sin uso) y VITE_MERCADOPAGO_PUBLIC_KEY (sin uso).
+  11. Unificar la escritura "MercadoPago" que muestra la pantalla de inscripción (ver ENTRADA
+      017).
+  12. Pruebas automatizadas del frontend para el flujo de inscripción y pago (no existen).
+
+================================================================================
+PARTE B — ENTRADAS
+================================================================================
+
+================================================================================
+ENTRADA 001
+================================================================================
+FECHA: 12/10/2026
+
+REPOSITORIO: activehub-backend
+
+RAMA Y COMMITS: feat/mp-integration. Sin commit al momento de escribir esta entrada (el archivo
+  docs/BITACORA-MERCADOPAGO.txt queda en el árbol de trabajo). Sin Pull Request.
+
+TIPO: documentación.
+
+TÍTULO: Alta de la bitácora de Mercado Pago y foto del punto de partida anterior a la
+  integración.
+
+QUÉ CAMBIA PARA EL USUARIO: no cambia nada visible. Se crea este archivo para documentar la
+  integración con Mercado Pago con el formato pedido para actualizar el informe.
+
+TEXTOS DE INTERFAZ: no aplica.
+
+DETALLE TÉCNICO:
+  - El formato pide crear la bitácora antes de la primera línea de la integración (sección 8).
+    No fue posible: cuando se recibió el formato (versión del 11/10/2026), la integración ya
+    estaba casi completa en la rama feat/mp-integration del backend y en la rama integracion
+    del frontend, con commits del 08/09/2026 al 10/10/2026. Por eso, y según la sección 1 del
+    formato, las entradas 002 a 016 se escriben después, con la fecha real de cada commit.
+  - Fuentes de las entradas reconstruidas: el historial de git de los dos repositorios, el
+    código actual (cada nombre de clase, endpoint, migración y texto de interfaz se verificó
+    contra el código del 12/10/2026) y la bitácora general del proyecto
+    (docs/BITACORA-INFORME.txt, entradas 012 a 032), que registró cada tarea al terminarla.
+    Las cantidades de pruebas de las entradas 002 a 016 son las que se midieron en su momento y
+    quedaron en esa bitácora general; no se volvieron a medir. La medición del 12/10/2026 está
+    en la ENTRADA 017 y en el ESTADO GENERAL.
+  - Punto de partida (estado anterior al primer commit de la integración propiamente dicha,
+    656319d del 29/09/2026), según las mediciones registradas en docs/BITACORA-INFORME.txt:
+      Pagos: interfaz PaymentGateway (shared/payments) con la implementación simulada
+        MockPaymentGateway activa. Existía además un primer intento de cliente real,
+        MercadoPagoPaymentGateway, con MercadoPagoConfig, MercadoPagoProperties,
+        MercadoPagoOrderRequest, MercadoPagoOrderResponse y PagoException (commit 4701cbe del
+        08/09/2026, "feat: servicio para crear un order en Mercado Pago y endpoint para pagar
+        clase v1"). En ese punto inscribirse pedía el pago con paymentGateway.iniciarPago, y la
+        implementación activa era la simulada.
+      Estados de pago: Retenido, Liberado, Cancelado, Efectivo (CHECK de la tabla pago en
+        V5__esquema_inscripciones.sql).
+      Casos de uso: 111. Migraciones: V1 a V27 (última: V27__interaccion_alumno.sql).
+      Backend: 842 pruebas en 187 archivos, 0 fallidas (bitácora general, ENTRADA 007).
+      Frontend: 142 pruebas en 16 archivos; cobertura 75,25 % de sentencias; ESLint 0 errores
+        y 11 advertencias.
+    Estos números coinciden con la línea base de la sección 3 del formato.
+
+ESTADO: terminado.
+
+HISTORIAS Y CRITERIOS: no aplica.
+
+PANTALLAS: no aplica.
+
+REGLAS DE NEGOCIO: no aplica. Aclaración para todas las entradas: el formato fija RN-01 a
+  RN-24 como vigentes en el informe, así que las reglas nuevas de esta bitácora se proponen
+  desde RN-25. La bitácora general había propuesto RN-21 y RN-22 dos veces, con contenidos
+  distintos (sus entradas 015, 017 y 030); esas propuestas quedan reemplazadas por las RN-25 a
+  RN-31 de esta bitácora. Cuando se cita una regla existente por número (RN-04, RN-14, RN-16,
+  RN-19, RN-20), se usa la numeración de la bitácora general; hay que confirmarla contra el
+  informe (ver DUDAS ABIERTAS).
+
+MÓDULOS: no aplica.
+
+CASOS DE USO: sin cambios en esta entrada (111 en el punto de partida).
+
+ENTIDADES Y MIGRACIONES: no aplica.
+
+TECNOLOGÍAS: sin cambios.
+
+COSTOS: sin cambios.
+
+RIESGOS: R02 en el punto de partida: vigente y sin mitigar, porque los pagos eran simulados.
+
+SEGURIDAD: esta bitácora no transcribe tokens, claves, credenciales, números de tarjeta, DNI,
+  correos ni datos personales. De las variables de entorno se escribe solo el nombre.
+
+PRUEBAS: no aplica.
+
+ANÁLISIS ESTÁTICO: no aplica.
+
+DESPLIEGUE Y CONFIGURACIÓN: no aplica.
+
+DECISIONES:
+  - Reconstruir la historia en lugar de empezar la bitácora desde el estado actual. Alternativa
+    descartada: una sola entrada con todo lo hecho. Motivo: el informe tiene que justificar cada
+    decisión técnica, y esas decisiones se tomaron en momentos distintos, con alternativas
+    distintas.
+  - Una entrada por tarea de Jira (KAN-52 a KAN-67) o por grupo de commits de la misma tarea,
+    según la regla 2.7 del formato.
+
+ERRORES DETECTADOS: no aplica.
+
+CAPTURAS SUGERIDAS: no aplica.
+
+PENDIENTE QUE QUEDA: las entradas 002 a 017.
+
+================================================================================
+ENTRADA 002
+================================================================================
+FECHA: 29/09/2026
+
+REPOSITORIO: ambos
+
+RAMA Y COMMITS:
+  Backend, rama feat/mp-integration: 656319d "wip(pagos): MP-02 limpieza + avances previos de
+  integración con Mercado Pago"; fcfb89f "Merge origin/integracion into feat/mp-integration";
+  ce73500 "feat: agrega tablas para integrar OAuth y desarrollo y corrección de PaymentGateway".
+  Frontend, rama integracion: cf30c5d "feat: mercado pago integracion".
+  Tareas de Jira: KAN-52 (MP-03, modelo de datos) y KAN-53 (MP-04, pasarela real).
+  Sin Pull Request.
+
+TIPO: funcionalidad nueva.
+
+TÍTULO: Modelo de datos del marketplace y pasarela real de Mercado Pago (Orders API) con
+  autorización sin captura; se retira la pasarela simulada.
+
+QUÉ CAMBIA PARA EL USUARIO:
+  El alumno que elige pagar con Mercado Pago completa los datos de su tarjeta en una ventana de
+  pago dentro de ActiveHub. El pago no se cobra en ese momento: Mercado Pago lo autoriza y el
+  monto queda reservado en la tarjeta, en la cuenta de Mercado Pago del instructor de la clase.
+  Si Mercado Pago rechaza la tarjeta, la inscripción no se crea, el cupo no se ocupa y se
+  muestra el motivo del rechazo. El pago en efectivo no cambia. El instructor y el
+  administrador no ven cambios en esta entrada.
+
+TEXTOS DE INTERFAZ: mensajes que devuelve el backend y muestra la ventana de pago de la
+  pantalla de inscripción (E3A-PAN-07). Verificados en el código actual, salvo los dos
+  marcados como reemplazados, verificados en el commit ce73500.
+  Rechazo de la tarjeta (PagoRechazadoException, según el motivo que informa Mercado Pago):
+    "La tarjeta no tiene fondos suficientes."
+    "Revisá los datos de la tarjeta."
+    "Revisá el código de seguridad de la tarjeta."
+    "Revisá la fecha de vencimiento de la tarjeta."
+    "Tenés que autorizar el pago con el banco emisor de tu tarjeta."
+    "La tarjeta no está habilitada. Comunicate con tu banco."
+    "Mercado Pago rechazó el pago. Probá con otra tarjeta."
+    "Superaste el límite de intentos. Probá con otra tarjeta."
+    "Ya hiciste un pago por este mismo monto."
+    Por defecto: "Mercado Pago rechazó el pago. Probá con otra tarjeta o medio de pago."
+  Falla de comunicación con Mercado Pago (PagoException):
+    "Mercado Pago no confirmó la autorización del pago. Intentá nuevamente."
+    "Mercado Pago no está respondiendo. Intentá nuevamente en unos minutos."
+    "No se pudo conectar con Mercado Pago. Intentá nuevamente."
+  Reemplazado en la ENTRADA 004: "El instructor todavía no puede cobrar con Mercado Pago.
+    Podés inscribirte pagando en efectivo."
+  Retirado en la ENTRADA 006: "Esta operación sobre pagos de Mercado Pago todavía no está
+    disponible." (lo devolvían, en la transición, las operaciones que todavía no se habían
+    migrado a la pasarela real).
+  Ventana de pago (components/pago/ModalPagoMercadoPago.tsx), textos vigentes en el código:
+    "Pago seguro con tarjeta"
+    "Completá los datos de tu tarjeta de crédito para confirmar el pago"
+    "No se pudo inicializar la pasarela de pagos. Verificá las credenciales de Mercado Pago."
+    "Ocurrió un error al procesar el pago. Intentá nuevamente."
+    "Ocurrió un problema con el formulario de pago. Por favor verificá los datos ingresados."
+    "Error al cargar el módulo de pago. Reintentá recargando la página."
+    Botón de cierre con texto alternativo "Cerrar modal".
+
+DETALLE TÉCNICO:
+  - Migración V28__mercadopago_marketplace.sql (ver ENTIDADES Y MIGRACIONES).
+  - Entidad nueva CuentaMercadoPagoInstructor, enum EstadoCuentaMercadoPago y
+    CuentaMercadoPagoInstructorRepository en domain/mercadopago.
+  - shared/persistence/TokenCifradoConverter: AttributeConverter que cifra access_token y
+    refresh_token con AES-256-GCM, vector de inicialización aleatorio de 12 bytes por valor;
+    la columna guarda base64(iv || cifrado || tag). Es un @Component para recibir la clave
+    MP_TOKEN_ENCRYPTION_KEY por inyección.
+  - Interfaz de pagos: shared/payments/PaymentGateway, rediseñada. Métodos:
+      autorizar(sellerToken, tarjeta, monto, comision, externalReference, idempotencyKey)
+      capturar(sellerToken, orderId, idempotencyKey)
+      cancelarAutorizacion(sellerToken, orderId, idempotencyKey)
+      reembolsar(sellerToken, orderId, idempotencyKey)
+      consultar(sellerToken, orderId)
+    Devuelven el record ResultadoPago(orderId, status, statusDetail), con autorizado()
+    (status "action_required" y statusDetail "waiting_capture") y enRevision() (status
+    "processing" o "in_review"). La tarjeta viaja en el record DatosTarjeta(token,
+    paymentMethodId, paymentMethodType, cuotas, emailPagador).
+  - Implementación única: shared/payments/MercadoPagoGateway, contra la Orders API con
+    RestClient (shared/config/MercadoPagoConfig, tiempo de conexión 5 s y de lectura 10 s):
+      POST /v1/orders con capture_mode "manual"
+      POST /v1/orders/{id}/capture, /v1/orders/{id}/cancel, /v1/orders/{id}/refund
+      GET  /v1/orders/{id}
+    Cada llamada lleva el token del instructor (sellerToken); el cliente HTTP no tiene un token
+    de la plataforma por defecto. El cuerpo se arma con MercadoPagoOrderRequest y la respuesta
+    se lee con MercadoPagoOrderResponse.
+  - Errores: un rechazo (orden con status "failed", en respuesta de error o en 200) lanza
+    PagoRechazadoException, código nuevo PAGO_RECHAZADO (422). Un 5xx, un 4xx sin orden, un
+    tiempo de espera agotado o una respuesta vacía lanzan PagoException, código ERROR_PAGO
+    (502).
+  - Retirados: MockPaymentGateway y MercadoPagoPaymentGateway.
+  - inscribirse (POST /api/alumno/clases/{claseId}/inscripciones): InscribirseRequest.datosPago
+    pasa a ser DatosPagoRequest, propio del caso de uso, con token de tarjeta,
+    paymentMethodId, paymentMethodType y cuotas. Antes recibía un DTO compartido con monto y
+    referencia elegidos por el cliente. El servicio valida los datos y la cuenta del
+    instructor antes de ocupar el cupo; autoriza por el precio de la clase (clase.precio, V23),
+    con referencia externa igual al id de la inscripción y el correo del alumno como pagador;
+    deriva la clave de idempotencia de la inscripción y del token de la tarjeta; guarda
+    mp_order_id, referencia_externa, status_detail, idempotency_key, comision 0,
+    monto_instructor y autorizado_hasta = ahora + 5 días (VentanaPagos.VIGENCIA_AUTORIZACION).
+    En efectivo completa monto_instructor = monto.
+  - Frontend (cf30c5d): ModalPagoMercadoPago.tsx con el Card Payment Brick, lib/mercadopago.ts
+    (carga del SDK) y tipos en lib/types.ts. La ventana manda solo token, paymentMethodId,
+    paymentMethodType y cuotas; nunca monto ni referencia.
+
+ESTADO: terminado y probado con pruebas automatizadas (respuestas HTTP de Mercado Pago
+  simuladas). La prueba contra el sandbox se hizo después (ENTRADA 007).
+
+HISTORIAS Y CRITERIOS:
+  E3A-HU05-IN (inscripción): se agrega el criterio nuevo "Cuando pago con Mercado Pago espero
+    que el monto quede reservado en mi tarjeta sin cobrarse hasta que se dicte la clase".
+    Se agrega el criterio nuevo "Cuando Mercado Pago rechaza mi tarjeta espero ver el motivo
+    del rechazo y que no se cree la inscripción ni se ocupe el cupo".
+  Los números de criterio de la historia en el informe no se verificaron en esta bitácora
+  (ver DUDAS ABIERTAS).
+
+PANTALLAS: E3A-PAN-07 (inscripción y pago): cambia la ventana de pago de Mercado Pago. Sin
+  pantallas nuevas.
+
+REGLAS DE NEGOCIO: la regla de retención (RN-04 según la bitácora general) cambia de sentido:
+  Retenido pasa a ser una autorización real en Mercado Pago, sin capturar, que vence a los 5
+  días. Su formulación completa queda en RN-26 (ENTRADA 006).
+
+MÓDULOS: pagos, inscripciones.
+
+CASOS DE USO: ninguno nuevo; total 111. Modificado: inscribirse.
+
+ENTIDADES Y MIGRACIONES:
+  Migración V28__mercadopago_marketplace.sql, idempotente (IF NOT EXISTS; restricciones
+  dentro de bloques DO con chequeo en pg_constraint).
+  Tabla nueva cuenta_mercadopago_instructor (entidad CuentaMercadoPagoInstructor):
+    id UUID, clave primaria, por defecto gen_random_uuid()
+    instructor_id UUID, obligatorio, FK a usuario(id), único (uq_cuenta_mp_instructor)
+    mp_user_id VARCHAR(50), opcional (usuario de Mercado Pago)
+    access_token TEXT, opcional, cifrado
+    refresh_token TEXT, opcional, cifrado
+    public_key VARCHAR(100), opcional
+    expires_at TIMESTAMPTZ, opcional
+    estado VARCHAR(20), obligatorio, por defecto 'VINCULADA', CHECK ck_cuenta_mp_estado
+      (VINCULADA, DESVINCULADA, TOKEN_VENCIDO)
+    created_at y updated_at TIMESTAMPTZ, obligatorios, por defecto now()
+    Relación: Usuario (instructor) 1 a 0..1 CuentaMercadoPagoInstructor (@OneToOne LAZY).
+    No extiende BaseEntity: desvincular es un cambio de estado.
+  Tabla pago (entidad Pago), columnas nuevas:
+    mp_order_id VARCHAR(100), opcional, índice ix_pago_mp_order_id (identificador de la orden
+      en Mercado Pago; se guarda para capturar, cancelar, reembolsar y consultar)
+    status_detail VARCHAR(100), opcional (último detalle informado por Mercado Pago)
+    comision NUMERIC(10,2), obligatorio, por defecto 0, CHECK ck_pago_comision (>= 0)
+    monto_instructor NUMERIC(10,2), opcional
+    autorizado_hasta TIMESTAMPTZ, opcional (vencimiento de la autorización)
+    idempotency_key VARCHAR(100), opcional, único (uq_pago_idempotency_key)
+  Columnas de pago que ya existían (V5): id, inscripcion_id (obligatorio, único, relación
+    Inscripcion 1 a 0..1 Pago), estado, monto (NUMERIC(10,2), >= 0), metodo ('Mercado Pago' o
+    'Efectivo'), referencia_externa VARCHAR(100), created_at, updated_at.
+  EstadoPago suma Rechazado y Reembolsado. El CHECK sin nombre de V5 (pago_estado_check) se
+    reemplaza por ck_pago_estado con seis valores: Retenido, Liberado, Cancelado, Efectivo,
+    Rechazado, Reembolsado.
+
+TECNOLOGÍAS: se reemplaza la pasarela simulada por la Orders API de Mercado Pago, llamada por
+  HTTP directamente con RestClient de Spring, sin SDK de Java. Cifrado con javax.crypto del
+  JDK. En el frontend, SDK JavaScript de Mercado Pago v2 (https://sdk.mercadopago.com/js/v2,
+  cargado en index.html) con el Card Payment Brick. Motivo: la simulación no permitía
+  comprobar que el dinero se mueve; la Orders API es la que admite captura manual.
+
+COSTOS: sin cambios. La plataforma no cobra comisión (decisión de MP-01, KAN-50).
+
+RIESGOS: R02: la probabilidad de falla de comunicación sigue igual, pero se implementan las
+  primeras mitigaciones: tiempos de espera acotados (5 s y 10 s), errores tipificados (422 y
+  502) y clave de idempotencia por operación.
+
+SEGURIDAD:
+  - El cliente ya no elige el monto ni la referencia del pago: el monto sale del precio de la
+    clase en la base (punto F.5 del checklist).
+  - Los tokens OAuth del instructor se guardan cifrados. Sin MP_TOKEN_ENCRYPTION_KEY la
+    aplicación arranca, pero cifrar o descifrar lanza un error: nunca se guarda en claro.
+  - ActiveHub no recibe ni guarda los datos de la tarjeta: el Brick los tokeniza en el
+    navegador y el backend solo recibe el token, de un solo uso.
+  - Variable nueva: MP_TOKEN_ENCRYPTION_KEY.
+
+PRUEBAS (medidas en su momento, según la bitácora general, entradas 012 y 013):
+  - Nueva TokenCifradoConverterTest (6 pruebas): cifrar y descifrar devuelve el original;
+    el mismo token cifra distinto cada vez; null queda null; otra clave no descifra; sin clave
+    no guarda en claro; clave de largo incorrecto falla.
+  - Nueva MercadoPagoGatewayTest con MockRestServiceServer (12 pruebas en ese momento):
+    autorización con captura manual y token del vendedor, comisión como marketplace_fee,
+    rechazo en 402 y en 200, error 5xx, 4xx sin orden, tiempo de espera, sin token del
+    vendedor, captura, cancelación y reembolso, consulta.
+  - InscribirseServiceTest reescrita en la parte de Mercado Pago (7 pruebas nuevas).
+  - Nueva MercadoPagoGatewaySandboxTest (@Disabled, 2 pruebas manuales contra el sandbox).
+  - Suite del backend: 853 pruebas en 189 archivos después del modelo de datos, y 869 pruebas
+    (867 correctas, 2 omitidas) en 191 archivos después de la pasarela.
+
+ANÁLISIS ESTÁTICO: según la bitácora general (entrada 013), "npx tsc -b" sin errores y build
+  correcto. El ESLint de ese día se corrió sobre un checkout de la rama main del frontend y no
+  sobre integracion, así que esa medición no corresponde a este código.
+
+DESPLIEGUE Y CONFIGURACIÓN: variable MP_TOKEN_ENCRYPTION_KEY (32 bytes en base64). Propiedad
+  app.mercadopago.base-url (por defecto, la API pública de Mercado Pago).
+
+DECISIONES:
+  - Orders API y no Checkout Pro ni la Payments API. Checkout Pro redirige al sitio de
+    Mercado Pago; la Orders API permite autorizar sin cobrar (capture_mode "manual") y capturar
+    después, que es lo que exige retener el dinero hasta que se dicta la clase. Decisión de
+    MP-01 (KAN-50).
+  - Checkout API (el alumno paga dentro de ActiveHub con el Brick) y no redirección: el alumno
+    no sale del sistema y la plataforma no ve los datos de la tarjeta.
+  - Marketplace con la cuenta de cada instructor y no una cuenta central de la plataforma: el
+    dinero no pasa por una cuenta de ActiveHub.
+  - Sin implementación simulada ni siquiera en desarrollo: se usa el sandbox. Las pruebas
+    automatizadas simulan Mercado Pago con Mockito o MockRestServiceServer (punto I.3 del
+    checklist). Motivo: un doble de prueba que se usa también al ejecutar la aplicación puede
+    esconder que la integración real no funciona.
+  - Clave de idempotencia derivada de la inscripción y del token de tarjeta: reintentar el
+    mismo pedido no reserva dos veces, y reintentar con otra tarjeta no choca con una clave ya
+    usada (punto B.6).
+  - instructor_id referencia a usuario y no a perfil_instructor.
+  - La columna comision se crea aunque hoy valga 0, para no migrar de nuevo el día que la
+    plataforma cobre comisión.
+
+ERRORES DETECTADOS: inscribirse recibía un DTO compartido con monto y referencia elegidos por
+  el cliente (el frontend mandaba el total a cobrar). Se corrigió en esta entrada.
+
+CAPTURAS SUGERIDAS: ventana de pago de la pantalla de inscripción mostrando un rechazo, por
+  ejemplo "La tarjeta no tiene fondos suficientes.".
+
+PENDIENTE QUE QUEDA: vinculación de la cuenta del instructor (ENTRADA 003); tokenizar con la
+  public key del instructor (ENTRADA 004); captura, cancelación y reembolso reales (ENTRADA
+  006); prueba en sandbox (ENTRADA 007).
+
+================================================================================
+ENTRADA 003
+================================================================================
+FECHA: 29/09/2026
+
+REPOSITORIO: ambos
+
+RAMA Y COMMITS: backend, feat/mp-integration: ca7d81f "KAN-54: vincular la cuenta de Mercado
+  Pago del instructor por OAuth...". Frontend, integracion: 34f912b "KAN-54: tarjeta «Cobros
+  con Mercado Pago» en el panel del instructor para vincular su cuenta por OAuth...".
+  Tarea KAN-54 (MP-05). Sin Pull Request.
+
+TIPO: funcionalidad nueva.
+
+TÍTULO: El instructor vincula su cuenta de Mercado Pago por OAuth desde su Panel.
+
+QUÉ CAMBIA PARA EL USUARIO:
+  En el Panel del instructor aparece la tarjeta "Cobros con Mercado Pago". Si la cuenta no
+  está vinculada, el instructor presiona "Vincular Mercado Pago", el navegador va al sitio de
+  Mercado Pago, el instructor inicia sesión allí y acepta. Mercado Pago lo devuelve a su
+  Panel, donde ve un mensaje de éxito, de cancelación o de error. Con la cuenta vinculada, la
+  tarjeta indica desde cuándo y que los pagos con tarjeta de sus clases van a su cuenta.
+  Vincular de nuevo reemplaza la vinculación anterior (una cuenta por instructor). El
+  administrador ve un permiso nuevo en "Roles y permisos" y una acción nueva en Auditoría.
+
+TEXTOS DE INTERFAZ:
+  Tarjeta del Panel del instructor (components/pago/TarjetaMercadoPago.tsx), textos vigentes
+  en el código (incluyen los que se agregaron en la ENTRADA 016):
+    Título: "Cobros con Mercado Pago"
+    Mientras consulta: "Consultando tu cuenta…"
+    Vinculada: "Cuenta vinculada desde el <fecha>. Los pagos con tarjeta de tus clases van a tu
+      cuenta." (sin fecha disponible: "Cuenta vinculada. Los pagos con tarjeta de tus clases
+      van a tu cuenta.")
+    No vinculada: "Vinculá tu cuenta para que tus alumnos puedan pagarte con tarjeta. Sin
+      cuenta vinculada solo pueden pagar en efectivo."
+    Botones: "Vincular Mercado Pago"; mientras redirige, "Abriendo Mercado Pago…"
+    Al volver de Mercado Pago:
+      "¡Listo! Vinculaste tu cuenta de Mercado Pago. Ya podés cobrar tus clases con tarjeta."
+      "Cancelaste la vinculación en Mercado Pago. Podés intentarlo de nuevo cuando quieras."
+      "Mercado Pago no aceptó la vinculación. Intentá de nuevo en unos minutos."
+    Errores: "No pudimos consultar tu cuenta de Mercado Pago." y "No pudimos iniciar la
+      vinculación. Intentá de nuevo."
+  Mensajes del backend:
+    "La vinculación con Mercado Pago no es válida. Volvé a intentarlo desde tu perfil."
+    "La vinculación con Mercado Pago venció. Volvé a intentarlo desde tu perfil."
+    "La vinculación con Mercado Pago no está disponible en este momento."
+  Roles y permisos: módulo "Cobros", acción "Vincular su cuenta de Mercado Pago".
+  Auditoría, columna Detalle: "<actor> vinculó su cuenta de Mercado Pago."
+
+DETALLE TÉCNICO:
+  - Tres casos de uso nuevos, uno por paquete:
+      iniciarvinculacionmercadopago: GET /api/instructor/mercadopago/vinculo, permiso
+        mercadopago.vincular; devuelve {url} hacia https://auth.mercadopago.com/authorization.
+      completarvinculacionmercadopago: GET /api/instructor/mercadopago/callback?code&state
+        [&error], público (permitAll); responde 302 al frontend con ?mercadopago=vinculada,
+        =cancelada o =error.
+      obtenercuentamercadopago: GET /api/instructor/mercadopago, permiso mercadopago.vincular;
+        devuelve {vinculada, estado, mpUserId, actualizadaEl, expiraEl}. Nunca devuelve tokens
+        ni public key; lee con una proyección que no carga ni descifra los tokens.
+  - shared/payments/MercadoPagoOAuthState: state = base64url(instructorId|vencimiento|nonce)
+    con firma HMAC-SHA256; vence a los 15 minutos. La clave se deriva del secreto JWT con una
+    etiqueta propia, de modo que un state no sirve como token de sesión ni al revés.
+  - shared/payments/MercadoPagoOAuthClient: arma la URL de autorización y canjea el código en
+    POST /oauth/token (grant_type authorization_code). El client secret nunca sale del backend.
+  - Callback: state inválido o vencido -> 400 sin guardar nada; sin code (canceló en Mercado
+    Pago) -> =cancelada; Mercado Pago rechaza el código -> =error sin tocar la fila; correcto
+    -> crea o actualiza la fila de cuenta_mercadopago_instructor con estado VINCULADA,
+    expires_at = ahora + expires_in y tokens cifrados, y audita MERCADOPAGO_VINCULADA con la
+    metadata "mp_user_id=<id>", sin tokens.
+  - Frontend: tarjeta TarjetaMercadoPago.tsx en el Panel del instructor, visible con el permiso
+    mercadopago.vincular, que lee ?mercadopago= al volver. El commit 34f912b resolvió además
+    marcadores de conflicto de un merge que habían quedado en Inscripcion.tsx.
+
+ESTADO: terminado y probado con pruebas automatizadas. Usado en la práctica en las pruebas en
+  sandbox del 07/10/2026 y del 10/10/2026 (ENTRADAS 007 y 011).
+
+HISTORIAS Y CRITERIOS: se propone la historia NUEVA E2I-HU13 "Vincular mi cuenta de Mercado
+  Pago para cobrar mis clases" (épica E2I, código siguiente a E2I-HU12). Criterios propuestos:
+    1. Cuando presiono "Vincular Mercado Pago" espero ir al sitio de Mercado Pago para
+       autorizar a ActiveHub con mi cuenta.
+    2. Cuando acepto en Mercado Pago espero volver a mi Panel con el mensaje "¡Listo!
+       Vinculaste tu cuenta de Mercado Pago. Ya podés cobrar tus clases con tarjeta.".
+    3. Cuando cancelo en Mercado Pago espero volver a mi Panel con un aviso de que puedo
+       intentarlo de nuevo y sin cambios en mi cuenta.
+    4. Cuando vinculo una cuenta y ya tenía otra vinculada espero que la nueva reemplace a la
+       anterior.
+    5. Cuando mi cuenta no está vinculada espero que mis clases solo acepten efectivo (se
+       implementa en la ENTRADA 004).
+  Los criterios 6 a 8 (desvincular y renovación) se proponen en la ENTRADA 016.
+
+PANTALLAS: Panel del instructor: cambia (tarjeta nueva "Cobros con Mercado Pago"). No es una
+  pantalla nueva. El código de pantalla del Panel del instructor no se verificó contra el
+  catálogo del informe (ver DUDAS ABIERTAS).
+
+REGLAS DE NEGOCIO: la regla de cuándo un instructor puede cobrar con Mercado Pago queda en
+  RN-25 (ENTRADA 004).
+
+MÓDULOS: pagos, roles y permisos, auditoría.
+
+CASOS DE USO: 3 nuevos (iniciarvinculacionmercadopago, completarvinculacionmercadopago,
+  obtenercuentamercadopago). Total: 114.
+
+ENTIDADES Y MIGRACIONES: V29__permiso_mercadopago.sql: inserta el permiso
+  mercadopago.vincular (módulo "Cobros", acción "Vincular su cuenta de Mercado Pago", no
+  crítico, orden 75) y su fila en configuracion_rol para cada rol vivo, habilitada solo para
+  INSTRUCTOR. Idempotente (ON CONFLICT DO NOTHING). AuditAccion suma MERCADOPAGO_VINCULADA.
+
+TECNOLOGÍAS: OAuth 2.0 (código de autorización) de Mercado Pago, sin SDK.
+
+COSTOS: sin cambios.
+
+RIESGOS: R02: mitigación nueva, cada cobro usa la cuenta propia del instructor. Riesgo nuevo
+  R22 (vencimiento o revocación de la vinculación), que se mitiga en la ENTRADA 016.
+
+SEGURIDAD: el callback es público pero solo acepta un state firmado que emite un endpoint con
+  permiso; la firma se compara en tiempo constante; los tokens se guardan cifrados y nunca se
+  devuelven ni se auditan; el toString de las credenciales no los incluye. Variables nuevas:
+  MP_CLIENT_ID (alternativa APP_ID), MP_CLIENT_SECRET, MP_REDIRECT_URI (alternativa
+  REDIRECT_URI), FRONTEND_URL. MP_OAUTH_TEST_TOKEN se agregó en esta entrada y se retiró en la
+  ENTRADA 007. Sin MP_CLIENT_SECRET la vinculación responde "La vinculación con Mercado Pago no
+  está disponible en este momento.".
+
+PRUEBAS (medidas en su momento, bitácora general, entrada 014): nuevas
+  MercadoPagoOAuthStateTest (7), MercadoPagoOAuthClientTest (5),
+  CompletarVinculacionMercadoPagoServiceTest (5), CompletarVinculacionMercadoPagoControllerTest
+  (2), IniciarVinculacionMercadoPagoServiceTest (2), IniciarVinculacionMercadoPagoControllerTest
+  (1), ObtenerCuentaMercadoPagoServiceTest (4), ObtenerCuentaMercadoPagoControllerTest (1).
+  CatalogoPublicoTest comprueba que el callback responde sin sesión y que /vinculo y
+  /api/instructor/mercadopago exigen sesión (401). Suite: 900 pruebas (898 correctas, 2
+  omitidas) en 199 archivos.
+
+ANÁLISIS ESTÁTICO: sin medición registrada para el commit del frontend de esta entrada.
+
+DESPLIEGUE Y CONFIGURACIÓN: en el panel de la aplicación de Mercado Pago, la URL de
+  redireccionamiento tiene que coincidir exactamente con MP_REDIRECT_URI (la ruta del
+  callback, sin barra final). Sin despliegue, se expone con ngrok.
+
+DECISIONES:
+  - Permiso propio mercadopago.vincular y no reutilizar cobros.confirmar: confirmar un cobro en
+    efectivo y darle a la plataforma acceso a una cuenta de Mercado Pago son habilitaciones
+    distintas.
+  - El state no es un JWT. No se usó PKCE: es opcional en Mercado Pago y exige habilitarlo en
+    la aplicación; queda como mejora.
+  - State inválido devuelve 400 y no redirige: si el state no es de ActiveHub, el pedido no
+    salió de ActiveHub.
+  - No se exige instructor verificado para vincular: puede dejar la cuenta lista mientras
+    espera la aprobación (igual no recibe inscripciones hasta estar verificado).
+
+ERRORES DETECTADOS: marcadores de conflicto de un merge commiteados en Inscripcion.tsx del
+  frontend; resueltos en 34f912b.
+
+CAPTURAS SUGERIDAS: tarjeta "Cobros con Mercado Pago" sin vincular; pantalla de
+  consentimiento de Mercado Pago con el nombre de la aplicación (sin datos de la cuenta a la
+  vista); tarjeta vinculada; fila del permiso en "Roles y permisos".
+
+PENDIENTE QUE QUEDA: renovar el token antes de que venza y desvincular (ENTRADA 016).
+
+================================================================================
+ENTRADA 004
+================================================================================
+FECHA: 29/09/2026
+
+REPOSITORIO: ambos
+
+RAMA Y COMMITS: backend, feat/mp-integration: 1c4a22b "KAN-57: sin cuenta de Mercado Pago
+  vinculada la clase solo acepta efectivo...". Frontend, integracion: 4a3db1b "Inscripción: el
+  botón y el modal de Mercado Pago vuelven a usar el precio de la clase, no el de la
+  actividad..." y df05e1a "KAN-57: la inscripción solo ofrece Mercado Pago si el instructor
+  tiene la cuenta vinculada...". Tarea KAN-57 (MP-08). Sin Pull Request.
+
+TIPO: funcionalidad nueva.
+
+TÍTULO: Sin cuenta de Mercado Pago vinculada, la clase solo acepta efectivo; el formulario de
+  tarjeta usa la public key del instructor.
+
+QUÉ CAMBIA PARA EL USUARIO:
+  En la pantalla de inscripción y pago, el alumno elige entre "MercadoPago" y "Efectivo". Si
+  el instructor de la clase no tiene la cuenta vinculada (o su autorización venció), la
+  opción de Mercado Pago no aparece, queda elegido Efectivo y se muestra un aviso. Si la tiene,
+  el formulario de tarjeta se inicializa con la clave pública de ese instructor. El botón de
+  pago y la ventana muestran el precio de la clase (antes, por un error de un merge, mostraban
+  el de la actividad, que podía no coincidir con lo que se cobra).
+
+TEXTOS DE INTERFAZ:
+  Pantalla de inscripción (E3A-PAN-07), sección de método de pago, aviso nuevo: "Esta clase
+    solo acepta pago en efectivo: el instructor todavía no habilitó los pagos con Mercado
+    Pago."
+  Error del backend (409, código MERCADOPAGO_NO_VINCULADO), si igual llega un pedido con
+    Mercado Pago: "Esta clase solo acepta pago en efectivo: el instructor todavía no vinculó su
+    cuenta de Mercado Pago." Reemplaza a "El instructor todavía no puede cobrar con Mercado
+    Pago. Podés inscribirte pagando en efectivo." (ENTRADA 002).
+  Error si no se puede leer la cuenta del instructor (502): "El pago con Mercado Pago no está
+    disponible en este momento."
+  Botón de pago (texto vigente): "Pagar $<precio de la clase> con MercadoPago"; mientras se
+    envía, "Procesando…".
+
+DETALLE TÉCNICO:
+  - shared/payments/CuentaMercadoPagoGuard (nuevo): publicKeySiAceptaMercadoPago(instructorId)
+    lee una proyección sin tokens; exigirCuentaVinculada(instructorId) devuelve el token o lanza
+    CuentaMercadoPagoNoVinculadaException (nueva, código MERCADOPAGO_NO_VINCULADO, 409).
+  - Regla única de vigencia: estado VINCULADA y expires_at futuro o nulo; sin public key
+    tampoco se ofrece Mercado Pago.
+  - inscribirse usa la guarda; el efectivo no la consulta.
+  - obteneractividad (GET /api/actividades/{id}): el instructor suma aceptaMercadoPago y
+    mpPublicKey, solo en el detalle (el listado no, para no agregar una consulta por
+    actividad). Nunca viaja un token.
+  - Frontend: Inscripcion.tsx deriva el método efectivo sin efecto de React;
+    ModalPagoMercadoPago recibe la public key; lib/mercadopago.ts guarda una instancia del SDK
+    por public key (antes una sola para toda la sesión). VITE_MERCADOPAGO_PUBLIC_KEY deja de
+    usarse.
+
+ESTADO: terminado y probado con pruebas automatizadas. Verificación en el navegador con un
+  instructor vinculado y otro sin vincular: no ejecutada (caso 9 de la matriz de sandbox).
+
+HISTORIAS Y CRITERIOS: E3A-HU05-IN: criterio nuevo "Cuando el instructor de la clase no tiene
+  Mercado Pago vinculado espero que solo se ofrezca pago en efectivo, con un aviso que lo
+  explique".
+
+PANTALLAS: E3A-PAN-07 (inscripción y pago): cambia la sección de método de pago.
+
+REGLAS DE NEGOCIO: NUEVA RN-25: "Una clase acepta pago con Mercado Pago solo si su instructor
+  tiene la cuenta de Mercado Pago vinculada y vigente (estado VINCULADA, con vencimiento futuro
+  o sin vencimiento informado, y con clave pública); en caso contrario la clase solo acepta
+  pago en efectivo."
+
+MÓDULOS: pagos, inscripciones, catálogo.
+
+CASOS DE USO: ninguno nuevo; total 114. Modificados: inscribirse, obteneractividad,
+  obtenercuentamercadopago.
+
+ENTIDADES Y MIGRACIONES: sin migraciones.
+
+TECNOLOGÍAS: sin cambios.
+
+COSTOS: sin cambios.
+
+RIESGOS: R02: el formulario tokeniza con la clave del vendedor que cobra, condición del
+  marketplace. Antes, con dos instructores en la misma sesión, se tokenizaba con la clave del
+  primero.
+
+SEGURIDAD: el detalle público de la actividad expone solo la public key, que es pública por
+  diseño; se lee sin cargar ni descifrar tokens.
+
+PRUEBAS (medidas en su momento, bitácora general, entrada 015): nueva CuentaMercadoPagoGuardTest
+  (6); ObtenerActividadServiceTest +1; InscribirseServiceTest: sin cuenta -> 409 sin ocupar
+  cupo; el efectivo no consulta la guarda. Suite del backend: 906 pruebas (904 correctas, 2
+  omitidas) en 200 archivos. Frontend: 145 pruebas en 17 archivos en verde.
+
+ANÁLISIS ESTÁTICO: frontend "npx tsc -b" sin errores, build correcto, ESLint "11 problems (0
+  errors, 11 warnings)" (bitácora general, entrada 015).
+
+DESPLIEGUE Y CONFIGURACIÓN: VITE_MERCADOPAGO_PUBLIC_KEY deja de ser necesaria.
+
+DECISIONES:
+  - 409 y no 400: el pedido está bien formado, pero la clase no admite ese método.
+  - Los datos de pago van en el detalle de la actividad y no en el listado.
+  - Ocultar la opción en la pantalla además de rechazarla en el backend: el alumno no llega a
+    un error evitable (punto A.4 del checklist: el alumno elige entre los dos métodos solo
+    cuando los dos están disponibles).
+
+ERRORES DETECTADOS: el SDK de Mercado Pago se guardaba con una sola public key para toda la
+  sesión; el botón y la ventana de pago mostraban el precio de la actividad y no el de la
+  clase (regresión de un merge). Ambos corregidos.
+
+CAPTURAS SUGERIDAS: pantalla de inscripción con el aviso "Esta clase solo acepta pago en
+  efectivo: el instructor todavía no habilitó los pagos con Mercado Pago."; la misma pantalla
+  con las dos opciones de pago.
+
+PENDIENTE QUE QUEDA: verificación en el navegador (caso 9 de la matriz).
+
+================================================================================
+ENTRADA 005
+================================================================================
+FECHA: 05/10/2026
+
+REPOSITORIO: activehub-backend
+
+RAMA Y COMMITS: feat/mp-integration: 1945dce "KAN-53: si la transacción de inscribirse hace
+  rollback después de autorizar en Mercado Pago, se cancela la autorización (compensación en
+  afterCompletion)...". Sin Pull Request.
+
+TIPO: corrección.
+
+TÍTULO: Si la inscripción no llega a guardarse después de autorizar, se cancela la
+  autorización en Mercado Pago.
+
+QUÉ CAMBIA PARA EL USUARIO: si Mercado Pago autoriza el pago pero la inscripción no se puede
+  guardar (por ejemplo, por un error de la base de datos posterior), el monto ya no queda
+  reservado en la tarjeta del alumno sin inscripción: el sistema le pide a Mercado Pago que
+  cancele esa autorización. No hay textos nuevos.
+
+TEXTOS DE INTERFAZ: no aplica.
+
+DETALLE TÉCNICO: InscribirseService registra una TransactionSynchronization; en afterCompletion
+  con estado STATUS_ROLLED_BACK llama a paymentGateway.cancelarAutorizacion con el token del
+  instructor, la orden autorizada y la clave de idempotencia de la autorización con el sufijo
+  ":cancel". Si esa cancelación falla, no se propaga (no tapa el error original): queda en el
+  log con nivel ERROR indicando que la orden quedó autorizada sin inscripción y que hay que
+  cancelarla a mano en Mercado Pago. Si la transacción confirma, no se hace nada.
+
+ESTADO: terminado y probado con pruebas automatizadas (Mercado Pago simulado). No probado en
+  sandbox.
+
+HISTORIAS Y CRITERIOS: E3A-HU05-IN, sin criterios nuevos.
+
+PANTALLAS: no aplica.
+
+REGLAS DE NEGOCIO: sin cambios.
+
+MÓDULOS: pagos, inscripciones.
+
+CASOS DE USO: ninguno nuevo; total 114. Modificado: inscribirse.
+
+ENTIDADES Y MIGRACIONES: sin cambios.
+
+TECNOLOGÍAS: sin cambios.
+
+COSTOS: sin cambios.
+
+RIESGOS: R02: mitigación nueva (compensación). Riesgo NUEVO R25: "Autorización huérfana: Mercado
+  Pago autoriza, pero la inscripción no se guarda y además falla la cancelación compensatoria."
+  Probabilidad baja; impacto medio (monto reservado al alumno hasta que la autorización vence a
+  los 5 días); mitigación: compensación automática y registro ERROR para intervención manual.
+
+SEGURIDAD: el log no incluye el token del instructor, solo el id de la orden.
+
+PRUEBAS (bitácora general, entrada 016): InscribirseServiceTest +3 (rollback cancela la
+  autorización; commit no cancela; una falla al cancelar no tapa el error original). Suite: 909
+  pruebas (907 correctas, 2 omitidas) en 200 archivos.
+
+ANÁLISIS ESTÁTICO: no aplica (solo backend).
+
+DESPLIEGUE Y CONFIGURACIÓN: sin cambios.
+
+DECISIONES: la compensación va en afterCompletion y no dentro de la transacción, porque solo
+  después del rollback se sabe que la inscripción no existe. No se reintenta: una falla queda en
+  el log para intervención manual.
+
+ERRORES DETECTADOS: una inscripción revertida después de autorizar dejaba el monto reservado en
+  la tarjeta del alumno sin inscripción. Detectado por revisión de código.
+
+CAPTURAS SUGERIDAS: no aplica.
+
+PENDIENTE QUE QUEDA: los tres tests de esta entrada se borraron por error en el commit de la
+  ENTRADA 006 y se restauraron en la ENTRADA 007.
+
+================================================================================
+ENTRADA 006
+================================================================================
+FECHA: 05/10/2026
+
+REPOSITORIO: activehub-backend
+
+RAMA Y COMMITS: feat/mp-integration: e6fc2fd "KAN-65: captura, cancelación y reembolso reales en
+  Mercado Pago...". Sin Pull Request.
+
+TIPO: funcionalidad nueva.
+
+TÍTULO: Captura al finalizar la clase, cancelación de la autorización y reembolso reales en
+  Mercado Pago.
+
+QUÉ CAMBIA PARA EL USUARIO:
+  El instructor cobra en Mercado Pago cuando la clase pasa a Finalizada: el sistema captura el
+  pago autorizado. Si la inscripción del alumno se cae antes de la clase (cancela el alumno,
+  el instructor cancela la clase o avisa su ausencia, o el instructor es suspendido), se
+  cancela la autorización y el monto deja de estar reservado en la tarjeta. Si se le devuelve
+  el dinero después de la clase (denuncia resuelta con "Reintegrar el pago"), se hace un
+  reembolso real y el pago queda Reembolsado. El paso a Liberado, 24 h después de la clase sin
+  denuncias, ya no mueve dinero: indica que el pago quedó firme. El administrador ve dos
+  acciones nuevas en Auditoría.
+
+TEXTOS DE INTERFAZ: Auditoría, columna Detalle (pantalla del administrador):
+  "El sistema cobró en Mercado Pago un pago autorizado: la clase finalizó."
+  "Se reembolsó en Mercado Pago un pago ya cobrado."
+  Se retira el mensaje de error "Esta operación sobre pagos de Mercado Pago todavía no está
+  disponible.".
+
+DETALLE TÉCNICO:
+  - shared/payments/OperacionesPagoMercadoPago (nuevo): capturar(pago, instructorId) y
+    reintegrar(pago, instructorId, actorId). reintegrar decide: sin capturar -> cancela la
+    autorización -> Cancelado; capturado -> reembolso total -> Reembolsado; autorización ya
+    vencida -> no llama a Mercado Pago (ya la canceló) y queda Cancelado. Claves de
+    idempotencia derivadas de la de la autorización con sufijos ":capture", ":cancel" y
+    ":refund".
+  - finalizarclasesvencidas: método nuevo capturarPagosPendientes(), sin transacción común
+    (cada pago confirma por separado), que el scheduler llama después de finalizar(). Captura
+    todo pago Retenido de Mercado Pago sin capturar de clases Finalizadas. Si falla, queda en
+    el log y se reintenta en la corrida siguiente (cada 5 minutos); si la autorización venció,
+    el pago pasa a Cancelado.
+  - liberarpagos (LiberarPagosScheduler, cada 15 minutos): ya no llama a Mercado Pago y no
+    libera un pago de Mercado Pago sin capturar.
+  - cancelarclase, cancelarinscripcion, notificarausenciaprofesor, crearpenalizacion y
+    resolverdenuncia (REINTEGRAR y SUSPENDER) reintegran por OperacionesPagoMercadoPago.
+  - PaymentGateway: se quitan los métodos de transición confirmarPago y cancelarPago.
+
+ESTADO: terminado y probado con pruebas automatizadas. Captura y reembolso probados después en
+  sandbox (ENTRADA 011); cancelación de una autorización sin capturar no probada en sandbox.
+
+HISTORIAS Y CRITERIOS:
+  E2I-HU08-CL (cancelación de clase): el reintegro del pago Retenido pasa a ser una
+    cancelación real de la autorización en Mercado Pago. Criterio nuevo: "Cuando cancelo una
+    clase con pagos de Mercado Pago sin cobrar espero que las autorizaciones se cancelen y que
+    a los alumnos no se les cobre nada".
+  E2I-HU07-GC (gestión de clase): criterio nuevo "Cuando la clase finaliza espero que el
+    sistema cobre en Mercado Pago los pagos autorizados de mis alumnos sin que yo haga nada".
+  E3A-HU06-MC (mis clases, cancelar la inscripción): criterio nuevo "Cuando cancelo mi
+    inscripción pagada con Mercado Pago antes de la clase espero que se libere la reserva de
+    mi tarjeta".
+
+PANTALLAS: sin cambios visibles en esta entrada, salvo los textos de Auditoría.
+
+REGLAS DE NEGOCIO:
+  Modificada la regla de retención y liberación (RN-04 según la bitácora general): el dinero se
+    captura al finalizar la clase y Liberado pasa a ser un estado interno.
+  NUEVA RN-26: "Un pago con Mercado Pago se autoriza al inscribirse sin cobrarse (estado
+    Retenido, autorización con vigencia de 5 días), se captura en Mercado Pago cuando la clase
+    pasa a Finalizada y pasa a Liberado 24 horas después del inicio de la clase si no tiene
+    denuncias abiertas. Liberado no mueve dinero." (La captura anticipada se agrega en la
+    ENTRADA 010.)
+  NUEVA RN-27: "Para devolver un pago de Mercado Pago, si todavía no se capturó se cancela la
+    autorización y el pago queda Cancelado; si ya se capturó se reembolsa el total y queda
+    Reembolsado. Si Mercado Pago no responde, la operación entera se revierte y el pago no se
+    marca como devuelto."
+
+MÓDULOS: pagos, clases, inscripciones, denuncias, penalizaciones, tareas programadas,
+  auditoría.
+
+CASOS DE USO: ninguno nuevo; total 114. Modificados: finalizarclasesvencidas, liberarpagos,
+  cancelarclase, cancelarinscripcion, notificarausenciaprofesor, crearpenalizacion,
+  resolverdenuncia.
+
+ENTIDADES Y MIGRACIONES: V30__pago_capturado_at.sql: columna pago.capturado_at TIMESTAMPTZ,
+  opcional (nulo = no capturado), idempotente. AuditAccion suma PAGO_CAPTURADO y
+  PAGO_REEMBOLSADO.
+
+TECNOLOGÍAS: sin cambios.
+
+COSTOS: sin cambios.
+
+RIESGOS: R02: el ciclo completo del dinero opera contra Mercado Pago. Riesgo NUEVO R21:
+  "Vencimiento de la autorización antes de la captura." Probabilidad media sin mitigación (la
+  autorización dura 5 días y la inscripción abre 4 días antes); impacto alto (el instructor no
+  cobra). Mitigación: captura al finalizar la clase y reintento cada 5 minutos (esta entrada) y
+  captura anticipada con aviso a la administración (ENTRADA 010).
+
+SEGURIDAD: los logs incluyen solo ids de pago y de orden, nunca el token del instructor.
+
+PRUEBAS (bitácora general, entrada 017): nueva OperacionesPagoMercadoPagoTest (11);
+  FinalizarClasesVencidasServiceTest +2; LiberarPagosServiceTest +2; MercadoPagoGatewayTest -2
+  (camino de transición eliminado); adaptadas las de los cinco casos de uso que reintegran.
+  Suite: 921 pruebas (919 correctas, 2 omitidas) en 201 archivos.
+
+ANÁLISIS ESTÁTICO: no aplica (solo backend).
+
+DESPLIEGUE Y CONFIGURACIÓN: sin variables nuevas.
+
+DECISIONES:
+  - Momento de la captura: al finalizar la clase. Alternativas evaluadas: capturar al liberar
+    (descartada: la liberación ocurre 24 h después de la clase y una inscripción hecha con más
+    de unos 3 días de anticipación perdía la autorización de 5 días antes de capturarse) y
+    capturar al inscribirse (descartada: todo reintegro pasaría a ser un reembolso, que tarda
+    días en verse en la tarjeta). Elegida por el equipo.
+  - OperacionesPagoMercadoPago vive en shared/payments y no en un caso de uso, para no inyectar
+    el servicio de un caso de uso en otro (convención del proyecto).
+  - Reintegro siempre total. No se implementó reintegro parcial porque ninguna regla de negocio
+    lo pide (punto B.4 del checklist).
+
+ERRORES DETECTADOS: con el diseño anterior la autorización vencía antes de capturarse. Además,
+  este commit borró por error los tres tests de la compensación de la ENTRADA 005 (restaurados
+  en la ENTRADA 007).
+
+CAPTURAS SUGERIDAS: Auditoría con la fila "El sistema cobró en Mercado Pago un pago autorizado:
+  la clase finalizó.".
+
+PENDIENTE QUE QUEDA: prueba en sandbox del ciclo completo; webhook; vista del estado real del
+  pago en las pantallas.
+
+================================================================================
+ENTRADA 007
+================================================================================
+FECHA: 07/10/2026
+
+REPOSITORIO: activehub-backend
+
+RAMA Y COMMITS: feat/mp-integration: a396be8 "KAN-58: un pago en revisión de Mercado Pago
+  reserva el lugar (pago EnRevision, V31), el instructor ya no puede confirmarlo como efectivo
+  y se cancela en MP si la inscripción se cae...". Tareas KAN-58 (MP-09). Incluye la primera
+  prueba en el sandbox de Mercado Pago, del mismo día. Sin Pull Request.
+
+TIPO: funcionalidad nueva.
+
+TÍTULO: Pago en revisión de Mercado Pago (estado EnRevision) y primer pago real autorizado en
+  el sandbox.
+
+QUÉ CAMBIA PARA EL USUARIO:
+  Si Mercado Pago no decide en el momento (análisis antifraude o revisión manual), el alumno ya
+  no ve un error: su lugar queda reservado, la inscripción figura con pago pendiente y recibe
+  una notificación que le avisa que Mercado Pago está revisando el pago. El instructor ve esas
+  inscripciones como pago pendiente, pero no puede confirmarlas a mano como si fueran efectivo.
+  Si la clase se cancela o el alumno se da de baja mientras el pago está en revisión, la orden
+  se cancela en Mercado Pago.
+
+TEXTOS DE INTERFAZ:
+  Notificación al alumno (campana), al inscribirse con un pago que queda en revisión:
+    "Tu lugar en la clase de "<actividad>" del <fecha y hora> está reservado: Mercado Pago está
+    revisando tu pago y te avisamos apenas se confirme."
+  Error al instructor si intenta confirmar a mano un pago de Mercado Pago, pantalla de gestión
+    de la clase (E2I-PAN-06): "Este pago lo está procesando Mercado Pago: la inscripción se
+    confirma sola cuando se apruebe."
+
+DETALLE TÉCNICO:
+  - EstadoPago suma EnRevision (status "processing" o "in_review" de la Orders API). V31 lo
+    agrega al CHECK ck_pago_estado.
+  - inscribirse: con EnRevision la inscripción queda en PagoPendiente, ocupa el cupo, el pago
+    guarda mp_order_id y no tiene autorizado_hasta. La compensación de la ENTRADA 005 también
+    cancela la orden en revisión si la transacción se revierte.
+  - confirmarcobroefectivo (POST /api/instructor/inscripciones/{id}/confirmar-cobro): solo
+    confirma pagos con método Efectivo.
+  - EstadoPago.reservadoEnMercadoPago() (Retenido o EnRevision) lo usan los seis puntos que
+    reintegran; OperacionesPagoMercadoPago.reintegrar acepta EnRevision y cancela la orden.
+  - Se restauraron los tres tests de la compensación borrados en la ENTRADA 006.
+  - Variables nuevas: MP_SANDBOX_PAYER_EMAIL (correo del comprador de prueba, que viaja como
+    pagador de las órdenes; vacía en producción) y MP_LOG_LEVEL (con DEBUG, la clase
+    MercadoPagoHttpLog registra cada pedido y respuesta a Mercado Pago con los secretos
+    recortados).
+  - Se retiró la variable MP_OAUTH_TEST_TOKEN y el parámetro test_token del canje OAuth: la
+    Orders API rechaza las credenciales de prueba con prefijo TEST- (401) y el valor tenía que
+    quedar siempre en false.
+  - Prueba manual ejecutada el 07/10/2026 en el sandbox de Mercado Pago (ver PRUEBAS).
+
+ESTADO: terminado y probado: pruebas automatizadas y prueba manual en sandbox del camino
+  aprobado. El camino en revisión (titular de prueba CONT) no se probó en sandbox.
+
+HISTORIAS Y CRITERIOS:
+  E3A-HU05-IN: criterio nuevo "Cuando Mercado Pago deja mi pago en revisión espero que mi lugar
+    quede reservado y recibir una notificación cuando se resuelva".
+  E2I-HU07-GC (confirmación de cobro): criterio nuevo "Cuando un alumno pagó con Mercado Pago y
+    el pago está en revisión espero no poder confirmarlo a mano como cobro en efectivo".
+
+PANTALLAS: sin cambios visuales (la pantalla de resultado se adapta en la ENTRADA 008).
+
+REGLAS DE NEGOCIO: NUEVA RN-28: "Solo se confirma a mano el cobro de un pago en efectivo. Un pago
+  de Mercado Pago en revisión deja la inscripción en PagoPendiente con el cupo ocupado, y lo
+  confirma o lo rechaza el aviso de Mercado Pago."
+
+MÓDULOS: pagos, inscripciones, clases, notificaciones.
+
+CASOS DE USO: ninguno nuevo; total 114. Modificados: inscribirse, confirmarcobroefectivo,
+  cancelarinscripcion, cancelarclase, notificarausenciaprofesor, crearpenalizacion,
+  resolverdenuncia.
+
+ENTIDADES Y MIGRACIONES: V31__pago_en_revision.sql: reemplaza ck_pago_estado por siete valores
+  (Retenido, Liberado, Cancelado, Efectivo, Rechazado, Reembolsado, EnRevision). Idempotente
+  (DROP y ADD del CHECK).
+  Estado nuevo: constante EnRevision; etiqueta visible para el alumno "En revisión" (ENTRADA
+  014); lo provoca una orden con status "processing" o "in_review"; puede pasar a Retenido
+  (Mercado Pago aprueba), a Rechazado (status "failed") o a Cancelado (orden cancelada o
+  vencida, o inscripción caída).
+
+TECNOLOGÍAS: sin cambios.
+
+COSTOS: sin cambios (sandbox).
+
+RIESGOS: R02: probabilidad de falla de configuración reducida: primer pago autorizado contra
+  Mercado Pago real (sandbox).
+
+SEGURIDAD: el log de depuración recorta los secretos. Durante la depuración de esta prueba un
+  token de acceso de prueba quedó expuesto fuera del sistema; se invalidó al volver a vincular
+  la cuenta con la aplicación del usuario Integrador.
+
+PRUEBAS:
+  Automatizadas (bitácora general, entradas 018 y 019): InscribirseServiceTest +3 (en revisión
+  reserva el lugar; processing también; en revisión con rollback cancela la orden) y +3
+  restauradas; ConfirmarCobroEfectivoServiceTest +1; OperacionesPagoMercadoPagoTest +2. Suite:
+  935 pruebas (933 correctas, 2 omitidas) en 202 archivos.
+  Manual, PRU-10 (NUEVA) "Inscripción con pago aprobado en el sandbox de Mercado Pago",
+  ejecutada el 07/10/2026:
+    Pasos: un instructor de demostración con la cuenta vinculada a un vendedor de prueba; una
+      alumna de demostración se inscribe con Mercado Pago a una clase de precio 3100,00 con una
+      tarjeta de prueba oficial del sandbox y el titular de prueba que fuerza la aprobación.
+    Resultado esperado: pago autorizado y no acreditado; inscripción Inscripto.
+    Resultado obtenido en ActiveHub: pago Retenido, método Mercado Pago, monto 3100,00 (precio
+      de la clase), comisión 0,00, monto del instructor 3100,00, status_detail
+      "waiting_capture", autorizado_hasta = creación + 5 días, capturado_at nulo; inscripción
+      Inscripto; cupos 1 de 20.
+    Resultado obtenido en Mercado Pago (consulta de la orden con el token del vendedor): status
+      "action_required", status_detail "waiting_capture", capture_mode "manual", total 3100,00,
+      referencia externa igual al id de la inscripción, cuenta del vendedor de prueba.
+    Estado: APROBADA. Evidencia: registro en la bitácora general (entrada 019) y caso 1 de
+      docs/PRUEBAS-SANDBOX-MERCADOPAGO.md.
+
+ANÁLISIS ESTÁTICO: no aplica (solo backend).
+
+DESPLIEGUE Y CONFIGURACIÓN (cómo se prueba el marketplace en sandbox; punto D.8 y J.3):
+  1. La Orders API no acepta credenciales TEST-: se prueba con cuentas de prueba y credenciales
+     APP_USR-. Lo que hace que sea una prueba es la cuenta, no el prefijo.
+  2. En un marketplace intervienen cuatro partes y todas tienen que ser de prueba: la
+     aplicación (client id y client secret del OAuth), el vendedor, el comprador y el dueño de
+     la aplicación. Con una aplicación de una cuenta real, la Orders API responde 422 sin
+     detalle y la Payments API responde 400 con el código 2034 "Invalid users involved".
+  3. Desde la cuenta real, en Developers > la aplicación > Cuentas de prueba, se crean
+     (Argentina) un Integrador, un Vendedor y un Comprador.
+  4. Con el Integrador se crea la aplicación (Checkout API / Orders, con OAuth); su URL de
+     redireccionamiento es la del callback expuesto con ngrok, sin barra final. Sus
+     credenciales van a MP_CLIENT_ID y MP_CLIENT_SECRET.
+  5. El instructor vincula la cuenta iniciando sesión en Mercado Pago con el Vendedor. Mercado
+     Pago reutiliza la sesión abierta (compartida con Mercado Libre): hay que iniciar sesión
+     primero como vendedor y comprobarlo antes de presionar "Vincular Mercado Pago".
+  6. MP_SANDBOX_PAYER_EMAIL = correo del Comprador de prueba.
+  7. Se paga con las tarjetas de prueba oficiales; el nombre del titular define el resultado.
+  El paso de sandbox a producción consiste en usar una aplicación real con credenciales reales,
+  vendedores reales y dejar vacía MP_SANDBOX_PAYER_EMAIL; no se ejecutó.
+
+DECISIONES:
+  - El estado nuevo va en el pago y no en la inscripción. PagoPendiente ya significa lo correcto
+    para la inscripción (lugar reservado, pago sin confirmar), y los usos existentes de
+    PagoPendiente (roster, liberar cupo al cancelar, cancelar al finalizar la clase) quedan
+    correctos sin tocarlos. Alternativa descartada: un estado de inscripción PagoEnRevision
+    (5 casos de uso, unos 12 archivos del frontend y el manual, con riesgo de cupos que no se
+    liberan).
+  - Un pago en revisión de una clase que finaliza queda para el webhook: finalizar es una sola
+    transacción y llamar a Mercado Pago adentro haría que una falla revierta todas las
+    finalizaciones.
+  - La respuesta del soporte de Mercado Pago (usar credenciales TEST- con test_token) se probó
+    y se descartó con evidencia (401 de la Orders API).
+
+ERRORES DETECTADOS:
+  - El commit de la ENTRADA 006 había borrado los tests de la compensación; restaurados.
+  - Configuración del sandbox incorrecta (aplicación creada por una cuenta real): diagnosticada
+    con el log de depuración; resuelta con la aplicación del Integrador.
+  - Se vinculó por error tres veces la cuenta del Integrador en lugar de la del Vendedor, por la
+    sesión compartida de Mercado Pago; resuelto con el procedimiento del paso 5.
+
+CAPTURAS SUGERIDAS: pantalla de resultado de la inscripción con Mercado Pago; movimiento
+  reservado en el panel del vendedor de prueba (sin datos de la cuenta a la vista).
+
+PENDIENTE QUE QUEDA: webhook que resuelva EnRevision (ENTRADA 009); estados de pago en el
+  frontend (ENTRADAS 008 y 014); prueba en sandbox de CONT (caso 4).
+
+================================================================================
+ENTRADA 008
+================================================================================
+FECHA: 07/10/2026
+
+REPOSITORIO: ambos
+
+RAMA Y COMMITS: frontend, integracion: 3f4a8e1 "KAN-59: la pantalla de inscripción muestra el
+  estado real que devuelve el backend..." y c5d79b2 "KAN-59: el modal de Mercado Pago ya no
+  queda trabado en «procesando» cuando la tarjeta es rechazada...". Backend,
+  feat/mp-integration: 90ada54 (bitácora general) y a6db34d "KAN-59: un rechazo de tarjeta ya
+  no deja el token de la tarjeta en el log...". Tarea KAN-59 (MP-10). Sin Pull Request.
+
+TIPO: modificación de funcionalidad existente.
+
+TÍTULO: Checkout con Mercado Pago: resultado según el estado real, solo tarjeta de crédito y
+  reintento tras un rechazo.
+
+QUÉ CAMBIA PARA EL USUARIO:
+  En la pantalla de inscripción y pago, la opción de Mercado Pago dice que se paga con tarjeta
+  de crédito, y el panel aclara que el monto queda reservado y se cobra después de la clase. El
+  alumno presiona el botón de pago, completa la tarjeta en la ventana segura y espera mientras
+  se procesa. Si el pago quedó reservado, ve "¡Inscripción confirmada!" con la aclaración de que
+  el cobro es después de la clase; si quedó en revisión, ve que se espera la confirmación de
+  Mercado Pago. Antes decía "Tu pago fue aprobado" en los dos casos, y era falso. Si Mercado
+  Pago rechaza la tarjeta, el mensaje queda visible y el formulario se reinicia para probar con
+  otra; antes la ventana quedaba trabada en "procesando". Solo se aceptan tarjetas de crédito.
+
+TEXTOS DE INTERFAZ (E3A-PAN-07, textos vigentes en el código):
+  Opción de pago: "MercadoPago" con la leyenda "Tarjeta de crédito" (antes "Tarjeta de crédito,
+    débito o dinero en cuenta"). Opción "Efectivo".
+  Panel de pago: título "Pagar con MercadoPago"; texto "Vas a completar los datos de tu tarjeta
+    de crédito en una ventana segura de MercadoPago. El monto queda reservado en tu tarjeta y
+    se cobra después de la clase."; botón "Pagar $<precio de la clase> con MercadoPago";
+    mientras se envía, "Procesando…".
+  Ventana de pago: "Completá los datos de tu tarjeta de crédito para confirmar el pago".
+  Resultado, pago reservado: título "¡Inscripción confirmada!"; texto "Tu lugar en <actividad>
+    del <fecha> quedó confirmado. El cobro se hace efectivo después de la clase: hasta entonces
+    el monto queda reservado en tu tarjeta."
+  Resultado, en revisión: título "Estamos esperando la confirmación de Mercado Pago"; texto "Tu
+    lugar en <actividad> del <fecha> está reservado mientras Mercado Pago revisa el pago. Te
+    avisamos con una notificación apenas se confirme."
+  Resultado, efectivo (sin cambios): título "¡Inscripción registrada!"; texto "Tu lugar en
+    <actividad> del <fecha> quedó inscripto con pago pendiente. Abonalo directamente al
+    instructor."
+  Instrucciones de efectivo (sin cambios): "Instrucciones de pago en efectivo"; "Tu inscripción
+    queda con pago pendiente hasta el inicio de la clase."; "Llegá 10 minutos antes y aboná los
+    $<precio> directamente al instructor."; "El instructor confirma tu asistencia y tu
+    inscripción queda completa."; botón "Confirmar inscripción (pago en efectivo)".
+  Rechazo nuevo del backend (a6db34d), motivo rejected_by_issuer: "Tu banco rechazó el pago.
+    Probá con otra tarjeta."
+
+DETALLE TÉCNICO:
+  - DataContext.inscribirse devuelve la respuesta de POST /inscripciones (id, estado, pagoId) y
+    Inscripcion.tsx elige el texto por el estado devuelto, no por el método elegido.
+  - ModalPagoMercadoPago: customization.paymentMethods.types.excluded = ["debit_card",
+    "prepaid_card"]. Tras un rechazo se incrementa un contador que vuelve a montar el Brick
+    (el token de tarjeta es de un solo uso).
+  - c5d79b2: el Brick dependía de funciones del componente padre que cambiaban en cada
+    renderizado y se volvía a montar en medio del pago, así que el Brick que pagaba quedaba
+    descartado y nunca mostraba el error. Ahora las funciones se leen desde referencias (refs) y
+    el Brick solo se reinicia si cambian el monto, la public key o hay un reintento.
+  - a6db34d (backend): un rechazo ya no deja el token de la tarjeta en el log (se recorta igual
+    que en MP_LOG_LEVEL) y se registra con nivel WARN, porque es un resultado del negocio y no
+    una falla. Se corrige que un rechazo sin el campo de cuotas en la respuesta se tomara como
+    error genérico de Mercado Pago (tipo int cambiado a Integer en la respuesta de la orden).
+
+ESTADO: terminado sin probar en sandbox. Compila y pasan las pruebas existentes; los casos de
+  sandbox con los titulares de prueba de rechazo (OTHE) y pendiente (CONT) no se ejecutaron
+  (casos 3 y 4 de la matriz).
+
+HISTORIAS Y CRITERIOS: E3A-HU05-IN: criterios nuevos "Cuando mi pago con Mercado Pago queda
+  reservado espero ver que la inscripción está confirmada y que el cobro se hace después de la
+  clase" y "Cuando Mercado Pago rechaza mi tarjeta espero ver el motivo y poder intentar con otra
+  tarjeta sin salir de la pantalla".
+
+PANTALLAS: E3A-PAN-07 (inscripción y pago): cambian la opción de pago, el panel, la ventana de
+  pago y la pantalla de resultado.
+
+REGLAS DE NEGOCIO: NUEVA RN-29: "El pago con Mercado Pago se acepta solo con tarjeta de crédito,
+  porque la reserva con captura posterior no existe para tarjetas de débito ni prepagas."
+
+MÓDULOS: pagos, inscripciones.
+
+CASOS DE USO: sin cambios en los casos de uso del backend; total 114.
+
+ENTIDADES Y MIGRACIONES: sin cambios.
+
+TECNOLOGÍAS: sin cambios.
+
+COSTOS: sin cambios.
+
+RIESGOS: R02: mejora el manejo del rechazo (el usuario puede reintentar). Riesgo NUEVO R29:
+  "Medios de pago limitados: solo tarjeta de crédito." Probabilidad media; impacto medio
+  (alumnos sin tarjeta de crédito solo pueden pagar en efectivo); mitigación: la opción
+  Efectivo sigue disponible.
+
+SEGURIDAD: el token de la tarjeta no queda en los logs del backend. El pedido de inscripción
+  sigue sin monto ni referencia.
+
+PRUEBAS (bitácora general, entrada 020): frontend 145 pruebas en 17 archivos en verde (npx
+  vitest run). No se agregaron pruebas automatizadas del flujo de pago.
+
+ANÁLISIS ESTÁTICO: "npx tsc -b" sin errores; "npm run build" correcto; ESLint "11 problems (0
+  errors, 11 warnings)" (bitácora general, entrada 020).
+
+DESPLIEGUE Y CONFIGURACIÓN: sin cambios.
+
+DECISIONES:
+  - Validación 3DS: no se implementa. En la Orders API es opcional y está apagada por defecto
+    (solo corre si la orden se crea con la configuración transaction_security en
+    on_fraud_risk). Activarla exige devolver la URL del desafío, mostrarla en un iframe y
+    consultar el estado o recibir el webhook, combinado con la captura manual. Queda como tarea
+    aparte.
+  - Medios de pago (punto A.3): habilitada solo la tarjeta de crédito. No habilitados: débito y
+    prepaga (Mercado Pago rechaza la orden con captura manual), dinero en cuenta (exige que el
+    alumno inicie sesión en Mercado Pago, que no ocurre en Checkout API) y medios en efectivo
+    fuera de línea (no admiten reserva con captura posterior). La razón de los dos últimos se
+    deduce del modo de integración elegido; no se probó contra Mercado Pago.
+  - El texto del resultado sale del estado que devuelve el backend, no del método elegido.
+
+ERRORES DETECTADOS: la pantalla decía "Tu pago fue aprobado" para un pago en revisión; la
+  ventana quedaba trabada en "procesando" tras un rechazo (diagnóstico: el Brick se volvía a
+  montar en cada renderizado); el token de la tarjeta quedaba en el log; un rechazo sin cuotas
+  se tomaba como error genérico. Todos corregidos.
+
+CAPTURAS SUGERIDAS: panel "Pagar con MercadoPago"; ventana de pago con el Brick (con una
+  tarjeta de prueba, sin datos reales); pantalla "Estamos esperando la confirmación de Mercado
+  Pago"; ventana con un rechazo y el formulario listo para otra tarjeta.
+
+PENDIENTE QUE QUEDA: casos 3 y 4 de la matriz de sandbox.
+
+================================================================================
+ENTRADA 009
+================================================================================
+FECHA: 09/10/2026
+
+REPOSITORIO: activehub-backend
+
+RAMA Y COMMITS: feat/mp-integration: 9cf273c "KAN-60: webhook de Mercado Pago con verificación de
+  firma..." y f66e119 "KAN-60: la firma del webhook de Mercado Pago se compara en tiempo
+  constante...". Tarea KAN-60. Sin Pull Request.
+
+TIPO: funcionalidad nueva.
+
+TÍTULO: Webhook de Mercado Pago con verificación de firma.
+
+QUÉ CAMBIA PARA EL USUARIO:
+  Si Mercado Pago deja un pago en revisión y después lo aprueba, la inscripción del alumno se
+  confirma sola y recibe una notificación. Si lo rechaza, el lugar se libera y el alumno recibe
+  una notificación que le dice que puede volver a inscribirse. Un reembolso hecho desde el panel
+  de Mercado Pago queda reflejado como Reembolsado en ActiveHub, y un contracargo queda
+  registrado. El administrador ve dos acciones nuevas en Auditoría.
+
+TEXTOS DE INTERFAZ:
+  Notificaciones al alumno (campana), con enlace a su inscripción:
+    "Mercado Pago aprobó tu pago: se confirmó tu inscripción a la clase de "<actividad>" del
+    <fecha y hora>."
+    "Mercado Pago no aprobó tu pago para la clase de "<actividad>" del <fecha y hora>, así que
+    tu lugar se liberó. Podés volver a inscribirte con otra tarjeta o en efectivo."
+  Auditoría, columna Detalle:
+    "Mercado Pago aprobó un pago que estaba en revisión: la inscripción quedó confirmada."
+    "Mercado Pago rechazó un pago que estaba en revisión: la inscripción se canceló y se liberó
+    el lugar."
+
+DETALLE TÉCNICO:
+  - Caso de uso nuevo recibirnotificacionmercadopago: POST /api/instructor/mercadopago/webhook,
+    público (permitAll) porque lo llama Mercado Pago sin sesión.
+  - Procesamiento (RecibirNotificacionMercadoPagoService.procesar, @Transactional):
+    1. Valida la firma; si no es válida responde 401 y no procesa.
+    2. Solo procesa avisos de tipo "order" con data.id; los demás se ignoran.
+    3. Bloquea la fila del pago por mp_order_id (agregado en la ENTRADA 013); si la orden no
+       corresponde a ningún pago, se ignora.
+    4. No le cree al cuerpo del aviso: consulta la orden en Mercado Pago con el token del
+       instructor (PaymentGateway.consultar).
+    5. Aplica la transición solo desde un estado concreto: EnRevision + orden autorizada ->
+       Retenido, inscripción Inscripto, autorizado_hasta = ahora + 5 días (si la inscripción ya
+       estaba cancelada, cancela la orden en Mercado Pago); EnRevision + "failed" -> Rechazado;
+       EnRevision + "canceled" o "expired" -> Cancelado (en los dos casos libera el cupo);
+       Retenido o Liberado + "refunded" -> Reembolsado (reembolso desde el panel); orden
+       "charged_back" -> se guarda el detalle y se registra una advertencia en el log
+       (resolución manual).
+    6. Responde 200 aunque ignore el aviso, para que Mercado Pago no reintente.
+    Por el paso 5, un aviso repetido o fuera de orden no tiene efecto.
+  - shared/payments/FirmaWebhookMercadoPago: valida el encabezado x-signature según la
+    documentación de Mercado Pago: lee ts y v1 por nombre, en cualquier orden; arma el manifest
+    "id:<data.id en minúsculas>;request-id:<x-request-id>;ts:<ts>;" omitiendo las partes
+    ausentes; calcula HMAC-SHA256 con MP_WEBHOOK_SECRET y compara con MessageDigest.isEqual
+    (tiempo constante, f66e119). Ante secreto sin configurar o encabezado ausente o mal formado
+    devuelve false, nunca una excepción.
+  - PagoRepository.findConDetalleByMpOrderId (sin distinguir mayúsculas). AuditAccion suma
+    PAGO_CONFIRMADO_MP y PAGO_RECHAZADO_MP.
+  - pom.xml suma la dependencia com.mercadopago:sdk-java 3.7.0, que ningún código usa (ninguna
+    importación de com.mercadopago en src, verificado el 12/10/2026).
+
+ESTADO: terminado y probado con pruebas automatizadas. La recepción de una notificación real
+  del panel de Mercado Pago después de corregir la firma no se verificó.
+
+HISTORIAS Y CRITERIOS: E3A-HU05-IN: criterio nuevo "Cuando Mercado Pago aprueba o rechaza un
+  pago que estaba en revisión espero recibir una notificación con el resultado y que mi
+  inscripción se confirme o se libere el lugar".
+
+PANTALLAS: sin cambios; las notificaciones se ven en la campana existente.
+
+REGLAS DE NEGOCIO: se aplica RN-28 (ENTRADA 007).
+
+MÓDULOS: pagos, inscripciones, notificaciones, auditoría.
+
+CASOS DE USO: 1 nuevo (recibirnotificacionmercadopago). Total: 115.
+
+ENTIDADES Y MIGRACIONES: sin migraciones.
+
+TECNOLOGÍAS: HMAC-SHA256 con commons-codec. Se agrega com.mercadopago:sdk-java 3.7.0 sin uso.
+
+COSTOS: sin cambios.
+
+RIESGOS: R02: mitigaciones nuevas: aviso automático de Mercado Pago, verificación de autenticidad
+  y transiciones idempotentes. Riesgo NUEVO R20: "Avisos de Mercado Pago duplicados, fuera de
+  orden o falsificados." Probabilidad media; impacto alto (estados de pago incorrectos);
+  mitigación implementada: firma HMAC en tiempo constante, consulta de la orden en Mercado Pago
+  y transición solo desde un estado concreto. Riesgo NUEVO R28: "El aviso no llega (sin URL
+  pública o caída)." Probabilidad alta mientras no haya despliegue; impacto medio (un pago en
+  revisión queda sin resolver); mitigación: ninguna implementada (ver ENTRADA 017).
+
+SEGURIDAD: endpoint público protegido por firma HMAC (punto F.2). La firma calculada no se
+  escribe en el log. Variable nueva: MP_WEBHOOK_SECRET; sin ella se rechazan todas las
+  notificaciones y se registra un error.
+
+PRUEBAS (bitácora general, entradas 021 y 022): FirmaWebhookMercadoPagoTest (10: firma
+  correcta, data.id en minúsculas, orden de ts y v1, manifest sin request-id, firma alterada,
+  otra orden, otro timestamp, otro secreto, secreto sin configurar y siete encabezados mal
+  formados; los valores esperados se calcularon con la receta de la documentación, no con la
+  clase); RecibirNotificacionMercadoPagoServiceTest (10) y ControllerTest (3); CatalogoPublicoTest
+  suma el webhook sin sesión. Suite: 962 pruebas (960 correctas, 2 omitidas) en 205 archivos.
+
+ANÁLISIS ESTÁTICO: no aplica (solo backend).
+
+DESPLIEGUE Y CONFIGURACIÓN: MP_WEBHOOK_SECRET (clave de la sección Webhooks del panel de la
+  aplicación) y la URL del webhook en ese panel apuntando a /api/instructor/mercadopago/webhook.
+  Cambiar la clave exige reiniciar el backend. Los eventos a los que quedó suscripta la
+  aplicación en el panel no se registraron (ver DUDAS ABIERTAS); el código solo procesa los de
+  tipo "order".
+
+DECISIONES:
+  - Consultar la orden en lugar de confiar en el cuerpo del aviso: el cuerpo puede venir
+    repetido, atrasado o falsificado; la orden consultada con el token del instructor es la
+    fuente de verdad.
+  - Responder 200 a un aviso ignorado para que Mercado Pago no lo reintente indefinidamente.
+  - La ruta queda bajo /api/instructor/mercadopago/, junto al callback de OAuth.
+
+ERRORES DETECTADOS: la primera versión de la firma rechazaba toda notificación (401 en el panel
+  de Mercado Pago): tomaba "ts=..." y "v1=..." con su prefijo, incluía v1 en el manifest y no
+  pasaba data.id a minúsculas. Además lanzaba excepciones (500) con un encabezado mal formado o
+  el secreto vacío. Corregido en 9cf273c. La comparación con equals filtraba información por
+  tiempo de respuesta; corregido en f66e119.
+
+CAPTURAS SUGERIDAS: panel de Mercado Pago con una notificación de prueba respondida 200 (sin la
+  clave a la vista).
+
+PENDIENTE QUE QUEDA: verificar una notificación real; conciliación si el aviso no llega;
+  decidir si se quita la dependencia sdk-java.
+
+================================================================================
+ENTRADA 010
+================================================================================
+FECHA: 10/10/2026
+
+REPOSITORIO: activehub-backend
+
+RAMA Y COMMITS: feat/mp-integration: 6b5aedf "KAN-61: captura anticipada de autorizaciones por
+  vencer, registro de capturas fallidas y aviso a la administración...". Tarea KAN-61 (MP-12).
+  El aviso a la administración lo escribió un integrante siguiendo docs/guia-KAN-61-aviso-
+  admin.md y se corrigió en la revisión. Sin Pull Request.
+
+TIPO: funcionalidad nueva.
+
+TÍTULO: Captura anticipada de autorizaciones por vencer, registro de capturas fallidas y aviso
+  a la administración.
+
+QUÉ CAMBIA PARA EL USUARIO:
+  El instructor cobra también en el caso en que la autorización de Mercado Pago iba a vencer
+  antes de que la clase finalizara (por ejemplo, si el proceso automático estuvo detenido). Si
+  el cobro de un mismo pago falla 6 veces seguidas (media hora, con el proceso cada 5 minutos),
+  los usuarios con permiso de ver la auditoría reciben una notificación en la campana, una sola
+  vez por pago y sin enlace. En Auditoría aparecen dos acciones nuevas.
+
+TEXTOS DE INTERFAZ:
+  Auditoría, columna Detalle:
+    "El sistema cobró en Mercado Pago un pago antes de que finalizara la clase, porque la
+    autorización estaba por vencer."
+    "Falló el cobro en Mercado Pago de un pago autorizado: se reintenta en la próxima corrida."
+  Notificación a la administración (tipo CAPTURA_PAGO_FALLIDA, sin enlace):
+    "No se pudo cobrar en Mercado Pago un pago de la clase de <actividad> del <fecha y hora>
+    después de 6 intentos. Revisá que el instructor tenga su cuenta de Mercado Pago vinculada."
+
+DETALLE TÉCNICO:
+  - Captura anticipada: FinalizarClasesVencidasService.capturarPagosPendientes toma, además de
+    los pagos Retenido sin capturar de clases Finalizadas, los de clases Programadas o
+    Habilitadas cuya autorización vence dentro de VentanaPagos.MARGEN_CAPTURA_ANTICIPADA (24 h)
+    (consulta PagoRepository.findSinCapturarPorVencer). Si entra, se audita
+    PAGO_CAPTURA_ANTICIPADA. En el flujo normal no ocurre: la inscripción abre 4 días antes y
+    la autorización dura 5.
+  - Registro de la falla: cada captura fallida suma pago.intentos_captura y se audita
+    PAGO_CAPTURA_FALLIDA con la metadata "intento N · <tipo de excepción>", sin el mensaje de la
+    excepción. El pago sigue Retenido y se reintenta cada 5 minutos.
+  - Al llegar a VentanaPagos.MAX_INTENTOS_CAPTURA (6) se llama una sola vez a
+    avisarAdministracion: busca los roles con el permiso auditoria.ver
+    (ConfiguracionRolRepository.rolesConPermiso), sus usuarios activos
+    (UsuarioRepository.findIdsActivosPorRol) y notifica a cada uno con TipoNotificacion
+    CAPTURA_PAGO_FALLIDA, entidadId = id del pago, Destino.ninguno().
+  - Una excepción al guardar el contador, al auditar o al notificar queda en el log y no corta
+    la corrida para los demás pagos.
+
+ESTADO: terminado y probado con pruebas automatizadas. Captura anticipada y aviso no ejecutados
+  en sandbox.
+
+HISTORIAS Y CRITERIOS: sin cambios en las historias del catálogo.
+
+PANTALLAS: sin cambios; la notificación se ve en la campana existente del administrador.
+
+REGLAS DE NEGOCIO: RN-26 (ENTRADA 006) se completa así: "Un pago con Mercado Pago se autoriza
+  al inscribirse sin cobrarse (estado Retenido, autorización con vigencia de 5 días), se captura
+  en Mercado Pago cuando la clase pasa a Finalizada, o antes si la autorización vence en menos
+  de 24 horas, y pasa a Liberado 24 horas después del inicio de la clase si no tiene denuncias
+  abiertas. Una captura fallida se reintenta cada 5 minutos hasta que vence la autorización; al
+  sexto intento fallido se avisa a quienes tienen el permiso de ver la auditoría. Liberado no
+  mueve dinero."
+  Se aplica la regla de permisos (RN-19 según la bitácora general): el destinatario se elige
+  por permiso y no por nombre de rol.
+
+MÓDULOS: pagos, tareas programadas, auditoría, notificaciones.
+
+CASOS DE USO: ninguno nuevo; total 115. Modificado: finalizarclasesvencidas.
+
+ENTIDADES Y MIGRACIONES: V32__pago_intentos_captura.sql: pago.intentos_captura INTEGER,
+  obligatorio, por defecto 0, idempotente. AuditAccion suma PAGO_CAPTURA_ANTICIPADA y
+  PAGO_CAPTURA_FALLIDA. TipoNotificacion suma CAPTURA_PAGO_FALLIDA (la columna tipo no tiene
+  CHECK). VentanaPagos suma MARGEN_CAPTURA_ANTICIPADA y MAX_INTENTOS_CAPTURA.
+
+TECNOLOGÍAS: sin cambios.
+
+COSTOS: sin cambios.
+
+RIESGOS: R21 (vencimiento de la autorización): mitigado con captura anticipada y aviso. R02:
+  un cobro que no entra ya no queda solo en el log del servidor.
+
+SEGURIDAD: la metadata de una captura fallida guarda solo el tipo de excepción; la notificación
+  no incluye datos del alumno ni el monto.
+
+PRUEBAS (bitácora general, entradas 023 y 024): FinalizarClasesVencidasServiceTest pasa a 15
+  pruebas: falla suma intento, audita y sigue Retenido; autorización por vencer se captura con
+  reloj fijo aunque la clase no finalizó; autorización ya vencida no se audita como
+  anticipada; el aviso llega a cada administrador con el texto exacto y sin destino; después
+  del tope no se vuelve a avisar; sin roles con el permiso no se notifica; si el aviso falla, se
+  siguen intentando los demás pagos. Suite: "Tests run: 971, Failures: 0, Errors: 0, Skipped:
+  2", "BUILD SUCCESS".
+
+ANÁLISIS ESTÁTICO: no aplica (solo backend).
+
+DESPLIEGUE Y CONFIGURACIÓN: sin variables nuevas.
+
+DECISIONES:
+  - Margen de 24 h para la captura anticipada, auditada aparte para distinguirla de la normal.
+  - El aviso se dispara una sola vez, al llegar al tope, y no en cada corrida posterior.
+  - Destinatarios por el permiso auditoria.ver, porque desde Auditoría se ven las fallas. Se
+    descartó una clave nueva (pagos.supervisar), que no protegería ningún endpoint y haría
+    fallar GuardasDePermisoTest.
+  - Sin destino: el administrador no tiene una pantalla de pagos a la que llevar el click.
+
+ERRORES DETECTADOS: con destino nulo la notificación no se guardaba y la excepción cortaba la
+  corrida de capturas (el constructor de Notificacion lee el tipo del destino). Se corrigió con
+  Destino.ninguno(). Se detectó en la revisión de código; la prueba con NotificacionService
+  simulado no lo detectaba.
+
+CAPTURAS SUGERIDAS: Auditoría con una fila "Falló el cobro en Mercado Pago de un pago
+  autorizado: se reintenta en la próxima corrida."; campana del administrador con la
+  notificación de captura fallida.
+
+PENDIENTE QUE QUEDA: ejecutar en sandbox la captura (ENTRADA 011).
+
+================================================================================
+ENTRADA 011
+================================================================================
+FECHA: 10/10/2026
+
+REPOSITORIO: activehub-backend
+
+RAMA Y COMMITS: feat/mp-integration: 06a34ef "Bitácora: entrada 025 (prueba en sandbox de la
+  captura y el reembolso de Mercado Pago, KAN-61; error abierto KAN-66)". Sin cambios de
+  código: prueba manual sobre el código del commit 6b5aedf. Sin Pull Request.
+
+TIPO: pruebas.
+
+TÍTULO: Prueba en el sandbox de Mercado Pago de la captura al finalizar la clase y del reembolso
+  de un pago capturado.
+
+QUÉ CAMBIA PARA EL USUARIO: no cambia nada. Se verificó el comportamiento existente contra el
+  sandbox de Mercado Pago.
+
+TEXTOS DE INTERFAZ: no aplica.
+
+DETALLE TÉCNICO: prueba manual ejecutada por un integrante el 10/10/2026, con el backend en el
+  equipo de desarrollo contra la base de Supabase y el sandbox, con un instructor vinculado a
+  un vendedor de prueba y un pago con una tarjeta de prueba oficial. Ver PRUEBAS.
+
+ESTADO: terminado y probado (las dos pruebas ejecutadas fueron aprobadas, con un error de
+  auditoría detectado).
+
+HISTORIAS Y CRITERIOS: E2I-HU07-GC (cobro al finalizar la clase) verificado contra Mercado Pago.
+  Resolución de una denuncia con "Reintegrar el pago" sobre un pago capturado verificada contra
+  Mercado Pago.
+
+PANTALLAS: no aplica.
+
+REGLAS DE NEGOCIO: RN-26 verificada en su primera parte (captura al finalizar la clase). RN-27
+  verificada en el caso del reembolso.
+
+MÓDULOS: pagos, tareas programadas, denuncias, auditoría.
+
+CASOS DE USO: sin cambios. Ejercitados: inscribirse, finalizarclasesvencidas, creardenuncia,
+  resolverdenuncia, recibirnotificacionmercadopago.
+
+ENTIDADES Y MIGRACIONES: sin cambios.
+
+TECNOLOGÍAS: sin cambios.
+
+COSTOS: dato observado en el panel del vendedor de prueba: el pago capturado figuraba "a cobrar
+  el 28 de octubre", es decir, Mercado Pago libera el dinero al vendedor con un plazo propio,
+  independiente de la retención de ActiveHub. La comisión aplicada a ese pago no se registró
+  (ver DUDAS ABIERTAS).
+
+RIESGOS: R02: captura y reembolso verificados contra Mercado Pago real (sandbox); disminuye la
+  probabilidad de falla de integración en esos dos caminos. Riesgo NUEVO R27: "Diferencia entre
+  el estado Liberado de ActiveHub y la acreditación real en Mercado Pago." Probabilidad alta (el
+  plazo de Mercado Pago es distinto de las 24 h internas); impacto medio (el instructor puede
+  ver Liberado o "Acreditado en tu cuenta" antes de poder disponer del dinero en Mercado Pago);
+  mitigación: ninguna en el código; documentarlo para el instructor. Riesgo NUEVO R24:
+  "Carrera entre un reintegro de ActiveHub y el aviso de Mercado Pago" (ver ERRORES DETECTADOS;
+  se corrige en la ENTRADA 013).
+
+SEGURIDAD: sin cambios.
+
+PRUEBAS:
+  PRU-11 (NUEVA) "Captura en Mercado Pago al finalizar la clase", ejecutada el 10/10/2026.
+    Pasos: inscripción de un alumno con Mercado Pago a una clase del instructor vinculado; se
+      adelantó la fecha de la clase en la base (UPDATE clase SET fecha_hora = now() - interval
+      '2 hours') para simular que ya ocurrió; se esperó la corrida de
+      FinalizarClasesVencidasScheduler.
+    Resultado esperado: clase Finalizada; pago capturado en Mercado Pago; estado Retenido con
+      capturado_at cargado hasta que pase el período de denuncias.
+    Resultado obtenido: la clase pasó a Finalizada; el pago quedó con capturado_at cargado y
+      estado Retenido; en el panel del vendedor de prueba el pago figura capturado, "a cobrar el
+      28 de octubre".
+    Estado: APROBADA. Evidencia: bitácora general, entrada 025; caso 2 de la matriz (parcial: el
+      paso a Liberado no se ejecutó).
+  PRU-12 (NUEVA) "Reembolso de un pago capturado por una denuncia resuelta con Reintegrar",
+    ejecutada el 10/10/2026.
+    Pasos: sobre la misma clase, dentro de la ventana de denuncias, el alumno denunció la
+      inasistencia del instructor y el administrador de demostración la resolvió con
+      "Reintegrar el pago".
+    Resultado esperado: pago Reembolsado; reembolso visible en Mercado Pago; una fila de
+      auditoría.
+    Resultado obtenido: el pago pasó a Reembolsado y el reembolso se reflejó en el panel de
+      Mercado Pago; en Auditoría apareció dos veces "Se reembolsó en Mercado Pago un pago ya
+      cobrado.".
+    Estado: APROBADA en lo que respecta al dinero, con un error de auditoría (KAN-66). Evidencia:
+      bitácora general, entrada 025; caso 7 de la matriz.
+  Observación: los movimientos no aparecen en la cuenta del comprador de prueba. Es esperable en
+    Checkout API: el alumno escribe la tarjeta en ActiveHub y paga como invitado, sin iniciar
+    sesión en Mercado Pago; el correo del comprador de prueba es un dato de la orden. La
+    documentación de Mercado Pago consultada no lo dice de forma explícita; la conclusión surge
+    del flujo.
+  Automatizadas: sin cambios (971 pruebas).
+  Relación con PRU-06: el reembolso por denuncia cubre una parte de la devolución del dinero,
+    pero PRU-06 (cancelación de una clase con reintegro en cascada y notificación) sigue sin
+    ejecutarse: la cancelación de una autorización sin capturar no se probó (caso 5 de la
+    matriz).
+
+ANÁLISIS ESTÁTICO: no aplica.
+
+DESPLIEGUE Y CONFIGURACIÓN: sin cambios. Para simular el paso del tiempo se modifica la fecha de
+  la clase en la base (procedimiento en docs/PRUEBAS-SANDBOX-MERCADOPAGO.md).
+
+DECISIONES: el error de auditoría se registró como tarea aparte (KAN-66) y no se corrigió en esta
+  prueba.
+
+ERRORES DETECTADOS: al reembolsar desde ActiveHub un pago capturado, Auditoría mostraba dos filas
+  "Se reembolsó en Mercado Pago un pago ya cobrado.". El dinero no se vio afectado: el reembolso
+  se hizo una sola vez y el estado final fue correcto. Causa probable en ese momento: el aviso de
+  Mercado Pago llegaba mientras la transacción del administrador todavía no había confirmado,
+  leía el pago Retenido, lo tomaba como un reembolso hecho desde el panel y auditaba; después
+  confirmaba la transacción del administrador y auditaba de nuevo. Se detectó en la pantalla
+  Auditoría durante la prueba. Corrección en la ENTRADA 013.
+
+CAPTURAS SUGERIDAS: panel del vendedor de prueba con el pago capturado "a cobrar el 28 de
+  octubre"; el mismo pago devuelto; Auditoría con las dos filas duplicadas (evidencia del
+  error).
+
+PENDIENTE QUE QUEDA: KAN-66 (ENTRADA 013); paso a Liberado en sandbox; cancelación de una
+  autorización sin capturar en sandbox.
+
+================================================================================
+ENTRADA 012
+================================================================================
+FECHA: 10/10/2026
+
+REPOSITORIO: activehub-backend
+
+RAMA Y COMMITS: feat/mp-integration: 0303997 "KAN-62: el aviso al alumno dice si su pago de
+  Mercado Pago se liberó (sin capturar: no se le cobra) o se reembolsó (ya capturado)...". Tarea
+  KAN-62 (MP-13). Sin Pull Request.
+
+TIPO: modificación de funcionalidad existente.
+
+TÍTULO: La notificación al alumno dice si su pago de Mercado Pago se liberó o se reembolsó.
+
+QUÉ CAMBIA PARA EL USUARIO: cuando la plataforma le devuelve al alumno un pago de Mercado Pago,
+  la notificación dice qué pasó con su dinero: si todavía no se había cobrado, que se liberó la
+  reserva y no se le cobra; si ya se había cobrado, que se le reembolsa. Antes decía siempre "Se
+  reintegra el pago retenido.", incluso para un pago ya cobrado, y al cancelar su propia
+  inscripción o ante la ausencia del profesor no mencionaba el pago. Aplica a: cancelación de la
+  clase, cancelación de la inscripción por el alumno, aviso de ausencia del profesor, denuncia
+  resuelta con Reintegrar y clases canceladas por una suspensión. Los pagos en efectivo
+  conservan su texto.
+
+TEXTOS DE INTERFAZ: textos que se agregan al final de la notificación al alumno (campana):
+  Pago sin cobrar: "Se liberó la reserva del pago en tu tarjeta: no se te va a cobrar."
+  Pago ya cobrado: "Te reembolsamos el pago por Mercado Pago; según tu banco, puede tardar unos
+    días en verse en tu tarjeta."
+  Texto retirado (verificado en el commit anterior a 0303997): "Se reintegra el pago retenido."
+
+DETALLE TÉCNICO: NotificacionMensajes.detalleReintegro(EstadoPago) arma el texto a partir del
+  estado que devuelve OperacionesPagoMercadoPago.reintegrar (Cancelado o Reembolsado). La usan
+  cancelarclase, cancelarinscripcion, notificarausenciaprofesor, resolverdenuncia (REINTEGRAR y
+  SUSPENDER) y crearpenalizacion.
+
+ESTADO: terminado y probado con pruebas automatizadas. Prueba en sandbox de cancelar una clase
+  con un pago sin capturar: no ejecutada (caso 5 de la matriz).
+
+HISTORIAS Y CRITERIOS: E2I-HU08-CL: criterio nuevo "Cuando el instructor cancela una clase que
+  pagué con Mercado Pago espero una notificación que diga si se liberó la reserva de mi tarjeta
+  o si se me reembolsa".
+
+PANTALLAS: sin cambios; notificaciones en la campana existente.
+
+REGLAS DE NEGOCIO: sin cambios (se aplica RN-27).
+
+MÓDULOS: pagos, notificaciones, clases, inscripciones, denuncias, penalizaciones.
+
+CASOS DE USO: ninguno nuevo; total 115. Modificados: cancelarclase, cancelarinscripcion,
+  notificarausenciaprofesor, resolverdenuncia, crearpenalizacion.
+
+ENTIDADES Y MIGRACIONES: sin cambios.
+
+TECNOLOGÍAS: sin cambios.
+
+COSTOS: sin cambios.
+
+RIESGOS: sin cambios en R02.
+
+SEGURIDAD: sin cambios.
+
+PRUEBAS (bitácora general, entrada 026): 3 nuevas (NotificacionMensajesTest con los dos textos;
+  CancelarClaseServiceTest con un pago ya capturado cuyo aviso dice que se reembolsa) y 3
+  ajustadas. Suite: "Tests run: 974, Failures: 0, Errors: 0, Skipped: 2", "BUILD SUCCESS".
+
+ANÁLISIS ESTÁTICO: no aplica.
+
+DESPLIEGUE Y CONFIGURACIÓN: sin cambios.
+
+DECISIONES: el texto se arma en un solo lugar (NotificacionMensajes) para que los cinco casos de
+  uso digan lo mismo.
+
+ERRORES DETECTADOS: un alumno al que se le reembolsaba un pago cobrado leía un texto que
+  describía otra cosa; detectado en la revisión de los criterios de KAN-62.
+
+CAPTURAS SUGERIDAS: campana del alumno con "Se liberó la reserva del pago en tu tarjeta: no se te
+  va a cobrar.".
+
+PENDIENTE QUE QUEDA: caso 5 de la matriz de sandbox.
+
+================================================================================
+ENTRADA 013
+================================================================================
+FECHA: 10/10/2026
+
+REPOSITORIO: activehub-backend
+
+RAMA Y COMMITS: feat/mp-integration: bcba07a "KAN-66: un reembolso pedido desde ActiveHub ya no
+  se audita dos veces..." y 25c5faa "KAN-66: con el pago desconectado, reintegrar decide y
+  guarda sobre la fila releída con el bloqueo, no sobre el objeto viejo del llamador...". Tarea
+  KAN-66. Sin Pull Request.
+
+TIPO: corrección.
+
+TÍTULO: Bloqueo de la fila del pago entre el reintegro de ActiveHub y el aviso de Mercado Pago:
+  el reembolso se audita una sola vez y no se decide con datos viejos.
+
+QUÉ CAMBIA PARA EL USUARIO: al devolver desde ActiveHub un pago de Mercado Pago (cancelar una
+  clase, resolver una denuncia con Reintegrar, una suspensión), Auditoría muestra una sola fila
+  del reembolso, con quien lo pidió como actor. Antes aparecía además una fila del Sistema que
+  decía, falsamente, que el reembolso se había hecho desde el panel de Mercado Pago. Además se
+  cubre un caso poco probable: si un alumno cancela su inscripción justo cuando el sistema
+  captura su pago por adelantado, ahora se detecta que ya se cobró y se reembolsa, en lugar de
+  fallar la cancelación. No hay textos nuevos.
+
+TEXTOS DE INTERFAZ: no aplica.
+
+DETALLE TÉCNICO:
+  - OperacionesPagoMercadoPago.reintegrar, antes de llamar a Mercado Pago, toma el bloqueo de la
+    fila del pago (SELECT ... FOR UPDATE, LockModeType PESSIMISTIC_WRITE) y la relee:
+    EntityManager.refresh si el pago está gestionado; EntityManager.find por id si está
+    desconectado (cancelarinscripcion llama antes a ClaseRepository.liberarCupo, una consulta de
+    modificación con clearAutomatically que desconecta las entidades, y refresh sobre una
+    entidad desconectada lanza IllegalArgumentException). El bloqueo dura hasta que confirma la
+    transacción del llamador. Si al releer el pago ya figura Cancelado o Reembolsado, no se
+    llama a Mercado Pago ni se audita de nuevo.
+  - 25c5faa: con el pago desconectado, reintegrar decide (estado, si está capturado, orden,
+    clave de idempotencia) y escribe sobre la instancia releída, la guarda y después copia
+    estado, autorizado_hasta y status_detail al objeto del llamador, que los usa para el aviso al
+    alumno. Antes decidía con el objeto viejo y su merge podía borrar capturado_at.
+  - RecibirNotificacionMercadoPagoService pide la fila con bloqueo
+    (PagoRepository.bloquearPorMpOrderId) antes de leer el pago y de consultar a Mercado Pago:
+    si hay un reintegro en curso, espera a que confirme y encuentra el pago ya Reembolsado.
+  - Revisión de los siete llamadores de reintegrar (cancelarclase, cancelarinscripcion,
+    notificarausenciaprofesor, resolverdenuncia con REINTEGRAR y con SUSPENDER,
+    crearpenalizacion y el webhook al aprobar tarde un pago en revisión): los siete corren dentro
+    de un método @Transactional. La compensación de inscribirse no pasa por reintegrar.
+
+ESTADO: terminado y probado con pruebas automatizadas. La espera real sobre el bloqueo de
+  PostgreSQL no se ejercita con pruebas automatizadas (usan objetos simulados). Verificación en
+  sandbox (una sola fila de auditoría): no ejecutada (caso 7b de la matriz).
+
+HISTORIAS Y CRITERIOS: sin cambios en las historias del catálogo. Regla de auditoría de
+  movimientos de dinero (RN-14 según la bitácora general): el registro vuelve a ser fiel.
+
+PANTALLAS: no aplica.
+
+REGLAS DE NEGOCIO: sin cambios.
+
+MÓDULOS: pagos, auditoría.
+
+CASOS DE USO: ninguno nuevo; total 115. Modificado: recibirnotificacionmercadopago; modificados
+  indirectamente, por reintegrar: cancelarclase, cancelarinscripcion, notificarausenciaprofesor,
+  resolverdenuncia, crearpenalizacion.
+
+ENTIDADES Y MIGRACIONES: sin migraciones. PagoRepository.bloquearPorMpOrderId (consulta con
+  bloqueo PESSIMISTIC_WRITE).
+
+TECNOLOGÍAS: bloqueo pesimista de JPA sobre PostgreSQL.
+
+COSTOS: sin cambios.
+
+RIESGOS: R24 (carrera entre el reintegro propio y el aviso de Mercado Pago): mitigado con el
+  bloqueo de fila; queda pendiente la verificación en sandbox. R02: mitigación nueva (punto B.6:
+  un mismo hecho ya no se procesa dos veces).
+
+SEGURIDAD: sin cambios.
+
+PRUEBAS (bitácora general, entradas 027 y 032): OperacionesPagoMercadoPagoTest +5 (el bloqueo
+  se toma antes de llamar a Mercado Pago; si al releer ya estaba Reembolsado no se llama ni se
+  audita; con el pago desconectado se bloquea con find y no con refresh; desconectado y ya
+  Reembolsado no se llama;
+  reintegrar_pagoDesconectadoConDatosViejos_decideConLaFilaReleidaYNoLaPisa);
+  RecibirNotificacionMercadoPagoServiceTest +2 (el webhook bloquea antes de leer y de consultar;
+  una orden reembolsada cuyo pago ya figura Reembolsado no se audita de nuevo). Suite después de
+  25c5faa: "Tests run: 1005, Failures: 0, Errors: 0, Skipped: 2", "BUILD SUCCESS".
+
+ANÁLISIS ESTÁTICO: no aplica.
+
+DESPLIEGUE Y CONFIGURACIÓN: el backend en ejecución tiene que reiniciarse para tomar la
+  corrección.
+
+DECISIONES: bloqueo pesimista de la fila del pago en lugar de deduplicar la auditoría:
+  deduplicar habría escondido el síntoma y dejado al webhook decidiendo con un estado viejo. Se
+  bloquea solo la tabla pago. Todo llamador de reintegrar tiene que ser transaccional.
+
+ERRORES DETECTADOS: el de la ENTRADA 011 (auditoría duplicada), corregido; el de la entidad
+  desconectada, que la primera versión de la corrección habría introducido, evitado antes del
+  commit con una prueba específica; y el de la decisión con datos viejos, corregido en 25c5faa.
+
+CAPTURAS SUGERIDAS: Auditoría con una sola fila "Se reembolsó en Mercado Pago un pago ya
+  cobrado." después de resolver una denuncia con Reintegrar (cuando se ejecute el caso 7b).
+
+PENDIENTE QUE QUEDA: caso 7b de la matriz de sandbox.
+
+================================================================================
+ENTRADA 014
+================================================================================
+FECHA: 10/10/2026
+
+REPOSITORIO: ambos
+
+RAMA Y COMMITS: backend, feat/mp-integration: d093b40 "KAN-63: listarmispagos informa si el pago
+  ya se capturó y listarrosterclase suma por alumno el estado, el método, si se capturó y el
+  neto que recibe el instructor...". Frontend, integracion: 19c2e41 "KAN-63: estados de pago
+  visibles y explicados...". Tarea KAN-63 (MP-14). Sin Pull Request.
+
+TIPO: modificación de funcionalidad existente.
+
+TÍTULO: Estados de pago visibles y explicados para el alumno y el instructor.
+
+QUÉ CAMBIA PARA EL USUARIO:
+  Alumno, Mis pagos: la columna "Estado pago" muestra una etiqueta y debajo una frase que explica
+  qué pasó con su dinero; distingue un pago reservado en la tarjeta de uno ya cobrado, y una
+  devolución por Mercado Pago de un pago en efectivo cancelado. Antes los pagos Rechazado,
+  Reembolsado y En revisión aparecían con la etiqueta verde "Disponible". Los totales separan lo
+  cobrado de lo reservado.
+  Instructor, gestión de la clase: la lista de alumnos inscriptos suma las columnas "Pago" (qué
+  pasa con ese pago) y "A recibir" (lo que recibe por ese alumno), y al pie el total de la clase
+  (punto A.5 del checklist).
+
+TEXTOS DE INTERFAZ:
+  Mis pagos (E3A-PAN-09), etiqueta y frase por estado (lib/status.ts, explicarPagoAlumno):
+    Retenido sin capturar: "Retenido hasta la clase" / "Reservado en tu tarjeta: todavía no se te
+      cobró."
+    Retenido capturado y Liberado: "Cobrado" / "Se cobró al dictarse la clase."
+    Efectivo: "Efectivo" / "Se paga en mano al instructor."
+    EnRevision: "En revisión" / "Mercado Pago está revisando el pago."
+    Rechazado: "Rechazado" / "Mercado Pago no aprobó el pago: no se te cobró."
+    Reembolsado: "Reembolsado" / "Se te devolvió por Mercado Pago."
+    Cancelado con Mercado Pago: "Retención liberada" / "No se te cobró: se liberó la reserva de
+      tu tarjeta."
+    Cancelado en efectivo: "Pago cancelado" / "Coordiná con el instructor la devolución de lo que
+      pagaste."
+  Mis pagos, totales: "Total pagado", "Retenido (Mercado Pago)", "Reintegrado".
+  Mis pagos, recuadro informativo: "Con Mercado Pago, el pago queda reservado en tu tarjeta hasta
+    que se dicta la clase y recién ahí se te cobra. Si la clase se cancela antes, la reserva se
+    libera y no se te cobra nada; si ya se te había cobrado, se te reembolsa." Reemplaza a "En
+    Mercado Pago el dinero queda Retenido hasta que la clase se dicta; luego pasa a Liberado. Si
+    la clase se cancela, se reintegra."
+  Gestión de la clase (E2I-PAN-06), columnas "Pago" y "A recibir"; pie "Total a recibir por esta
+    clase:". Etiqueta y frase (explicarPagoInstructor):
+    Retenido sin capturar: "Retenido" / "Se cobra al dictarse la clase."
+    Retenido capturado: "Cobrado" / "Se libera 24 h después de la clase si no hay denuncias."
+    Liberado: "Liberado" / "Acreditado en tu cuenta."
+    Efectivo: "Efectivo" / "Se cobra en mano."
+    EnRevision: "En revisión" / "Mercado Pago todavía no lo aprobó."
+    Rechazado: "Rechazado" / "Mercado Pago no aprobó el pago."
+    Reembolsado: "Reintegrado" / "Se le devolvió al alumno."
+    Cancelado: "Reintegrado" / "No se cobró."
+
+DETALLE TÉCNICO:
+  - Backend: listarmispagos (GET /api/alumno/pagos, permiso inscripciones.gestionar) devuelve
+    capturado; listarrosterclase (GET /api/instructor/clases/{claseId}/roster, permiso
+    clases.gestionar) devuelve por alumno pagoEstado, pagoMetodo, pagoCapturado y pagoNeto
+    (monto_instructor si está calculado; si no, monto menos comisión).
+  - Frontend: EstadoPago (lib/types.ts) suma Rechazado, Reembolsado y EnRevision; StatusBadge
+    suma el tipo "reembolsado"; lib/status.ts suma explicarPagoAlumno y explicarPagoInstructor;
+    MisPagos.tsx y GestionClase.tsx las usan. La frase de 24 h replica
+    VentanaPagos.PERIODO_DENUNCIAS del backend.
+
+ESTADO: terminado y probado con pruebas automatizadas. Verificación visual en el navegador con
+  datos de sandbox: no ejecutada (casos 13 y 14 de la matriz).
+
+HISTORIAS Y CRITERIOS:
+  E3A-HU07-MP (mis pagos): criterio nuevo "Cuando veo mis pagos espero que cada estado diga con
+    una frase si el monto está reservado, cobrado, devuelto o rechazado".
+  E2I-HU07-GC (gestión de clase): criterio nuevo "Cuando veo los alumnos de mi clase espero ver
+    el estado del pago de cada uno, lo que recibo por cada uno y el total de la clase".
+
+PANTALLAS: E3A-PAN-09 (mis pagos) y E2I-PAN-06 (gestión de la clase por el instructor), sin
+  pantallas nuevas.
+
+REGLAS DE NEGOCIO: RN-26 visible para los dos roles.
+
+MÓDULOS: pagos, inscripciones, clases.
+
+CASOS DE USO: ninguno nuevo; total 115. Modificados: listarmispagos, listarrosterclase.
+
+ENTIDADES Y MIGRACIONES: sin cambios.
+
+TECNOLOGÍAS: sin cambios.
+
+COSTOS: sin cambios. Como la comisión es 0, "A recibir" coincide hoy con el precio pagado.
+
+RIESGOS: R27 (diferencia entre Liberado y la acreditación real): el texto "Acreditado en tu
+  cuenta." para Liberado puede no coincidir con la disponibilidad del dinero en Mercado Pago
+  (ver ENTRADA 011).
+
+SEGURIDAD: el roster solo lo ve el instructor dueño de la clase (regla existente).
+
+PRUEBAS (bitácora general, entrada 028): backend +2 (ListarMisPagosServiceTest: un Retenido
+  capturado se informa como capturado; ListarRosterClaseServiceTest: pago y neto por alumno) y 1
+  ajustada; suite "Tests run: 982, Failures: 0, Errors: 0, Skipped: 2". Frontend +5 en
+  src/lib/status.test.ts; "Test Files  17 passed (17)", "Tests  150 passed (150)".
+
+ANÁLISIS ESTÁTICO: ESLint "11 problems (0 errors, 11 warnings)"; "npx tsc -b" sin errores; build
+  correcto (bitácora general, entrada 028).
+
+DESPLIEGUE Y CONFIGURACIÓN: sin cambios.
+
+DECISIONES: la frase que explica cada estado se arma en el frontend porque depende de quién mira
+  (alumno o instructor); el backend manda el dato (estado, método, capturado).
+
+ERRORES DETECTADOS: pagos Reembolsado, Rechazado o En revisión mostrados con la etiqueta verde
+  "Disponible": pagoStatusType no contemplaba esos estados y StatusBadge caía al estilo por
+  defecto. Corregido.
+
+CAPTURAS SUGERIDAS: Mis pagos con un pago "Retenido hasta la clase", uno "Cobrado" y uno
+  "Reembolsado"; gestión de la clase con las columnas "Pago" y "A recibir" y el total al pie.
+
+PENDIENTE QUE QUEDA: casos 13 y 14 de la matriz.
+
+================================================================================
+ENTRADA 015
+================================================================================
+FECHA: 10/10/2026
+
+REPOSITORIO: ambos
+
+RAMA Y COMMITS: backend, feat/mp-integration: 4eeb791 "KAN-64 (documentación): .env.example con
+  todas las variables...", df81424 "Matriz de pruebas de Mercado Pago: casos 15 a 17...".
+  Frontend, integracion: 83125b7 "KAN-64 (documentación)...". Tarea KAN-64 (MP-15, parte de
+  documentación). Sin Pull Request.
+
+TIPO: documentación.
+
+TÍTULO: Documentación de la integración y matriz de pruebas manuales en sandbox.
+
+QUÉ CAMBIA PARA EL USUARIO: no cambia nada en la aplicación. Cambia la documentación para quien
+  instala, prueba o mantiene el sistema.
+
+TEXTOS DE INTERFAZ: no aplica.
+
+DETALLE TÉCNICO:
+  - activehub-backend/.env.example (nuevo, versionado): todas las variables de entorno, agrupadas
+    y comentadas, sin valores secretos.
+  - activehub-backend/CLAUDE.md y README.md: sección "Mercado Pago: el marketplace real"
+    (modelo, ciclo del pago, decisiones, sandbox, variables, pendientes); se corrigieron datos
+    desactualizados que describían pagos simulados.
+  - docs/PRUEBAS-SANDBOX-MERCADOPAGO.md (nuevo): preparación, cómo simular el paso del tiempo,
+    consulta de verificación y una matriz de 17 casos (más el 7b) con resultado esperado y
+    estado. Al 12/10/2026: probados los casos 1 y 7; parcial el 2; pendientes 3 a 6, 7b y 8 a 17.
+  - activehub-frontend/CLAUDE.md y README.md: sección "Pagos con Mercado Pago" y corrección de
+    la tabla del roadmap.
+  - Hallazgos documentados sin cambiar código: MP_ACCESS_TOKEN se lee pero no se usa;
+    VITE_MERCADOPAGO_PUBLIC_KEY está declarada pero no se usa.
+
+ESTADO: terminado (documentación). La ejecución de la matriz sigue parcial.
+
+HISTORIAS Y CRITERIOS: no aplica.
+
+PANTALLAS: no aplica.
+
+REGLAS DE NEGOCIO: no aplica.
+
+MÓDULOS: pagos.
+
+CASOS DE USO: sin cambios; total 115.
+
+ENTIDADES Y MIGRACIONES: sin cambios.
+
+TECNOLOGÍAS: sin cambios.
+
+COSTOS: sin cambios.
+
+RIESGOS: R02: la configuración del sandbox queda documentada y reproducible.
+
+SEGURIDAD: .env.example solo tiene nombres de variables y valores por defecto no secretos.
+
+PRUEBAS: sin cambios de código.
+
+ANÁLISIS ESTÁTICO: no aplica.
+
+DESPLIEGUE Y CONFIGURACIÓN (punto J.3, configuración inicial de la plataforma): cargar las
+  variables de Mercado Pago de .env.example; crear la aplicación en Mercado Pago con OAuth y la
+  URL de redireccionamiento igual a MP_REDIRECT_URI; generar MP_TOKEN_ENCRYPTION_KEY (32 bytes en
+  base64) y no cambiarla después (si cambia, los tokens guardados no se pueden leer y cada
+  instructor tiene que volver a vincular); configurar en la sección Webhooks la URL pública del
+  webhook y copiar su clave a MP_WEBHOOK_SECRET; definir FRONTEND_URL.
+
+DECISIONES: no se quitaron MP_ACCESS_TOKEN ni VITE_MERCADOPAGO_PUBLIC_KEY del código porque es un
+  cambio fuera del alcance de la documentación; queda anotado.
+
+ERRORES DETECTADOS: documentación desactualizada (pagos descriptos como simulados, valores por
+  defecto viejos). Corregida.
+
+CAPTURAS SUGERIDAS: no aplica.
+
+PENDIENTE QUE QUEDA: ejecutar la matriz.
+
+================================================================================
+ENTRADA 016
+================================================================================
+FECHA: 10/10/2026
+
+REPOSITORIO: ambos
+
+RAMA Y COMMITS: backend, feat/mp-integration: ba9c1a9 "KAN-55: la vinculación con Mercado Pago se
+  renueva sola y el instructor puede desvincularla..." y 3e4c6d9 (bitácora general). Frontend,
+  integracion: 1019e1c (bitácora general) y ee00004 "KAN-67: botón «Desvincular» en la tarjeta
+  de Mercado Pago del Panel del instructor...". Tareas KAN-55 (MP-06) y KAN-67. Sin Pull
+  Request.
+
+TIPO: funcionalidad nueva.
+
+TÍTULO: Renovación automática de la vinculación con Mercado Pago y desvinculación de la cuenta
+  del instructor.
+
+QUÉ CAMBIA PARA EL USUARIO:
+  La vinculación del instructor ya no vence sin aviso. Antes, cuando vencía el token (Mercado
+  Pago lo emite por 180 días), las clases pasaban a aceptar solo efectivo sin que el instructor
+  se enterara. Ahora, cada hora, el sistema renueva los tokens que vencen dentro de los próximos
+  7 días. Si Mercado Pago rechaza la renovación (por ejemplo, porque el instructor quitó el
+  permiso a la aplicación), la cuenta queda vencida, el instructor recibe una notificación con un
+  ícono de alerta y tiene que volver a vincularla desde su Panel. Si Mercado Pago no responde, se
+  reintenta en la hora siguiente.
+  En la tarjeta "Cobros con Mercado Pago" aparece el botón "Desvincular" (con la cuenta vinculada
+  o vencida). Pide confirmación y avisa que desde ese momento las clases solo aceptan efectivo. No
+  se puede desvincular mientras haya pagos de alumnos todavía reservados, cobrados sin liberar o
+  en revisión: el diálogo lo explica y dice cuántos son.
+  El administrador ve tres acciones nuevas en Auditoría y un ícono de alerta en las
+  notificaciones de captura fallida.
+
+TEXTOS DE INTERFAZ:
+  Tarjeta "Cobros con Mercado Pago" (Panel del instructor):
+    Cuenta vencida: "La autorización de tu cuenta venció. Volvé a vincularla para seguir cobrando
+      con tarjeta."; botón "Volver a vincular".
+    Botón: "Desvincular".
+  Diálogo de confirmación:
+    Título: "¿Desvincular tu cuenta de Mercado Pago?"
+    Texto: "Desde ese momento tus clases solo van a aceptar pagos en efectivo. Podés volver a
+      vincularla cuando quieras."
+    Botones: "Cancelar" / "Sí, desvincular"; mientras procesa, "Desvinculando…". Con un error a la
+      vista, "Cancelar" pasa a "Cerrar" y el botón de confirmar desaparece.
+    Error 409 (código MERCADOPAGO_CON_PAGOS_PENDIENTES), texto del backend: con un pago, "No podés
+      desvincular tu cuenta de Mercado Pago todavía: hay 1 pago de un alumno que todavía se cobra
+      o se devuelve a través de ella. Vas a poder desvincularla cuando esas clases finalicen y los
+      pagos se acrediten."; con N pagos, "No podés desvincular tu cuenta de Mercado Pago todavía:
+      hay N pagos de alumnos que todavía se cobran o se devuelven a través de ella. Vas a poder
+      desvincularla cuando esas clases finalicen y los pagos se acrediten."
+    Error 404: "No tenés una cuenta de Mercado Pago vinculada."
+    Error sin respuesta del servidor (frontend): "No pudimos desvincular tu cuenta. Intentá de
+      nuevo."
+  Notificación al instructor (tipo MERCADOPAGO_TOKEN_VENCIDO, sin enlace): "Mercado Pago no aceptó
+    renovar la vinculación de tu cuenta. Hasta que la vuelvas a vincular desde tu Panel, tus
+    clases solo aceptan pago en efectivo."
+  Campana: ícono de alerta con texto alternativo "Requiere tu atención" para
+    MERCADOPAGO_TOKEN_VENCIDO y CAPTURA_PAGO_FALLIDA.
+  Auditoría, columna Detalle: "<actor> desvinculó su cuenta de Mercado Pago."; "El sistema
+    renovó la vinculación con Mercado Pago de un instructor antes de que venciera."; "Mercado
+    Pago rechazó la renovación de la vinculación de un instructor: tiene que volver a vincular su
+    cuenta."
+
+DETALLE TÉCNICO:
+  - Caso de uso nuevo renovartokensmercadopago: RenovarTokensMercadoPagoScheduler
+    (@Scheduled(fixedRate = 1 h)) y RenovarTokensMercadoPagoService, con Clock inyectado.
+    VENTANA_RENOVACION = 7 días. Busca los ids de las cuentas VINCULADA con expires_at anterior a
+    ahora + 7 días (CuentaMercadoPagoInstructorRepository.findIdsQueVencenAntesDe) y carga cada
+    una por separado, sin @Transactional, para que una cuenta ilegible no corte la corrida.
+    Guarda el access token y el refresh token nuevos (el refresh token viejo deja de servir).
+  - MercadoPagoOAuthClient.renovar(refreshToken): POST /oauth/token con grant_type
+    refresh_token. Un 4xx lanza RenovacionRechazadaException (definitivo: TOKEN_VENCIDO, tokens
+    borrados, notificación); un 5xx o la falta de conexión lanzan PagoException (transitorio: sin
+    cambios, se reintenta). Una cuenta sin refresh token se trata como rechazo.
+  - Caso de uso nuevo desvincularcuentamp: DELETE /api/instructor/mercadopago, permiso
+    mercadopago.vincular, responde 204. El instructor sale del token. Cuenta los pagos de Mercado
+    Pago del instructor en Retenido o EnRevision (PagoRepository.countDeMercadoPagoDeInstructorEn);
+    si hay alguno, 409. Si no, un UPDATE pone la fila en DESVINCULADA con access_token,
+    refresh_token y expires_at en NULL, sin cargar la entidad. La fila no se borra. Una cuenta
+    TOKEN_VENCIDO también se puede desvincular; una ya DESVINCULADA no hace nada (idempotente,
+    sin auditoría).
+  - Enumeraciones: AuditAccion suma MERCADOPAGO_DESVINCULADA, MERCADOPAGO_TOKEN_RENOVADO y
+    MERCADOPAGO_TOKEN_VENCIDO; TipoNotificacion suma MERCADOPAGO_TOKEN_VENCIDO; ApiErrorCode suma
+    MERCADOPAGO_CON_PAGOS_PENDIENTES (409) con CuentaMercadoPagoConPagosPendientesException.
+  - Frontend: DataContext.desvincularMercadoPago(); TarjetaMercadoPago.tsx con el diálogo (usa
+    el componente Modal) y, al terminar bien, vuelve a pedir GET /api/instructor/mercadopago;
+    lib/notificaciones.ts suma esAlerta(tipo); NotificationBell.tsx dibuja el ícono de alerta.
+
+ESTADO: terminado y probado con pruebas automatizadas. Prueba manual de la renovación (forzar
+  expires_at en el pasado y esperar la tarea) y verificación en el navegador del botón: no
+  ejecutadas (casos 15 a 17 de la matriz).
+
+HISTORIAS Y CRITERIOS: E2I-HU13 (NUEVA, ENTRADA 003), criterios propuestos que se suman:
+  6. Cuando presiono "Desvincular" y confirmo, sin pagos pendientes, espero que mi cuenta quede
+     desvinculada y que la tarjeta vuelva a ofrecer "Vincular Mercado Pago".
+  7. Cuando intento desvincular con pagos de alumnos todavía reservados o en revisión espero ver
+     cuántos son y que la cuenta siga vinculada.
+  8. Cuando Mercado Pago rechaza la renovación de mi vinculación espero recibir una notificación
+     y que mis clases pasen a aceptar solo efectivo hasta que vuelva a vincular.
+
+PANTALLAS: Panel del instructor: cambia la tarjeta "Cobros con Mercado Pago" y se agrega un
+  diálogo de confirmación (no es una pantalla nueva). Campana de notificaciones de los tres roles:
+  ícono de alerta.
+
+REGLAS DE NEGOCIO:
+  NUEVA RN-30: "Un instructor no puede desvincular su cuenta de Mercado Pago mientras tenga pagos
+    de Mercado Pago en estado Retenido (capturados o no) o EnRevision, porque se cobran,
+    reintegran o consultan con su cuenta."
+  NUEVA RN-31: "La vinculación con Mercado Pago se renueva automáticamente cuando faltan 7 días o
+    menos para su vencimiento; si Mercado Pago rechaza la renovación, la cuenta queda con el
+    token vencido, se borran sus tokens y se avisa al instructor."
+
+MÓDULOS: pagos, tareas programadas, notificaciones, auditoría.
+
+CASOS DE USO: 2 nuevos (desvincularcuentamp, renovartokensmercadopago). Total: 117.
+
+ENTIDADES Y MIGRACIONES: sin migración nueva. Se empiezan a escribir los estados DESVINCULADA y
+  TOKEN_VENCIDO, que ya existían en el CHECK de V28.
+
+TECNOLOGÍAS: flujo refresh_token del OAuth de Mercado Pago
+  (https://www.mercadopago.com.ar/developers/es/docs/security/oauth/renewal).
+
+COSTOS: sin cambios.
+
+RIESGOS: R22 (vencimiento o revocación de la vinculación): mitigado: renovación automática con
+  168 intentos (uno por hora durante 7 días) y aviso al instructor. R26: "Una cuenta en
+  TOKEN_VENCIDO con pagos retenidos no puede capturarlos ni reintegrarlos." Probabilidad baja;
+  impacto alto (cobros que no entran, reintegros bloqueados con 409); mitigación: aviso a la
+  administración al sexto intento de captura fallido (ENTRADA 010) y bloqueo de la
+  desvinculación voluntaria con pagos pendientes (RN-30).
+
+SEGURIDAD: los tokens nunca van a la auditoría ni a los logs. Al desvincular o al quedar
+  TOKEN_VENCIDO se borran los dos tokens de la base. Desvincular exige sesión y el permiso
+  mercadopago.vincular; el instructor sale del token, nunca del cuerpo (punto F.3).
+
+PRUEBAS (bitácora general, entradas 030 y 031): backend: archivos nuevos
+  RenovarTokensMercadoPagoServiceTest (8), DesvincularCuentaMPServiceTest (6) y
+  DesvincularCuentaMPControllerTest (2), y MercadoPagoOAuthClientTest +3 (renovación correcta,
+  4xx rechazada, 5xx transitorio). La suite pasó de 982 a 1004 pruebas (22 más; la bitácora
+  general dice "23 nuevas" y detalla 19, diferencia no resuelta): "Tests run: 1004, Failures: 0,
+  Errors: 0, Skipped: 2", 209 archivos. Frontend: archivo nuevo
+  src/lib/notificaciones.test.ts (3 pruebas); "Test Files  18 passed (18)", "Tests  153 passed
+  (153)".
+
+ANÁLISIS ESTÁTICO: ESLint 0 errores y 11 advertencias; verificación de tipos sin errores
+  (bitácora general, entrada 031).
+
+DESPLIEGUE Y CONFIGURACIÓN: sin variables nuevas; la renovación usa MP_CLIENT_ID y
+  MP_CLIENT_SECRET.
+
+DECISIONES:
+  - Bloquear la desvinculación también con pagos Retenido capturados y con EnRevision, no solo
+    con los sin capturar: los capturados se reembolsan con el token del instructor durante el
+    período de denuncias, y los en revisión los resuelve el webhook consultando con ese token.
+  - Ventana de 7 días con una corrida por hora.
+  - Notificación sin enlace: no existe un destino de notificación para el Panel del instructor.
+  - El error 409 se muestra dentro del diálogo, donde el instructor confirmó.
+  - Después de desvincular se vuelve a pedir el estado al backend en lugar de suponerlo.
+  - Se conservó el nombre de paquete desvincularcuentamp, que ya había empezado un integrante,
+    en lugar de desvincularcuentamercadopago; la ruta sí es la de la tarea.
+
+ERRORES DETECTADOS: un borrador previo de la desvinculación (POST
+  /api/instructor/cuenta-mercadopago/desvincular, con la lógica en el Controller) no seguía la
+  convención de casos de uso; se reemplazó.
+
+CAPTURAS SUGERIDAS: tarjeta con el botón "Desvincular"; diálogo "¿Desvincular tu cuenta de
+  Mercado Pago?"; el mismo diálogo con el mensaje de pagos pendientes; campana con la
+  notificación de vinculación vencida y el ícono de alerta.
+
+PENDIENTE QUE QUEDA: casos 15 a 17 de la matriz; criterio 4 de KAN-55.
+
+================================================================================
+ENTRADA 017
+================================================================================
+FECHA: 12/10/2026
+
+REPOSITORIO: ambos
+
+RAMA Y COMMITS: backend, feat/mp-integration, último commit df81424; frontend, integracion,
+  último commit 583bc00. Sin cambios de código en esta entrada. Sin Pull Request. Ninguna de las
+  dos ramas estaba empujada al remoto con estos commits.
+
+TIPO: pruebas.
+
+TÍTULO: Medición del estado actual, hallazgos y cierre provisorio de la documentación de la
+  integración.
+
+QUÉ CAMBIA PARA EL USUARIO: no cambia nada. Se midió el sistema y se revisó el código para dejar
+  la foto del 12/10/2026.
+
+TEXTOS DE INTERFAZ: se verificó, buscando cada texto en el código, que los textos transcriptos en
+  las entradas 002 a 016 existen tal cual. Los textos "El instructor todavía no puede cobrar con
+  Mercado Pago. Podés inscribirte pagando en efectivo.", "Esta operación sobre pagos de Mercado
+  Pago todavía no está disponible." y "Se reintegra el pago retenido." ya no existen en el código
+  actual; se verificaron en los commits ce73500 y anterior a 0303997.
+  Hallazgo de escritura: la pantalla de inscripción (E3A-PAN-07) muestra "MercadoPago", junto,
+  en cuatro textos ("MercadoPago" como nombre de la opción, "Pagar con MercadoPago", "...en una
+  ventana segura de MercadoPago..." y "Pagar $<precio> con MercadoPago"). El resto de la
+  aplicación escribe "Mercado Pago". Se transcriben literalmente y queda como pendiente
+  unificarlos.
+
+DETALLE TÉCNICO:
+  - Mediciones (comandos y salidas en el ESTADO GENERAL): backend 1005 pruebas en 209 archivos,
+    0 fallos, 2 omitidas; 117 casos de uso; 32 migraciones; frontend 153 pruebas en 18 archivos,
+    cobertura 71,95 % de sentencias; ESLint 0 errores y 11 advertencias; tsc -b sin errores.
+  - Interfaz de pagos y sus implementaciones (punto 4.8 del formato): la interfaz propia es
+    com.activehub.shared.payments.PaymentGateway. Hoy tiene una sola implementación,
+    com.activehub.shared.payments.MercadoPagoGateway. Las implementaciones anteriores,
+    MockPaymentGateway (simulada) y MercadoPagoPaymentGateway (primer intento), se eliminaron en
+    ce73500. Los casos de uso no llaman a MercadoPagoGateway directamente: dependen de
+    PaymentGateway y de OperacionesPagoMercadoPago, que concentra la captura y el reintegro.
+  - Hallazgo: no existe conciliación periódica de pagos. PaymentGateway.consultar solo se llama
+    desde el webhook (verificado buscando sus usos). Consecuencia: si el aviso de Mercado Pago no
+    llega, un pago EnRevision queda en ese estado. Al finalizar la clase, FinalizarClasesVencidas
+    cancela las inscripciones en PagoPendiente (incluida la de ese pago), pero el pago sigue
+    EnRevision y la orden no se cancela en Mercado Pago hasta que llegue un aviso. Si Mercado
+    Pago aprueba tarde y el aviso llega, el webhook cancela la orden (ENTRADA 009). Responde a
+    los puntos B.5 y D.5 del checklist: el cupo queda ocupado mientras el pago está en revisión,
+    se libera al rechazarse o cancelarse (webhook) o al finalizar la clase, y no se libera por
+    tiempo.
+  - Hallazgo: com.mercadopago:sdk-java 3.7.0 está en pom.xml y ningún archivo de src lo importa.
+  - Hallazgo: las clases MercadoPagoOrderRequest y MercadoPagoOrderResponse, creadas en el
+    primer intento (4701cbe), siguen en uso: MercadoPagoGateway las usa para el cuerpo de la
+    orden y su respuesta.
+  - Hallazgo: la cobertura del frontend bajó de 75,25 % a 71,95 % de sentencias. No es una baja
+    de calidad del código probado: la ENTRADA 016 agregó pruebas de lib/notificaciones.ts y el
+    proveedor v8 ahora incluye ese archivo en la medición, con 30,43 % de sentencias cubiertas.
+    El 75,25 % no se había vuelto a medir desde la bitácora general, entrada 011.
+  - Hallazgo: el backend no tiene integración continua, y la del frontend no corrió sobre este
+    código porque los commits no se empujaron.
+  - Hallazgo: no hay pruebas automatizadas del frontend para el flujo de inscripción y pago.
+
+ESTADO: terminado. Declaración del punto K.1 del checklist: la integración real con Mercado Pago
+  queda PARCIAL, implementada completa y funcionando solo en el entorno de pruebas (sandbox).
+  Detalle del punto K.2:
+    Funciona y está probado contra el sandbox: vinculación por OAuth, autorización al
+      inscribirse, captura al finalizar la clase y reembolso de un pago capturado por denuncia.
+    Implementado con pruebas automatizadas, sin prueba en sandbox: pago en revisión y su
+      resolución por webhook, rechazo de tarjeta, cancelación de una autorización sin capturar
+      (cancelar clase o inscripción), paso a Liberado, captura anticipada, aviso a la
+      administración, corrección de la auditoría duplicada, renovación y desvinculación de la
+      cuenta, estados de pago en las pantallas.
+    No implementado: conciliación sin webhook, reintegro parcial, comisión de la plataforma
+      (siempre 0), 3DS, otros medios de pago.
+    No hecho: despliegue, URL pública del webhook, configuración y prueba en producción, Pull
+      Request y aprobación.
+  El pendiente número 1 del informe ("integración real con Mercado Pago") pasa de PENDIENTE a
+  PARCIAL.
+
+HISTORIAS Y CRITERIOS: resumen de las entradas 002 a 016: afectadas E3A-HU05-IN, E3A-HU06-MC,
+  E3A-HU07-MP, E2I-HU07-GC, E2I-HU08-CL; NUEVA E2I-HU13 con 8 criterios propuestos.
+
+PANTALLAS: resumen: modificadas E3A-PAN-07 (inscripción y pago), E3A-PAN-09 (mis pagos),
+  E2I-PAN-06 (gestión de la clase), Panel del instructor (tarjeta "Cobros con Mercado Pago" y
+  diálogo de desvinculación) y la campana de notificaciones. E3A-PAN-08 (mis clases) no cambió
+  de pantalla; cambió el efecto de cancelar una inscripción pagada con Mercado Pago. Pantallas
+  nuevas: ninguna. Mapa de navegación: el Panel del instructor sale hacia el sitio de Mercado
+  Pago (OAuth) y vuelve al Panel con ?mercadopago=vinculada, =cancelada o =error.
+
+REGLAS DE NEGOCIO: resumen: nuevas RN-25 a RN-31 (entradas 004, 006, 010, 007, 008, 016);
+  modificada la regla de retención y liberación (RN-04 según la bitácora general), cuya nueva
+  formulación completa es RN-26.
+
+MÓDULOS: resumen: pagos, inscripciones, clases, catálogo, notificaciones, auditoría, roles y
+  permisos, tareas programadas, denuncias, penalizaciones.
+
+CASOS DE USO: total 117 (antes 111): 6 nuevos (iniciarvinculacionmercadopago,
+  completarvinculacionmercadopago, obtenercuentamercadopago, recibirnotificacionmercadopago,
+  desvincularcuentamp, renovartokensmercadopago); ninguno eliminado; modificados: inscribirse,
+  obteneractividad, confirmarcobroefectivo, cancelarinscripcion, cancelarclase,
+  notificarausenciaprofesor, crearpenalizacion, resolverdenuncia, finalizarclasesvencidas,
+  liberarpagos, listarmispagos, listarrosterclase, listarauditoria (descripciones nuevas).
+
+ENTIDADES Y MIGRACIONES: resumen: entidad nueva CuentaMercadoPagoInstructor; entidad Pago con
+  ocho columnas nuevas (mp_order_id, status_detail, comision, monto_instructor,
+  autorizado_hasta, idempotency_key, capturado_at, intentos_captura); EstadoPago con siete
+  valores; migraciones V28 a V32. Identificadores externos guardados (punto E.3):
+  pago.mp_order_id (id de la orden de Mercado Pago; con él se captura, cancela, reembolsa y
+  consulta, y el webhook encuentra el pago), cuenta_mercadopago_instructor.mp_user_id (usuario
+  de Mercado Pago del instructor, para trazabilidad) y pago.referencia_externa (desde la ENTRADA
+  002 guarda también el id de la orden, para los caminos anteriores). No se guarda un
+  identificador de preferencia porque no se usa Checkout Pro.
+
+TECNOLOGÍAS: resumen: Mercado Pago Orders API y OAuth por HTTP con RestClient, sin SDK de Java;
+  SDK JavaScript v2 con Card Payment Brick; dependencia com.mercadopago:sdk-java 3.7.0 declarada
+  sin uso.
+
+COSTOS: no se pudo confirmar en esta fecha la comisión vigente de Mercado Pago (ver DUDAS
+  ABIERTAS). Decisión vigente (punto G.2): la plataforma no cobra comisión (pago.comision = 0);
+  la comisión que cobre Mercado Pago por cada venta la absorbe el instructor, porque el pago se
+  acredita en su cuenta como vendedor; esto se deduce del modelo marketplace y no se verificó en
+  el panel con un pago real. Costos nuevos de despliegue, dominio o certificado: ninguno, porque
+  no hubo despliegue.
+
+RIESGOS: estado de R02 (punto H.1): probabilidad reducida en los caminos probados en sandbox,
+  sin cambio en producción (no configurada); impacto sigue alto. Mitigaciones implementadas:
+  tiempos de espera (5 s conexión, 10 s lectura), errores tipificados con mensaje al usuario
+  (422 rechazo, 502 falla de Mercado Pago, 409 sin cuenta), claves de idempotencia por
+  operación, compensación de autorizaciones huérfanas, reintentos de captura cada 5 minutos con
+  aviso a la administración, captura anticipada, webhook con firma y consulta de la orden,
+  bloqueo de fila contra carreras, renovación automática de la vinculación, auditoría de cada
+  operación. Mitigaciones no implementadas: conciliación periódica y reintentos automáticos en
+  el momento del pago (el alumno reintenta a mano).
+  Riesgos nuevos (punto H.2), numerados desde R20:
+    R20 avisos duplicados, fuera de orden o falsificados (ENTRADA 009), mitigado.
+    R21 vencimiento de la autorización antes de la captura (ENTRADA 006), mitigado.
+    R22 vencimiento o revocación de la vinculación (ENTRADAS 003 y 016), mitigado.
+    R23 (NUEVO en esta entrada) pérdida o cambio de MP_TOKEN_ENCRYPTION_KEY. Probabilidad baja;
+      impacto alto (ningún token se puede leer: ningún cobro, captura ni reintegro con Mercado
+      Pago hasta que cada instructor vuelva a vincular, y los pagos ya retenidos no se pueden
+      capturar). Mitigación: documentado en .env.example y CLAUDE.md; sin rotación de clave
+      implementada.
+    R24 carrera entre reintegro propio y aviso (ENTRADAS 011 y 013), mitigado, sin verificar en
+      sandbox.
+    R25 autorización huérfana (ENTRADA 005), mitigado parcialmente.
+    R26 cuenta vencida con pagos retenidos (ENTRADA 016), mitigado parcialmente.
+    R27 diferencia entre Liberado y la acreditación real en Mercado Pago (ENTRADA 011), sin
+      mitigar.
+    R28 el aviso de Mercado Pago no llega (ENTRADA 009 y esta entrada), sin mitigar.
+    R29 medios de pago limitados a tarjeta de crédito (ENTRADA 008), aceptado.
+
+SEGURIDAD: resumen (puntos F.1 a F.5):
+  F.1 No se guardan datos de tarjeta: el Brick los tokeniza en el navegador y el backend recibe
+    un token de un solo uso, que tampoco queda en los logs. Se guardan, en la base de Supabase:
+    tokens OAuth del instructor (cifrados con AES-256-GCM), su public key y su usuario de
+    Mercado Pago, y por pago el id de la orden, el detalle de estado y los montos.
+  F.2 Avisos: firma HMAC-SHA256 del encabezado x-signature con MP_WEBHOOK_SECRET, comparada en
+    tiempo constante, y consulta de la orden en Mercado Pago antes de cambiar nada.
+  F.3 Iniciar un pago: quien tenga inscripciones.gestionar (alumno), para sí mismo. Ver pagos:
+    el alumno los suyos (GET /api/alumno/pagos) y el instructor los de sus clases (roster, con
+    clases.gestionar). Pedir un reintegro: no hay un endpoint de reintegro; se dispara al
+    cancelar la inscripción (alumno), cancelar la clase o avisar ausencia (instructor), o
+    resolver una denuncia o aplicar una suspensión (administración). Vincular y desvincular:
+    mercadopago.vincular. Callback y webhook: públicos, protegidos por state firmado y por firma.
+  F.4 Variables nuevas, solo nombres: MP_CLIENT_ID, MP_CLIENT_SECRET, MP_REDIRECT_URI,
+    MP_TOKEN_ENCRYPTION_KEY, MP_WEBHOOK_SECRET, MP_SANDBOX_PAYER_EMAIL, MP_LOG_LEVEL,
+    FRONTEND_URL. Si faltan: sin MP_CLIENT_SECRET la vinculación responde "no está disponible";
+    sin MP_TOKEN_ENCRYPTION_KEY cifrar o descifrar falla (nunca se guarda en claro); sin
+    MP_WEBHOOK_SECRET se rechazan todos los avisos; sin MP_SANDBOX_PAYER_EMAIL las órdenes usan
+    el correo del alumno; sin FRONTEND_URL se usa http://localhost:5173.
+  F.5 El monto lo toma el backend del precio de la clase; el pedido del navegador no lleva monto.
+
+PRUEBAS: resumen (puntos I.1 a I.7):
+  I.1 Backend: de 842 pruebas en 187 archivos a 1005 en 209 (medido hoy). Archivos de prueba
+    agregados por la integración, citados en las entradas: TokenCifradoConverterTest,
+    MercadoPagoGatewayTest, MercadoPagoGatewaySandboxTest, MercadoPagoOAuthStateTest,
+    MercadoPagoOAuthClientTest, los tests de Service y Controller de los seis casos de uso
+    nuevos, CuentaMercadoPagoGuardTest, OperacionesPagoMercadoPagoTest,
+    FirmaWebhookMercadoPagoTest, NotificacionMensajesTest, más casos nuevos en
+    InscribirseServiceTest, FinalizarClasesVencidasServiceTest, LiberarPagosServiceTest,
+    ConfirmarCobroEfectivoServiceTest y los de los casos de uso que reintegran.
+  I.2 Frontend: de 142 pruebas en 16 archivos a 153 en 18 (medido hoy); cobertura 71,95 % de
+    sentencias. Pruebas agregadas por la integración: src/lib/status.test.ts (+5) y
+    src/lib/notificaciones.test.ts (3).
+  I.3 Mercado Pago se simula solo en las pruebas automatizadas: Mockito para PaymentGateway en
+    los casos de uso y MockRestServiceServer para MercadoPagoGateway y MercadoPagoOAuthClient.
+    Motivo: las pruebas no dependen de la red ni de credenciales, y la aplicación nunca corre
+    con una pasarela simulada.
+  I.4 Pruebas manuales en sandbox: PRU-10 (07/10/2026), PRU-11 y PRU-12 (10/10/2026), las tres
+    APROBADAS (PRU-12 con el error de auditoría corregido después).
+  I.5 Casos límite: pago rechazado, pendiente que después se aprueba, aviso duplicado, aviso
+    fuera de orden y carrera entre reintegro y aviso: cubiertos por pruebas automatizadas, no
+    en sandbox. Cancelación durante el pago: cubierta por la compensación (ENTRADA 005) y por el
+    webhook que cancela una orden aprobada tarde. Dos alumnos por el último cupo:
+    InscribirseConcurrenciaTest (anterior a la integración; adaptada en las entradas 002 y
+    004), con Mercado Pago simulado.
+  I.6 PRU-05 (inscripción en efectivo y confirmación de cobro por el instructor): sin ejecución
+    documentada; el flujo de efectivo no cambió, salvo que ya no se puede confirmar a mano un
+    pago de Mercado Pago. PRU-06 (cancelación de clase con reintegro en cascada y
+    notificación): sin ejecución documentada; hay que reformular su resultado esperado, porque
+    el reintegro de un pago de Mercado Pago ahora es una cancelación de la autorización o un
+    reembolso, y la notificación al alumno dice cuál de los dos (casos 5 y 8 de la matriz).
+  I.7 Integración continua: no verificada (ver ESTADO GENERAL).
+
+ANÁLISIS ESTÁTICO: ESLint del frontend 0 errores y 11 advertencias, sin cambios respecto de la
+  línea base; verificación de tipos sin errores; integración continua no verificada.
+
+DESPLIEGUE Y CONFIGURACIÓN: no desplegado. Ver ENTRADA 015 para la configuración inicial.
+
+DECISIONES: el pendiente número 1 del informe se declara PARCIAL y no TERMINADO, porque la mayor
+  parte de los caminos de dinero solo se probó con Mercado Pago simulado y la integración no
+  está configurada ni probada en producción.
+
+ERRORES DETECTADOS: ninguno nuevo en el código; ver los hallazgos de DETALLE TÉCNICO.
+
+CAPTURAS SUGERIDAS (punto L.1):
+  - Pantalla de inscripción con las opciones "MercadoPago" y "Efectivo".
+  - Ventana de pago con el Brick, con una tarjeta de prueba.
+  - Pantalla de resultado "¡Inscripción confirmada!".
+  - Mis pagos del alumno con varios estados.
+  - Gestión de la clase del instructor con "Pago", "A recibir" y el total.
+  - Tarjeta "Cobros con Mercado Pago" vinculada y sin vincular.
+  - Panel de Mercado Pago del vendedor de prueba con un pago capturado y uno devuelto, sin datos
+    de la cuenta a la vista.
+  - Consola con "Tests run: 1005, Failures: 0, Errors: 0, Skipped: 2" y "BUILD SUCCESS".
+  - Consola con "Test Files  18 passed (18)", "Tests  153 passed (153)" y el resumen de
+    cobertura.
+  - Consola con "11 problems (0 errors, 11 warnings)".
+  - Resultado del flujo de integración continua del frontend, cuando se empujen los commits.
+
+PENDIENTE QUE QUEDA: los pendientes abiertos del ESTADO GENERAL.
+
+--------------------------------------------------------------------------------
+DUDAS ABIERTAS
+--------------------------------------------------------------------------------
+1. Comisión de Mercado Pago por acreditación y plazos: no confirmada. El 12/10/2026 la página
+   oficial https://www.mercadopago.com.ar/costs-section respondió 403 a la consulta automática,
+   y una búsqueda en mercadopago.com.ar devolvió porcentajes con las etiquetas de plazo
+   mezcladas. Hay que leerla en un navegador y registrar el porcentaje, el plazo elegido y la
+   fecha de consulta.
+2. Comisión que Mercado Pago aplicó a los pagos de sandbox del 07/10 y del 10/10/2026: no se
+   registró en ningún lado.
+3. Qué plazo de liberación tiene configurado el vendedor de prueba: el panel mostró "a cobrar el
+   28 de octubre" para un pago capturado el 10/10/2026; no se registró la configuración que lo
+   explica.
+4. Eventos a los que quedó suscripta la aplicación de Mercado Pago en la sección Webhooks: no se
+   registró. El código solo procesa avisos de tipo "order".
+5. Numeración de reglas de negocio: el formato fija RN-01 a RN-24 en el informe; esta bitácora
+   cita RN-04 (retención y liberación), RN-14 (auditoría), RN-19 (permisos) con la numeración
+   de docs/BITACORA-INFORME.txt, que llegaba hasta RN-20. Hay que confirmar contra el informe.
+6. Números de criterio: las historias afectadas tienen criterios propios en el informe que no se
+   pudieron consultar desde el repositorio; los criterios de esta bitácora se proponen como
+   nuevos y falta asignarles número.
+7. Código de pantalla del Panel del instructor (donde está la tarjeta "Cobros con Mercado
+   Pago"): no verificado contra el catálogo E2I-PAN-01 a E2I-PAN-13.
+8. Códigos de riesgo R01 a R19: esta bitácora solo usa R02 y los nuevos R20 a R29. La bitácora
+   general usaba otra lista (R01 a R15, con R11 "APIs externas"); hay que confirmar contra el
+   informe si alguno de los riesgos nuevos ya existe con otro número.
+9. Si la escritura "MercadoPago" de la pantalla de inscripción se corrige a "Mercado Pago" antes
+   de redactar el manual de usuario.
+10. Si Mercado Pago informa a la plataforma la comisión real de cada pago (fee) y si conviene
+    guardarla, ya que hoy pago.comision guarda solo la comisión de ActiveHub (0).
+11. Qué hace el webhook si llega un aviso de un pago cuyo instructor ya no tiene la cuenta
+    vigente: exigirCuentaVinculada lanza una excepción antes de consultar la orden; no se
+    verificó qué código HTTP recibe Mercado Pago en ese caso ni si reintenta.
+
+================================================================================
+FIN DE LA BITÁCORA
+================================================================================

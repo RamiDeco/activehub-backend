@@ -21,7 +21,7 @@ public class ResolverDenunciaController {
     }
 
     @PostMapping("/{id}/resolver")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('denuncias.resolver')")
     public ResolverDenunciaResponse resolver(
             @PathVariable UUID id, @Valid @RequestBody ResolverDenunciaRequest request, Authentication authentication
     ) {

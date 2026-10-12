@@ -23,7 +23,7 @@ public class CrearClaseController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('INSTRUCTOR')")
+    @PreAuthorize("@permisos.puede('clases.gestionar')")
     public ResponseEntity<CrearClaseResponse> crear(
             @PathVariable UUID actividadId,
             @Valid @RequestBody CrearClaseRequest request,

@@ -8,6 +8,7 @@ import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.time.Zonas;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -27,7 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class LevantarSuspensionesVencidasService {
 
-    private static final ZoneId ZONA_AR = ZoneId.of("America/Argentina/Buenos_Aires");
 
     private final PenalizacionRepository penalizacionRepository;
     private final UsuarioRepository usuarioRepository;
@@ -48,7 +48,7 @@ public class LevantarSuspensionesVencidasService {
 
     @Transactional
     public int levantar() {
-        LocalDate hoy = LocalDate.ofInstant(clock.instant(), ZONA_AR);
+        LocalDate hoy = LocalDate.ofInstant(clock.instant(), Zonas.AR);
         List<Penalizacion> vencidas =
                 penalizacionRepository.findSuspensionesVencidas(TipoPenalizacion.SUSPENSION_TEMPORAL, hoy);
 

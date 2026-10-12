@@ -14,10 +14,11 @@ import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
-import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.payments.OperacionesPagoMercadoPago;
 import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -29,7 +30,7 @@ public class CancelarClaseService {
     private final ClaseRepository claseRepository;
     private final InscripcionRepository inscripcionRepository;
     private final PagoRepository pagoRepository;
-    private final PaymentGateway paymentGateway;
+    private final OperacionesPagoMercadoPago operacionesPago;
     private final NotificacionService notificacionService;
     private final AuditService auditService;
 
@@ -39,7 +40,7 @@ public class CancelarClaseService {
             ClaseRepository claseRepository,
             InscripcionRepository inscripcionRepository,
             PagoRepository pagoRepository,
-            PaymentGateway paymentGateway,
+            OperacionesPagoMercadoPago operacionesPago,
             NotificacionService notificacionService,
             AuditService auditService,
             InstructorVerificadoGuard instructorVerificadoGuard
@@ -47,7 +48,7 @@ public class CancelarClaseService {
         this.claseRepository = claseRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.pagoRepository = pagoRepository;
-        this.paymentGateway = paymentGateway;
+        this.operacionesPago = operacionesPago;
         this.notificacionService = notificacionService;
         this.auditService = auditService;
         this.instructorVerificadoGuard = instructorVerificadoGuard;
@@ -75,16 +76,26 @@ public class CancelarClaseService {
                 + ". Tu inscripción fue cancelada.";
         for (Inscripcion inscripcion : inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA)) {
             Pago pago = inscripcion.getPago();
-            if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
-                paymentGateway.cancelarPago(pago.getReferenciaExterna());
+            String detallePago = "";
+            // E2I-HU08 criterio 5: el reintegro alcanza a los pagos Retenidos *y* a los que
+            // ya se cobraron en Efectivo; ambos quedan en Cancelado. Antes el efectivo no se
+            // tocaba y el alumno seguía viendo su pago como válido para una clase que no existe.
+            if (pago != null && pago.getEstado().reservadoEnMercadoPago()) {
+                detallePago = NotificacionMensajes.detalleReintegro(
+                        operacionesPago.reintegrar(pago, instructorId, instructorId));
+            } else if (pago != null && pago.getEstado() == EstadoPago.Efectivo) {
+                // No hay gateway al que pedirle nada: la plata la cobró el instructor en mano.
+                // El registro queda Cancelado y la devolución se arregla con él.
                 pago.setEstado(EstadoPago.Cancelado);
                 pagoRepository.save(pago);
+                detallePago = " Coordiná con el instructor la devolución de lo que pagaste en efectivo.";
             }
             inscripcion.setEstado(EstadoInscripcion.CANCELADA);
             inscripcionRepository.save(inscripcion);
 
             notificacionService.notificar(
-                    inscripcion.getAlumno().getId(), TipoNotificacion.CLASE_CANCELADA, mensaje, clase.getId());
+                    inscripcion.getAlumno().getId(), TipoNotificacion.CLASE_CANCELADA, mensaje + detallePago, clase.getId(),
+                    Destino.clase(clase.getId()));
         }
 
         clase.setEstado(EstadoClase.Cancelada);

@@ -19,7 +19,7 @@ public class ListarInstructoresController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('instructores.validar')")
     public List<ListarInstructoresResponse> listar(
             @RequestParam(value = "estado", required = false) EstadoVerificacion estadoVerificacion) {
         return listarInstructoresService.listar(estadoVerificacion);

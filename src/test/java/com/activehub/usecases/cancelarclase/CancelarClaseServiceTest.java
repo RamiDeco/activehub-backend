@@ -1,5 +1,7 @@
 package com.activehub.usecases.cancelarclase;
 
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.lenient;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,9 +27,10 @@ import com.activehub.shared.security.InstructorVerificadoGuard;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
-import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.payments.OperacionesPagoMercadoPago;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -50,7 +53,7 @@ class CancelarClaseServiceTest {
     @Mock
     private PagoRepository pagoRepository;
     @Mock
-    private PaymentGateway paymentGateway;
+    private OperacionesPagoMercadoPago operacionesPago;
     @Mock
     private NotificacionService notificacionService;
     @Mock
@@ -66,8 +69,15 @@ class CancelarClaseServiceTest {
 
     @BeforeEach
     void setUp() {
+        // El componente real decide cancelar o reembolsar; aca solo importa que se lo llame y
+        // que el pago quede en el estado que devolveria para uno sin capturar.
+        lenient().when(operacionesPago.reintegrar(any(), any(), any())).thenAnswer(inv -> {
+            Pago p = inv.getArgument(0);
+            p.setEstado(EstadoPago.Cancelado);
+            return EstadoPago.Cancelado;
+        });
         service = new CancelarClaseService(
-                claseRepository, inscripcionRepository, pagoRepository, paymentGateway, notificacionService, auditService, instructorVerificadoGuard);
+                claseRepository, inscripcionRepository, pagoRepository, operacionesPago, notificacionService, auditService, instructorVerificadoGuard);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();
@@ -117,13 +127,38 @@ class CancelarClaseServiceTest {
         assertThat(clase.getEstado()).isEqualTo(EstadoClase.Cancelada);
         assertThat(inscripto.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
-        verify(paymentGateway).cancelarPago("ref-abc");
+        verify(operacionesPago).reintegrar(argThat(p -> "ref-abc".equals(p.getReferenciaExterna())), any(), any());
         verify(notificacionService).notificar(
-                eq(inscripto.getAlumno().getId()), eq(TipoNotificacion.CLASE_CANCELADA), any(), eq(claseId));
+                eq(inscripto.getAlumno().getId()), eq(TipoNotificacion.CLASE_CANCELADA),
+                org.mockito.ArgumentMatchers.endsWith("Se liberó la reserva del pago en tu tarjeta: no se te va a cobrar."),
+                eq(claseId), eq(Destino.clase(claseId)));
     }
 
     @Test
-    void cancelar_pagoEfectivo_noLoToca() {
+    void cancelar_pagoYaCapturado_elAvisoDiceQueSeReembolsa() {
+        Pago pago = new Pago();
+        pago.setEstado(EstadoPago.Retenido);
+        pago.setMetodo(MetodoPago.MERCADO_PAGO);
+        pago.setMonto(new BigDecimal("4500"));
+        pago.setCapturadoAt(Instant.parse("2026-08-31T13:00:00Z"));
+        Inscripcion inscripto = inscripcionCon(EstadoInscripcion.INSCRIPTO, pago);
+        // KAN-62: capturado, OperacionesPagoMercadoPago reembolsa en vez de cancelar.
+        org.mockito.Mockito.doReturn(EstadoPago.Reembolsado).when(operacionesPago).reintegrar(any(), any(), any());
+
+        when(claseRepository.findById(claseId)).thenReturn(Optional.of(clase));
+        when(inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA))
+                .thenReturn(List.of(inscripto));
+
+        service.cancelar(claseId, instructorId);
+
+        verify(notificacionService).notificar(
+                eq(inscripto.getAlumno().getId()), eq(TipoNotificacion.CLASE_CANCELADA),
+                org.mockito.ArgumentMatchers.contains("Te reembolsamos el pago por Mercado Pago"),
+                eq(claseId), eq(Destino.clase(claseId)));
+    }
+
+    @Test
+    void cancelar_pagoEfectivo_tambienQuedaCancelado() {
         Pago pago = new Pago();
         pago.setEstado(EstadoPago.Efectivo);
         pago.setMetodo(MetodoPago.EFECTIVO);
@@ -136,9 +171,13 @@ class CancelarClaseServiceTest {
 
         service.cancelar(claseId, instructorId);
 
-        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Efectivo);
+        // E2I-HU08 criterio 5: el reintegro alcanza a los pagos Retenidos y a los cobrados en
+        // Efectivo. No hay gateway al que pedirle nada — la plata la tiene el instructor —
+        // pero el registro no puede quedar como un pago válido de una clase que no existe.
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         assertThat(pendiente.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
-        verify(paymentGateway, never()).cancelarPago(any());
+        verify(operacionesPago, never()).reintegrar(any(), any(), any());
+        verify(pagoRepository).save(pago);
     }
 
     @Test

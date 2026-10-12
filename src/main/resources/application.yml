@@ -2,10 +2,19 @@ server:
   port: ${PORT:8080}
 
 spring:
-  application:
-    name: activehub-api
+  config:
+    import: optional:file:./.env[.properties]
+    application:
+      name: activehub-api
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/activehub?user=activehub&password=activehub}
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+      minimum-idle: 1
+      connection-timeout: 30000
+      max-lifetime: 1500000
   jpa:
     hibernate:
       ddl-auto: validate
@@ -13,13 +22,30 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        jdbc:
+          time_zone: UTC
   flyway:
     enabled: true
     locations: classpath:db/migration
-<<<<<<< Updated upstream
-=======
     schemas: public
     default-schema: public
+  # Gmail SMTP. Con `MAIL_USERNAME` vacio el starter igual levanta y `EmailSender` cae al modo
+  # "log" (ver su javadoc): sin esto, un checkout sin credenciales no podria ni registrar a
+  # nadie. La contraseña es una **contraseña de aplicacion** de Google, no la de la cuenta.
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+      # Sin timeouts, un SMTP que no responde cuelga el request de registro hasta el timeout
+      # del socket del sistema operativo.
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
   servlet:
     multipart:
       # El limite por archivo tiene que coincidir con el que promete la UI de registro
@@ -27,14 +53,102 @@ spring:
       # segun la pantalla era rechazado por el servidor.
       max-file-size: 5MB
       max-request-size: 30MB
->>>>>>> Stashed changes
 
 app:
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-0123456789abcdef0123456789abcdef}
-    expiration-min: ${JWT_EXPIRATION_MIN:120}
+    # E1A-HU02 criterio 3: "la sesion expira automaticamente por inactividad". El TTL del
+    # token ES la ventana de inactividad: el frontend lo renueva contra /api/auth/refresh
+    # mientras el usuario usa la app, asi que solo vence si deja de usarla. Bajarlo de 120
+    # a 30 min es lo que hace que la expiracion sea por inactividad y no por antiguedad.
+    expiration-min: ${JWT_EXPIRATION_MIN:30}
   admin-seed:
     email: ${ADMIN_SEED_EMAIL:}
     password: ${ADMIN_SEED_PASSWORD:}
+  # A donde vuelve el navegador cuando termina un flujo que pasa por un sitio externo (el
+  # callback de Mercado Pago lo llama el navegador, no el frontend).
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  mercadopago:
+    access-token: ${MP_ACCESS_TOKEN:}
+    # AES-256 (32 bytes en base64) para cifrar los tokens OAuth de los instructores en la base.
+    token-encryption-key: ${MP_TOKEN_ENCRYPTION_KEY:}
+    # OAuth del marketplace (KAN-54): con estas credenciales el instructor vincula su cuenta.
+    # APP_ID y REDIRECT_URI son los nombres con los que ya estaban cargadas en el .env (MP-01).
+    client-id: ${MP_CLIENT_ID:${APP_ID:}}
+    client-secret: ${MP_CLIENT_SECRET:}
+    # Tiene que coincidir EXACTO con la "URL de redireccionamiento" de la aplicacion en MP.
+    redirect-uri: ${MP_REDIRECT_URI:${REDIRECT_URI:}}
+    # SANDBOX: no hay un "modo prueba" en el codigo. La Orders API no acepta credenciales TEST-
+    # (401 "Test credentials are not supported"): se prueba con CUENTAS DE PRUEBA y credenciales
+    # APP_USR-. En un marketplace las cuatro partes tienen que ser de prueba, la APLICACION
+    # incluida: client-id/secret de una aplicacion creada por un usuario de prueba "Integrador"
+    # (con una aplicacion de una cuenta real, MP responde 422 / 2034 "Invalid users involved").
+    # Detalle y procedimiento en docs/BITACORA-INFORME.txt.
+    #
+    # Solo sandbox: correo del comprador de prueba (@testuser.com) como pagador de las ordenes.
+    # En produccion, vacia: va el correo del alumno.
+    sandbox-payer-email: ${MP_SANDBOX_PAYER_EMAIL:}
+    # Clave secreta del webhook (panel de la aplicacion > Webhooks > Configurar notificaciones).
+    # Sin ella toda notificacion se rechaza con 401: no se procesa nada que no se pueda verificar.
+    webhook-secret: ${MP_WEBHOOK_SECRET:}
+  mail:
+    # De dónde sale el "From". Por defecto la propia cuenta de Gmail: **Gmail reescribe el
+    # remitente a la cuenta autenticada**, así que poner otra dirección acá no sirve de nada.
+    from: ${MAIL_FROM:${spring.mail.username:}}
+    from-nombre: ${MAIL_FROM_NOMBRE:ActiveHub}
+  verificacion-email:
+    # Ventana de validez del código. 15 min alcanza para ir al correo y volver, y deja corta
+    # la ventana en la que un código filtrado sirve para algo.
+    ttl-min: ${VERIFICACION_TTL_MIN:15}
+    # Reenvíos: mínimo entre dos envíos al mismo usuario, para no convertir el endpoint en un
+    # generador de spam contra un correo ajeno.
+    espera-reenvio-seg: ${VERIFICACION_ESPERA_REENVIO_SEG:60}
+    # Intentos fallidos antes de invalidar el código. Sin esto, 6 dígitos son 10^6
+    # combinaciones que un script prueba en minutos.
+    max-intentos: ${VERIFICACION_MAX_INTENTOS:5}
+  google:
+    # Client ID de la app web en Google Cloud Console. Vacío = "Continuar con Google"
+    # deshabilitado (el endpoint responde 400 y el frontend no muestra el botón).
+    client-id: ${GOOGLE_CLIENT_ID:}
+  ia:
+    # Groq Cloud (plan gratuito) para el asistente de ayuda y el informe de beneficios y
+    # prevenciones. Con GROQ_API_KEY vacia la aplicacion arranca igual y las dos pantallas caen a
+    # lo que hacian antes (FAQs por coincidencia de palabras, plantillas por nivel de intensidad):
+    # ver IaConfig. La clave se saca de console.groq.com y va SOLO en el backend.
+    groq:
+      api-key: ${GROQ_API_KEY:}
+      url: ${GROQ_URL:https://api.groq.com/openai/v1/chat/completions}
+      # Modelo del plan gratuito con 128k de contexto. Se cambia por variable de entorno sin
+      # recompilar, porque Groq rota los modelos disponibles cada tanto: la cuenta de este proyecto
+      # ya NO tiene llama-3.3 (devolvia 404) y los modelos de chat que ofrece hoy son la familia
+      # openai/gpt-oss y qwen. Para ver los vigentes: GET https://api.groq.com/openai/v1/models.
+      modelo: ${GROQ_MODELO:openai/gpt-oss-120b}
+      # Cuanto "piensa" antes de escribir (low | medium | high). Solo lo entienden los modelos de
+      # razonamiento como gpt-oss, y con ellos NO es opcional: el razonamiento gasta del mismo
+      # presupuesto de tokens que la respuesta, asi que con el esfuerzo por defecto la respuesta
+      # vuelve vacia. Si se cambia a un modelo que no razona, hay que dejar esta variable vacia
+      # (GROQ_REASONING_EFFORT=) o el proveedor rechaza el pedido.
+      reasoning-effort: ${GROQ_REASONING_EFFORT:low}
+      # Corto a proposito: del otro lado hay alguien esperando frente a una burbuja de chat.
+      timeout-seg: ${GROQ_TIMEOUT_SEG:25}
+  storage:
+    documentos-instructor-dir: ${DOCUMENTOS_INSTRUCTOR_DIR:./uploads/documentos-instructor}
+    fotos-perfil-dir: ${FOTOS_PERFIL_DIR:./uploads/fotos-perfil}
+    fotos-actividad-dir: ${FOTOS_ACTIVIDAD_DIR:./uploads/fotos-actividad}
+    # Supabase Storage. Con url y service-key cargadas, los archivos van al bucket y los
+    # directorios de arriba quedan sin uso; vacias, se sigue escribiendo en disco. No hay
+    # ningun flag de modo a proposito: ver AlmacenamientoConfig.
+    # SUPABASE_STORAGE_SERVICE_KEY es la service_role key del proyecto, que saltea RLS: va
+    # solo en el backend, nunca en el frontend ni versionada.
+    supabase:
+      url: ${SUPABASE_STORAGE_URL:}
+      service-key: ${SUPABASE_STORAGE_SERVICE_KEY:}
+      bucket: ${SUPABASE_STORAGE_BUCKET:activehub}
+
+logging:
+  level:
+    # MP_LOG_LEVEL=DEBUG loguea cada pedido a Mercado Pago (URL, headers y body) y su respuesta,
+    # con los secretos recortados (MercadoPagoHttpLog). Apagado por defecto.
+    com.activehub.shared.payments.MercadoPagoHttpLog: ${MP_LOG_LEVEL:INFO}

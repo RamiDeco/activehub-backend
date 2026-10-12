@@ -1,5 +1,6 @@
 package com.activehub.shared.notificacion;
 
+import com.activehub.domain.inscripcion.EstadoPago;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -23,5 +24,18 @@ public final class NotificacionMensajes {
 
     public static String formatFechaHora(Instant instante) {
         return FECHA_HORA.format(instante) + " hs";
+    }
+
+    /**
+     * KAN-62: que paso con la plata de un pago de Mercado Pago devuelto, para sumar al aviso del
+     * alumno. Son dos cosas distintas para quien lo lee: sin capturar, nunca se le cobro (se
+     * libera la reserva de la tarjeta); capturado, se le cobro y se le reembolsa.
+     *
+     * @param estadoFinal lo que devolvio {@code OperacionesPagoMercadoPago.reintegrar}
+     */
+    public static String detalleReintegro(EstadoPago estadoFinal) {
+        return estadoFinal == EstadoPago.Reembolsado
+                ? " Te reembolsamos el pago por Mercado Pago; según tu banco, puede tardar unos días en verse en tu tarjeta."
+                : " Se liberó la reserva del pago en tu tarjeta: no se te va a cobrar.";
     }
 }

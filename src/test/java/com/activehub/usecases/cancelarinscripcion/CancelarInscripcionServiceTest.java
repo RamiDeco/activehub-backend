@@ -1,12 +1,16 @@
 package com.activehub.usecases.cancelarinscripcion;
 
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.lenient;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.activehub.domain.actividad.Actividad;
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.actividad.ClaseRepository;
 import com.activehub.domain.inscripcion.EstadoInscripcion;
@@ -15,13 +19,15 @@ import com.activehub.domain.inscripcion.Inscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.domain.inscripcion.MetodoPago;
 import com.activehub.domain.inscripcion.Pago;
-import com.activehub.domain.inscripcion.PagoRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
-import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.notificacion.Destino;
+import com.activehub.shared.notificacion.NotificacionService;
+import com.activehub.shared.notificacion.TipoNotificacion;
+import com.activehub.shared.payments.OperacionesPagoMercadoPago;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
@@ -46,31 +52,48 @@ class CancelarInscripcionServiceTest {
     @Mock
     private ClaseRepository claseRepository;
     @Mock
-    private PagoRepository pagoRepository;
-    @Mock
-    private PaymentGateway paymentGateway;
+    private OperacionesPagoMercadoPago operacionesPago;
     @Mock
     private AuditService auditService;
+    @Mock
+    private NotificacionService notificacionService;
 
     private CancelarInscripcionService service;
     private UUID inscripcionId;
     private UUID alumnoId;
     private UUID claseId;
+    private UUID instructorId;
     private Inscripcion inscripcion;
     private Clase clase;
 
     @BeforeEach
     void setUp() {
+        // El componente real decide cancelar o reembolsar; aca solo importa que se lo llame y
+        // que el pago quede en el estado que devolveria para uno sin capturar.
+        lenient().when(operacionesPago.reintegrar(any(), any(), any())).thenAnswer(inv -> {
+            Pago p = inv.getArgument(0);
+            p.setEstado(EstadoPago.Cancelado);
+            return EstadoPago.Cancelado;
+        });
         Clock clock = Clock.fixed(AHORA, ZoneOffset.UTC);
-        service = new CancelarInscripcionService(inscripcionRepository, claseRepository, pagoRepository, paymentGateway, auditService, clock);
+        service = new CancelarInscripcionService(
+                inscripcionRepository, claseRepository, operacionesPago, auditService, notificacionService, clock);
 
         alumnoId = UUID.randomUUID();
         Usuario alumno = new Usuario();
         ReflectionTestUtils.setField(alumno, "id", alumnoId);
 
+        instructorId = UUID.randomUUID();
+        Usuario instructor = new Usuario();
+        ReflectionTestUtils.setField(instructor, "id", instructorId);
+        Actividad actividad = new Actividad();
+        actividad.setNombre("Running");
+        actividad.setInstructor(instructor);
+
         claseId = UUID.randomUUID();
         clase = new Clase();
         clase.setFechaHora(AHORA.plus(Duration.ofDays(2)));
+        clase.setActividad(actividad);
         ReflectionTestUtils.setField(clase, "id", claseId);
 
         inscripcionId = UUID.randomUUID();
@@ -89,6 +112,8 @@ class CancelarInscripcionServiceTest {
 
         assertThat(inscripcion.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         verify(claseRepository).liberarCupo(claseId);
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CANCELADA), any(), eq(inscripcionId), eq(Destino.inscripcion(inscripcionId)));
+        verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.ALUMNO_CANCELO_INSCRIPCION), any(), eq(inscripcionId), eq(Destino.clase(claseId)));
     }
 
     @Test
@@ -102,7 +127,7 @@ class CancelarInscripcionServiceTest {
     }
 
     @Test
-    void cancelar_pagoRetenido_loMarcaCanceladoYLlamaGateway() {
+    void cancelar_pagoRetenido_loReintegra() {
         Pago pago = new Pago();
         pago.setEstado(EstadoPago.Retenido);
         pago.setMetodo(MetodoPago.MERCADO_PAGO);
@@ -115,8 +140,11 @@ class CancelarInscripcionServiceTest {
         service.cancelar(inscripcionId, alumnoId);
 
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
-        verify(paymentGateway).cancelarPago("ref-123");
-        verify(pagoRepository).save(pago);
+        verify(operacionesPago).reintegrar(argThat(p -> "ref-123".equals(p.getReferenciaExterna())), any(), any());
+        // KAN-62: el aviso al alumno dice que no se le va a cobrar (el pago no estaba capturado).
+        verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CANCELADA),
+                org.mockito.ArgumentMatchers.endsWith("Se liberó la reserva del pago en tu tarjeta: no se te va a cobrar."),
+                eq(inscripcionId), eq(Destino.inscripcion(inscripcionId)));
     }
 
     @Test
@@ -133,8 +161,7 @@ class CancelarInscripcionServiceTest {
         service.cancelar(inscripcionId, alumnoId);
 
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Efectivo);
-        verify(paymentGateway, never()).cancelarPago(any());
-        verify(pagoRepository, never()).save(any());
+        verify(operacionesPago, never()).reintegrar(any(), any(), any());
     }
 
     @Test

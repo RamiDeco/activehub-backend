@@ -25,6 +25,36 @@ public interface ClaseRepository extends JpaRepository<Clase, UUID> {
     List<Clase> findAllConDetalle();
 
     /**
+     * E2I-HU06 criterio 8: solapamiento de horario dentro de la misma actividad. Dos
+     * intervalos se pisan si cada uno empieza antes de que el otro termine; se excluyen
+     * las Canceladas porque un horario liberado se puede volver a usar.
+     */
+    @Query("SELECT COUNT(c) > 0 FROM Clase c WHERE c.actividad.id = :actividadId "
+            + "AND c.estado <> com.activehub.domain.actividad.EstadoClase.Cancelada "
+            + "AND (:excluirClaseId IS NULL OR c.id <> :excluirClaseId) "
+            + "AND c.fechaHora < :horaFin AND c.horaFin > :fechaHora")
+    boolean existeSolapamiento(
+            @Param("actividadId") UUID actividadId,
+            @Param("fechaHora") Instant fechaHora,
+            @Param("horaFin") Instant horaFin,
+            @Param("excluirClaseId") UUID excluirClaseId);
+
+    boolean existsByAgendaClasesIdAndFechaHora(UUID agendaClasesId, Instant fechaHora);
+
+    /**
+     * Clases de un instructor que se dictan dentro de una ventana y todavia estan vivas. La
+     * usa la penalizacion por suspension temporal para cancelar lo que cae en el periodo.
+     */
+    @Query("SELECT c FROM Clase c JOIN FETCH c.actividad a WHERE a.instructor.id = :instructorId "
+            + "AND c.estado NOT IN :estadosExcluidos "
+            + "AND c.fechaHora >= :desde AND c.fechaHora < :hasta ORDER BY c.fechaHora ASC")
+    List<Clase> findVivasDeInstructorEntre(
+            @Param("instructorId") UUID instructorId,
+            @Param("desde") Instant desde,
+            @Param("hasta") Instant hasta,
+            @Param("estadosExcluidos") Collection<EstadoClase> estadosExcluidos);
+
+    /**
      * UPDATE atomico condicional: evita la doble ocupacion del ultimo cupo
      * bajo pedidos concurrentes sin necesitar un lock explicito ni un
      * read-then-write en Java. Devuelve 0 filas afectadas si no habia cupo.

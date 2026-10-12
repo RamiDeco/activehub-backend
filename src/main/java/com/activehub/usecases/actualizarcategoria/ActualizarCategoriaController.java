@@ -21,7 +21,7 @@ public class ActualizarCategoriaController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('taxonomia.gestionar')")
     public ActualizarCategoriaResponse actualizar(
             @PathVariable UUID id,
             @Valid @RequestBody ActualizarCategoriaRequest request,

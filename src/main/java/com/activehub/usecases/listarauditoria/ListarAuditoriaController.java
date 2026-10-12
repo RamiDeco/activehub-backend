@@ -17,7 +17,7 @@ public class ListarAuditoriaController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('auditoria.ver')")
     public List<ListarAuditoriaResponse> listar() {
         return listarAuditoriaService.listar();
     }

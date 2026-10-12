@@ -32,8 +32,8 @@ class ListarMisDenunciasControllerTest {
         UUID alumnoId = UUID.randomUUID();
         when(listarMisDenunciasService.listar(alumnoId)).thenReturn(List.of(
                 new ListarMisDenunciasResponse(
-                        UUID.randomUUID(), UUID.randomUUID(), Instant.now(), UUID.randomUUID(), "Yoga",
-                        "No se presentó", "Pendiente", Instant.now())));
+                        UUID.randomUUID(), "CLASE", UUID.randomUUID(), Instant.now(), UUID.randomUUID(), "Yoga",
+                        "No se presentó", "Pendiente", null, null, Instant.now())));
 
         var authentication = new UsernamePasswordAuthenticationToken(alumnoId, null, List.of());
 

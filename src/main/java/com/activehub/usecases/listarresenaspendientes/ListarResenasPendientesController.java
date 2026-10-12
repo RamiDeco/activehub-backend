@@ -17,7 +17,7 @@ public class ListarResenasPendientesController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('denuncias.resolver')")
     public List<ListarResenasPendientesResponse> listar() {
         return listarResenasPendientesService.listar();
     }

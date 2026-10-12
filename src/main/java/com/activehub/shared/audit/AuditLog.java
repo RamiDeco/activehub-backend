@@ -44,15 +44,24 @@ public class AuditLog {
     @Column(columnDefinition = "TEXT")
     private String metadata;
 
+    /** IP del request que origino la accion. 45 = IPv6 con sufijo IPv4 mapeado. */
+    @Column(length = 45)
+    private String ip;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     public AuditLog(UUID actorId, AuditAccion accion, String entidad, UUID entidadId, String metadata) {
+        this(actorId, accion, entidad, entidadId, metadata, null);
+    }
+
+    public AuditLog(UUID actorId, AuditAccion accion, String entidad, UUID entidadId, String metadata, String ip) {
         this.actorId = actorId;
         this.accion = accion;
         this.entidad = entidad;
         this.entidadId = entidadId;
         this.metadata = metadata;
+        this.ip = ip;
     }
 }

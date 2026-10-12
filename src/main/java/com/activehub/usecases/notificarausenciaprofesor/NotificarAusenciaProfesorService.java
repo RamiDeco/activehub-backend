@@ -8,15 +8,16 @@ import com.activehub.domain.inscripcion.EstadoPago;
 import com.activehub.domain.inscripcion.Inscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.domain.inscripcion.Pago;
-import com.activehub.domain.inscripcion.PagoRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
+import com.activehub.shared.notificacion.Destino;
+import com.activehub.shared.notificacion.NotificacionMensajes;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
-import com.activehub.shared.payments.PaymentGateway;
+import com.activehub.shared.payments.OperacionesPagoMercadoPago;
 import com.activehub.shared.security.InstructorVerificadoGuard;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -27,8 +28,7 @@ public class NotificarAusenciaProfesorService {
 
     private final ClaseRepository claseRepository;
     private final InscripcionRepository inscripcionRepository;
-    private final PagoRepository pagoRepository;
-    private final PaymentGateway paymentGateway;
+    private final OperacionesPagoMercadoPago operacionesPago;
     private final NotificacionService notificacionService;
     private final AuditService auditService;
 
@@ -37,16 +37,14 @@ public class NotificarAusenciaProfesorService {
     public NotificarAusenciaProfesorService(
             ClaseRepository claseRepository,
             InscripcionRepository inscripcionRepository,
-            PagoRepository pagoRepository,
-            PaymentGateway paymentGateway,
+            OperacionesPagoMercadoPago operacionesPago,
             NotificacionService notificacionService,
             AuditService auditService,
             InstructorVerificadoGuard instructorVerificadoGuard
     ) {
         this.claseRepository = claseRepository;
         this.inscripcionRepository = inscripcionRepository;
-        this.pagoRepository = pagoRepository;
-        this.paymentGateway = paymentGateway;
+        this.operacionesPago = operacionesPago;
         this.notificacionService = notificacionService;
         this.auditService = auditService;
         this.instructorVerificadoGuard = instructorVerificadoGuard;
@@ -73,16 +71,16 @@ public class NotificarAusenciaProfesorService {
         int notificados = 0;
         for (Inscripcion inscripcion : inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA)) {
             Pago pago = inscripcion.getPago();
-            if (pago != null && pago.getEstado() == EstadoPago.Retenido) {
-                paymentGateway.cancelarPago(pago.getReferenciaExterna());
-                pago.setEstado(EstadoPago.Cancelado);
-                pagoRepository.save(pago);
+            String detallePago = "";
+            if (pago != null && pago.getEstado().reservadoEnMercadoPago()) {
+                detallePago = NotificacionMensajes.detalleReintegro(operacionesPago.reintegrar(pago, instructorId, instructorId));
             }
             inscripcion.setEstado(EstadoInscripcion.CANCELADA);
             inscripcionRepository.save(inscripcion);
 
             notificacionService.notificar(
-                    inscripcion.getAlumno().getId(), TipoNotificacion.AUSENCIA_PROFESOR, request.mensaje(), claseId);
+                    inscripcion.getAlumno().getId(), TipoNotificacion.AUSENCIA_PROFESOR, request.mensaje() + detallePago, claseId,
+                    Destino.clase(claseId));
             notificados++;
         }
 

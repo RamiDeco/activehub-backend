@@ -19,7 +19,7 @@ public class CancelarClaseController {
     }
 
     @PostMapping("/{id}/cancelar")
-    @PreAuthorize("hasRole('INSTRUCTOR')")
+    @PreAuthorize("@permisos.puede('clases.gestionar')")
     public CancelarClaseResponse cancelar(@PathVariable UUID id, Authentication authentication) {
         UUID instructorId = (UUID) authentication.getPrincipal();
         return cancelarClaseService.cancelar(id, instructorId);

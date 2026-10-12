@@ -20,7 +20,7 @@ public class RechazarInstructorController {
     }
 
     @PostMapping("/{id}/rechazar")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permisos.puede('instructores.validar')")
     public RechazarInstructorResponse rechazar(
             @PathVariable UUID id,
             @RequestBody(required = false) RechazarInstructorRequest request,

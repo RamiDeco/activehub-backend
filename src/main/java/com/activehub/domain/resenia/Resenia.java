@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -36,6 +37,18 @@ public class Resenia extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String comentario;
 
+    /** Pendiente de aprobación del admin. NO significa "denunciada" — ver `oculta`. */
     @Column(name = "en_moderacion", nullable = false)
     private boolean enModeracion = true;
+
+    /** E2I-HU11 criterio 4: el instructor responde públicamente la reseña. */
+    @Column(name = "respuesta_instructor", columnDefinition = "TEXT")
+    private String respuestaInstructor;
+
+    @Column(name = "respuesta_instructor_at")
+    private Instant respuestaInstructorAt;
+
+    /** Baja del listado público por denuncia resuelta, sin borrar la reseña. */
+    @Column(nullable = false)
+    private boolean oculta = false;
 }
