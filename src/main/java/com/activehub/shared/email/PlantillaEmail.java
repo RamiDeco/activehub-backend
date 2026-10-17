@@ -1,6 +1,7 @@
 package com.activehub.shared.email;
 
 import com.activehub.domain.usuario.PropositoVerificacion;
+import com.activehub.shared.notificacion.TipoNotificacion;
 
 /**
  * El HTML de los mails, con la identidad visual de la app.
@@ -164,6 +165,111 @@ public final class PlantillaEmail {
                         escapar(bajada),        // %10$s
                         TENUE,                  // %11$s
                         escapar(cierre));       // %12$s
+    }
+
+    /** Título del mail de una notificación importante; también va como asunto. */
+    public static String tituloNotificacion(TipoNotificacion tipo) {
+        return switch (tipo) {
+            case AUSENCIA_PROFESOR -> "Tu clase no se va a dictar";
+            case CLASE_CANCELADA -> "Se canceló una clase";
+            case INSCRIPCION_CANCELADA -> "Se canceló tu inscripción";
+            case DENUNCIA_RESUELTA -> "Se resolvió tu denuncia";
+            case ACTIVIDAD_ELIMINADA -> "Se eliminó una actividad";
+            case INSTRUCTOR_APROBADO -> "Tu cuenta de instructor fue aprobada";
+            case INSTRUCTOR_RECHAZADO -> "Tu solicitud de instructor fue rechazada";
+            case INSTRUCTOR_SUSPENDIDO -> "Tu cuenta de instructor fue suspendida";
+            case PENALIZACION_APLICADA -> "Recibiste una penalización";
+            case MERCADOPAGO_TOKEN_VENCIDO -> "Volvé a vincular tu cuenta de Mercado Pago";
+            case CAPTURA_PAGO_FALLIDA -> "No se pudo cobrar un pago";
+            default -> "Tenés una novedad en ActiveHub";
+        };
+    }
+
+    public static String asuntoNotificacion(TipoNotificacion tipo) {
+        return tituloNotificacion(tipo) + " — ActiveHub";
+    }
+
+    /**
+     * Mail de una notificación importante. El texto es <b>el mismo mensaje de la campana</b>,
+     * que ya nombra la actividad, la fecha y qué pasó con el pago: escribir otro texto para el
+     * correo sería la forma segura de que los dos digan cosas distintas.
+     *
+     * @param urlApp a dónde lleva el botón "Abrir ActiveHub" (la URL del frontend).
+     */
+    public static String cuerpoNotificacion(TipoNotificacion tipo, String nombre, String mensaje, String urlApp) {
+        String titulo = tituloNotificacion(tipo);
+        return """
+                <!doctype html>
+                <html lang="es">
+                <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1">
+                  <title>%1$s</title>
+                </head>
+                <body style="margin:0;padding:0;background:%5$s;">
+                  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">%3$s</div>
+                  <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background:%5$s;padding:32px 12px;">
+                    <tr>
+                      <td align="center">
+                        <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:100%%;background:#ffffff;border:1px solid %6$s;border-radius:18px;overflow:hidden;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                          <tr>
+                            <td style="padding:26px 32px 0 32px;">
+                              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                  <td width="40" height="40" align="center" valign="middle" style="width:40px;height:40px;background:%4$s;border-radius:11px;color:#ffffff;font-size:21px;font-weight:bold;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">A</td>
+                                  <td style="padding-left:11px;font-size:21px;font-weight:bold;color:%4$s;letter-spacing:-.3px;">Active<span style="color:%7$s;">Hub</span></td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:24px 32px 0 32px;">
+                              <h1 style="margin:0 0 10px 0;font-size:22px;line-height:1.25;color:%4$s;letter-spacing:-.4px;">%1$s</h1>
+                              <p style="margin:0 0 14px 0;font-size:15px;line-height:1.6;color:%8$s;">Hola %2$s,</p>
+                              <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background:%5$s;border:1px solid %6$s;border-radius:14px;">
+                                <tr>
+                                  <td style="padding:16px 18px;font-size:15px;line-height:1.6;color:%4$s;">%3$s</td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:22px 32px 0 32px;">
+                              <a href="%9$s" style="display:inline-block;background:%7$s;color:#ffffff;text-decoration:none;font-weight:bold;font-size:14px;padding:12px 22px;border-radius:11px;">Abrir ActiveHub</a>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:22px 32px 26px 32px;">
+                              <div style="height:1px;background:#EEF2F6;margin-bottom:16px;"></div>
+                              <p style="margin:0;font-size:12px;line-height:1.55;color:%10$s;">
+                                También lo vas a ver en la campana de notificaciones de la app. Te escribimos
+                                por correo porque es un aviso importante sobre tus clases, tus pagos o tu cuenta.
+                              </p>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:16px 32px;background:%5$s;border-top:1px solid %6$s;">
+                              <p style="margin:0;font-size:11.5px;color:%10$s;">ActiveHub · Actividades deportivas y recreativas en Mendoza</p>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </body>
+                </html>
+                """
+                .formatted(
+                        escapar(titulo),        // %1$s
+                        escapar(nombre),        // %2$s
+                        escapar(mensaje),       // %3$s
+                        AZUL,                   // %4$s
+                        FONDO,                  // %5$s
+                        BORDE,                  // %6$s
+                        NARANJA,                // %7$s
+                        TEXTO,                  // %8$s
+                        escapar(urlApp),        // %9$s
+                        TENUE);                 // %10$s
     }
 
     /**

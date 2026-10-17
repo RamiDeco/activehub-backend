@@ -8,34 +8,55 @@ package com.activehub.shared.notificacion;
  * Deliberadamente abierto a crecer (nuevos horarios de actividades favoritas,
  * cancelación de clase, confirmación de operaciones, etc.) sin requerir una
  * migración nueva: la columna en base es un VARCHAR sin CHECK.
+ *
+ * <p>El booleano de cada valor dice si el aviso <b>además</b> se manda por correo (ver
+ * {@link #porCorreo()}).
  */
 public enum TipoNotificacion {
-    AUSENCIA_PROFESOR,
-    CLASE_CANCELADA,
-    NUEVO_HORARIO_FAVORITO,
+    AUSENCIA_PROFESOR(true),
+    CLASE_CANCELADA(true),
+    NUEVO_HORARIO_FAVORITO(false),
 
     // Alumno
-    INSCRIPCION_CONFIRMADA,
-    COBRO_EFECTIVO_CONFIRMADO,
-    INSCRIPCION_CANCELADA,
-    RESENIA_APROBADA,
-    RESENIA_RECHAZADA,
-    DENUNCIA_RESUELTA,
-    ACTIVIDAD_ELIMINADA,
-    RESENIA_RESPONDIDA,
+    INSCRIPCION_CONFIRMADA(false),
+    COBRO_EFECTIVO_CONFIRMADO(false),
+    INSCRIPCION_CANCELADA(true),
+    RESENIA_APROBADA(false),
+    RESENIA_RECHAZADA(false),
+    DENUNCIA_RESUELTA(true),
+    ACTIVIDAD_ELIMINADA(true),
+    RESENIA_RESPONDIDA(false),
 
     // Instructor
-    INSTRUCTOR_APROBADO,
-    INSTRUCTOR_RECHAZADO,
-    DENUNCIA_RECIBIDA,
-    INSTRUCTOR_SUSPENDIDO,
-    PENALIZACION_APLICADA,
-    DENUNCIA_DESESTIMADA,
-    NUEVA_INSCRIPCION,
-    ALUMNO_CANCELO_INSCRIPCION,
-    NUEVA_RESENIA,
-    MERCADOPAGO_TOKEN_VENCIDO,
+    INSTRUCTOR_APROBADO(true),
+    INSTRUCTOR_RECHAZADO(true),
+    DENUNCIA_RECIBIDA(false),
+    INSTRUCTOR_SUSPENDIDO(true),
+    PENALIZACION_APLICADA(true),
+    DENUNCIA_DESESTIMADA(false),
+    NUEVA_INSCRIPCION(false),
+    ALUMNO_CANCELO_INSCRIPCION(false),
+    NUEVA_RESENIA(false),
+    MERCADOPAGO_TOKEN_VENCIDO(true),
 
     // Administrador
-    CAPTURA_PAGO_FALLIDA
+    CAPTURA_PAGO_FALLIDA(true);
+
+    /**
+     * Sólo lo importante va por correo: lo que le cambia a alguien la agenda o la plata
+     * (clase cancelada, inscripción cancelada con su reintegro, actividad eliminada, ausencia
+     * del profesor), el desenlace de una denuncia, una sanción, el estado de su cuenta de
+     * instructor y las alertas de cobro. Lo rutinario (una inscripción nueva, una reseña, un
+     * horario de un favorito) se queda en la campana: un mail por cada evento termina en la
+     * carpeta de spam y arrastra a los importantes con él.
+     */
+    private final boolean porCorreo;
+
+    TipoNotificacion(boolean porCorreo) {
+        this.porCorreo = porCorreo;
+    }
+
+    public boolean porCorreo() {
+        return porCorreo;
+    }
 }

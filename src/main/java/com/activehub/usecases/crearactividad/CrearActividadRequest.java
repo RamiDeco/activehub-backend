@@ -18,7 +18,8 @@ public record CrearActividadRequest(
         // nuevos. La existencia la verifica el servicio contra la base.
         @NotNull(message = "El nivel de intensidad es obligatorio") UUID nivelIntensidadId,
         @NotNull(message = "El precio es obligatorio")
-        @DecimalMin(value = "0", message = "El precio no puede ser negativo") BigDecimal precio,
+        @DecimalMin(value = "0", message = "El precio no puede ser negativo")
+        @DecimalMax(value = "1000000", message = "El precio no puede superar los $1.000.000") BigDecimal precio,
         @NotBlank(message = "La ubicación es obligatoria") @SinHtml String ubicacion,
         @NotBlank(message = "El color/imagen es obligatorio") String photoTint,
         // El cupo NO va en la Actividad (sección 2: vive en Clase y en AgendaClases).

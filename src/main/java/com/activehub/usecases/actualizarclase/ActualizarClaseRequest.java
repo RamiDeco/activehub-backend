@@ -1,5 +1,6 @@
 package com.activehub.usecases.actualizarclase;
 
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
@@ -10,6 +11,7 @@ public record ActualizarClaseRequest(
         // La duracion es un dato de la actividad, no de cada clase.
 
         @NotNull(message = "Los cupos máximos son obligatorios")
-        @Min(value = 1, message = "El cupo debe ser un número entero mayor a 0") Integer cuposMax
+        @Min(value = 1, message = "El cupo debe ser un número entero mayor a 0")
+        @Max(value = 500, message = "El cupo no puede superar las 500 personas") Integer cuposMax
 ) {
 }

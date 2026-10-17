@@ -35,22 +35,22 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-10-10, despues de la ENTRADA 032) ===
+=== ESTADO GENERAL (actualizado: 2026-10-17, despues de la ENTRADA 040) ===
 Casos de uso implementados en el backend: 117
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
 Los dos ultimos son desvincularcuentamp y renovartokensmercadopago (ENTRADA 030, KAN-55).
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
 
-Pruebas automatizadas del backend: 209 archivos / 1005 pruebas / resultado: 1003 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
+Pruebas automatizadas del backend: 211 archivos / 1018 pruebas / resultado: 1016 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
 (comando de conteo de archivos: find src/test -name "*Test.java" | wc -l)
-(comando de ejecucion: JAVA_HOME=$HOME/.jdks/ms-21.0.7 ./mvnw test)
-(salida literal: "Tests run: 1005, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS", ejecutada el 2026-10-10 en la ENTRADA 032)
+(comando de ejecucion: JAVA_HOME=$HOME/.jdks/corretto-21.0.10 ./mvnw -B test)
+(salida literal: "Tests run: 1018, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS", ejecutada el 2026-10-17 en la ENTRADA 034)
 
-Pruebas automatizadas del frontend: 18 archivos / 153 pruebas / resultado: 153 correctas, 0 fallidas (ENTRADA 031)
-(comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  18)
-(comando de ejecucion: npx vitest run; salida literal: "Test Files  18 passed (18)" - "Tests  153 passed (153)")
+Pruebas automatizadas del frontend: 22 archivos / 175 pruebas / resultado: 175 correctas, 0 fallidas (ENTRADA 040)
+(comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  22)
+(comando de ejecucion: npm test; salida literal: "Test Files  22 passed (22)" - "Tests  175 passed (175)")
 Cobertura sobre los archivos alcanzados: 75.25% de sentencias, 66.86% de ramas, 69.23% de funciones, 78.17% de lineas (comando: npm run test:coverage).
-Cubren lib/ completo salvo nominatim y resaltado (notificaciones tiene pruebas desde la ENTRADA 031, sin medir de nuevo la cobertura), mas las dos pantallas publicas (Ayuda y Manual). Las pantallas de Alumno, Instructor y Administrador todavia no tienen pruebas.
+Cubren lib/ completo salvo nominatim y resaltado (notificaciones tiene pruebas desde la ENTRADA 031, sin medir de nuevo la cobertura), mas las dos pantallas publicas (Ayuda y Manual). Las pantallas de Alumno e Instructor todavia no tienen pruebas; la de Administrador "Gestion de denuncias" tiene la primera desde la ENTRADA 033.
 
 Migraciones Flyway: V1 a V32 (ultima: V32__pago_intentos_captura, ENTRADA 023)
 (comando: ls src/main/resources/db/migration | wc -l  ->  32)
@@ -73,7 +73,7 @@ Estado por modulo (los 15):
 5. Alumno - PROBADO.
 6. Instructor - PROBADO.
 7. Actividades - PROBADO - alta, edicion, taxonomia, niveles, fotos (ahora en Supabase Storage), geolocalizacion.
-8. Reservas y Pagos - PARCIAL - la pasarela simulada se retiro (ENTRADA 013); la inscripcion autoriza contra Mercado Pago real (probado en sandbox, KAN-58); la captura al finalizar la clase y el reembolso de un pago capturado estan PROBADOS en sandbox (ENTRADA 025); la cancelacion de una autorizacion sin capturar sigue sin prueba en sandbox. Auditoria duplicada del reembolso corregida (KAN-66, ENTRADAS 027 y 032), pendiente de verificar en sandbox. Renovacion automatica de la vinculacion y desvinculacion de la cuenta (KAN-55, ENTRADA 030) IMPLEMENTADAS y con pruebas automatizadas; la prueba manual con la base (vencimiento forzado) esta PENDIENTE. Boton "Desvincular" en el Panel del instructor (KAN-67, ENTRADA 031) IMPLEMENTADO, sin verificar en el navegador.
+8. Reservas y Pagos - PARCIAL en esta bitacora; el usuario informa el 2026-10-16 que la integracion con Mercado Pago quedo terminada y funcionando (pruebas hechas en otra PC, no re-verificadas en esta sesion) - la pasarela simulada se retiro (ENTRADA 013); la inscripcion autoriza contra Mercado Pago real (probado en sandbox, KAN-58); la captura al finalizar la clase y el reembolso de un pago capturado estan PROBADOS en sandbox (ENTRADA 025); la cancelacion de una autorizacion sin capturar sigue sin prueba en sandbox. Auditoria duplicada del reembolso corregida (KAN-66, ENTRADAS 027 y 032), pendiente de verificar en sandbox. Renovacion automatica de la vinculacion y desvinculacion de la cuenta (KAN-55, ENTRADA 030) IMPLEMENTADAS y con pruebas automatizadas; la prueba manual con la base (vencimiento forzado) esta PENDIENTE. Boton "Desvincular" en el Panel del instructor (KAN-67, ENTRADA 031) IMPLEMENTADO, sin verificar en el navegador.
 9. Historial y Calificaciones - PROBADO.
 10. Busqueda y Filtrado - PROBADO - filtrado tradicional en Explorar y, desde esta actualizacion, motor de recomendaciones con puntaje en el Home del alumno.
 11. Administracion y Soporte - PROBADO.
@@ -98,7 +98,7 @@ Despliegue: backend (Render) - no desplegado; frontend (Vercel) - no desplegado;
 
 Variables de entorno del backend agregadas en las ENTRADAS 006 y 007 (solo los nombres, sin valores): GROQ_API_KEY (obligatoria para que el asistente funcione; vacia = las dos pantallas caen a su comportamiento sin modelo; el usuario ya la cargo en su entorno local), GROQ_URL, GROQ_MODELO (por defecto openai/gpt-oss-120b desde la ENTRADA 007), GROQ_REASONING_EFFORT (por defecto "low") y GROQ_TIMEOUT_SEG.
 
-Pendiente transversal que arrastra la ENTRADA 007: el manual de usuario (Anexo 8) quedo desactualizado en sus apartados 1.6 y 2.3, que describen el chat y el asistente de beneficios como eran antes de la IA. La ENTRADA 007 detalla, apartado por apartado, que hay que cambiar. Al actualizarlo hay que reemplazar tambien la copia que usa el asistente (activehub-backend/src/main/resources/manual/manual-usuario-activehub.txt), porque es la fuente con la que responde el chatbot. Desde la ENTRADA 009 hay un TERCER lugar que se actualiza junto con los otros dos: activehub-frontend/src/lib/manual.ts, que es el texto que muestra la pantalla /manual.
+Pendiente transversal que arrastra la ENTRADA 007 - RESUELTO en la ENTRADA 034 (las dos copias del sistema tienen el manual vigente; quedan 7 lineas de diferencia con el Anexo 8, ver esa entrada). Texto original del pendiente: el manual de usuario (Anexo 8) quedo desactualizado en sus apartados 1.6 y 2.3, que describen el chat y el asistente de beneficios como eran antes de la IA. La ENTRADA 007 detalla, apartado por apartado, que hay que cambiar. Al actualizarlo hay que reemplazar tambien la copia que usa el asistente (activehub-backend/src/main/resources/manual/manual-usuario-activehub.txt), porque es la fuente con la que responde el chatbot. Desde la ENTRADA 009 hay un TERCER lugar que se actualiza junto con los otros dos: activehub-frontend/src/lib/manual.ts, que es el texto que muestra la pantalla /manual.
 
 Modelo de ramas: rama activa integracion en los dos repositorios. Sin etiquetas. No existe la rama develop. Lo de las ENTRADAS 002 y 003 (recuperacion de contrasenia y Supabase Storage) lo commiteo el usuario el 2026-09-22 con el mensaje "Agregada la posibilidad de recuperar contrasenia olvidada. Arreglos de bugs menores.": backend 4ef25fd, frontend 8c8fd42. Lo de las ENTRADAS 004 y 005 (motor de recomendaciones, baja de la actividad de prueba y cabecera de este archivo) lo commiteo el usuario el 2026-09-22 con el mensaje "Mejoradas las recomendaciones": backend 430df40, frontend 827f835. Al 2026-09-22 los dos arboles de trabajo estan limpios y no hay nada sin commitear.
 === FIN ESTADO GENERAL ===
@@ -1959,3 +1959,277 @@ ERRORES DETECTADOS: el descripto en DETALLE TECNICO (corregido en esta entrada).
 CAPTURAS SUGERIDAS: suite-backend-1005.png - consola con "Tests run: 1005, Failures: 0, Errors: 0, Skipped: 2" y "BUILD SUCCESS".
 PENDIENTE QUE QUEDA: verificacion en sandbox de KAN-66: reiniciar el backend, pago capturado -> denuncia -> el administrador resuelve con REINTEGRAR -> en Auditoria una sola fila "Se reembolsó en Mercado Pago un pago ya cobrado." con el administrador como actor.
 === FIN ENTRADA 032 ===
+
+=== ENTRADA 033 ===
+FECHA: 2026-10-16
+REPOSITORIO: ambos
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada (backend sobre e9bd52f, frontend sobre 583bc00) - sin Pull Request
+TIPO: CAMBIO FUNCIONAL
+TITULO: Correcciones de cierre pedidas por el usuario: acciones de denuncia por tipo, topes de sanciones, paginacion, renombre de secciones del administrador, buscador del Home, boton para activar la ubicacion, notificaciones importantes por correo, boton de inasistencia, detalle de clase desde el historial y filtro por actividad del instructor
+QUE CAMBIA PARA EL USUARIO:
+ Administrador:
+ a) El item del menu que se llamaba "Auditoria" (resolucion de denuncias) ahora se llama "Gestion de denuncias", y el que se llamaba "Trazabilidad" (registro de operaciones) ahora se llama "Auditoria". Las rutas no cambiaron (/admin/auditoria y /admin/trazabilidad).
+ b) En "Gestion de denuncias", al abrir una denuncia sobre una resenia solo se ofrecen "Ocultar la resenia" y "Desestimar". Antes se ofrecian tambien Reintegrar, Suspender y Penalizar, que el sistema rechazaba. La tabla gano la columna "Tipo" (Clase / Resenia), la columna "Denunciado" muestra al autor de la resenia cuando corresponde y el panel de resolucion cita el comentario denunciado.
+ c) Topes: la suspension dura entre 15 y 365 dias (antes solo tenia minimo) y la multa va de $1.000 a $500.000 (en la suspension, 0 sigue significando "sin multa"). Valen en "Penalizaciones" y en las dos pantallas que resuelven denuncias. En "Penalizaciones" el calendario de "Fecha fin" no deja elegir una fecha fuera de ese rango.
+ d) Paginacion de 10 filas en la pestania "Reclamos" de "Gestion", en las dos sub-pestanias de "Resenias" ("Pendientes de moderacion" y "Publicadas") y en "Gestion de denuncias", con los mismos controles que ya tenia "Auditoria" (ex "Trazabilidad").
+ e) La descripcion de "Reintegrar el pago" decia que alcanzaba solo a quien denuncio; ahora dice lo que hace el sistema: devuelve el pago a todos los inscriptos de la clase.
+ Instructor:
+ f) Las clases del "Historial" se pueden abrir: llevan a la misma pantalla de detalle de clase que se usa desde "Mis actividades", en modo consulta (quienes se inscribieron, estado de inscripcion, pago y monto a recibir, sin botones de editar, cancelar, notificar ausencia ni confirmar cobro). En una clase cancelada se listan los alumnos que estaban anotados, con su inscripcion cancelada y el estado de su pago.
+ g) Filtro "Actividad" en "Proximas clases" y en "Historial".
+ h) El precio por clase no puede superar $1.000.000 y el cupo maximo de una clase no puede superar 500 personas.
+ Alumno:
+ i) El buscador del Home muestra todos los resultados: antes se veia solo el primero y el resto quedaba tapado.
+ j) Con la ubicacion apagada aparece el boton "Activar ubicacion", que vuelve a mostrar el cartel del navegador. Si el navegador tiene la ubicacion bloqueada para el sitio (caso en que ningun boton puede volver a mostrar el cartel), se muestran los pasos para habilitarla a mano. Esta en "Cerca de tu ubicacion" del Home, en Explorar (filtro por distancia y orden por cercania) y en el detalle de la actividad.
+ k) En "Mis clases", el boton "Inasistencia" solo aparece mientras la denuncia es posible: clase finalizada, desde 1 hora y hasta 24 horas despues del inicio. Antes aparecia en cualquier clase pasada, tambien en las finalizadas hace dias, donde el sistema la rechazaba. Una clase ya denunciada muestra "Reporte enviado" aunque se recargue la pagina.
+ Todos los roles:
+ l) Las notificaciones importantes llegan ademas por correo: clase cancelada, ausencia del profesor, inscripcion cancelada (incluye el reintegro), actividad eliminada, denuncia resuelta, suspension, penalizacion, aprobacion o rechazo de la cuenta de instructor, vinculacion de Mercado Pago vencida y falla de cobro (esta ultima, a la administracion). Las demas siguen solo en la campana.
+TEXTOS DE INTERFAZ (literales):
+ Menu del administrador: "Gestion de denuncias" (con tilde: "Gestión de denuncias"), "Auditoría".
+ Titulos: "Gestión de denuncias"; "Auditoría" (antes "Registro de auditoría y trazabilidad").
+ Bajada de Gestion de denuncias: "Revisá las denuncias y resolvelas. Sobre una clase: reintegro, suspensión, penalización o desestimar. Sobre una reseña: ocultarla o desestimar."
+ Columnas: "Tipo", "Denunciante", "Motivo", "Denunciado", "Estado". Etiquetas de tipo: "Clase", "Reseña".
+ Botones de resolucion: "Reintegrar el pago", "Suspender al instructor", "Aplicar penalización económica", "Desestimar", "Ocultar la reseña".
+ Modal de suspension: "Días de suspensión (entre 15 y 365)"; ayuda de la multa: "En 0 no se aplica penalización económica, solo la suspensión. Si cargás una multa, va de $1.000 a $500.000."
+ Penalizaciones: "Monto ($) · entre 1.000 y 500.000"; "La suspensión dura entre 15 y 365 días."
+ Errores: "La suspensión no puede durar menos de 15 días."; "La suspensión no puede durar más de 365 días."; "La multa tiene que estar entre $1.000 y $500.000."; "El monto no puede ser negativo."; "El precio no puede superar los $1.000.000."; "El cupo no puede superar las 500 personas".
+ Paginacion: "« Primera", "Anterior", "Página N de M", "Siguiente", "Última »".
+ Detalle de clase desde el historial: "Volver al historial"; "Esta clase se canceló. Abajo están los alumnos que estaban anotados y qué pasó con cada pago."; "Esta clase ya se dictó. Es un detalle de consulta: no hay acciones pendientes."; "Esta clase no tuvo alumnos inscriptos."
+ Filtro del instructor: "Actividad" con la opcion "Todas las actividades"; vacios: "No hay clases con esos filtros." (Historial) y "No tenés clases próximas de esa actividad." (Proximas clases).
+ Ubicacion: boton "Activar ubicación"; textos "Activá tu ubicación para ver las actividades que tenés cerca." / "...para filtrar por distancia." / "...para ordenar las actividades por cercanía." / "...para saber a qué distancia te queda."; bloqueada: "Tu navegador tiene bloqueada la ubicación para ActiveHub. Activala para (...)." y los pasos "Tocá el ícono que está a la izquierda de la dirección de la página (un candado o dos barritas).", "Buscá "Ubicación" y cambiala a "Permitir".", "Recargá la página."
+ Mis clases: el aviso gris paso de "disponible 1 h tras el inicio" a "disponible al finalizar la clase".
+ Correo: asunto "<titulo> — ActiveHub"; titulos "Tu clase no se va a dictar", "Se canceló una clase", "Se canceló tu inscripción", "Se resolvió tu denuncia", "Se eliminó una actividad", "Tu cuenta de instructor fue aprobada", "Tu solicitud de instructor fue rechazada", "Tu cuenta de instructor fue suspendida", "Recibiste una penalización", "Volvé a vincular tu cuenta de Mercado Pago", "No se pudo cobrar un pago"; saludo "Hola <nombre>,"; boton "Abrir ActiveHub"; pie "También lo vas a ver en la campana de notificaciones de la app. Te escribimos por correo porque es un aviso importante sobre tus clases, tus pagos o tu cuenta."
+DETALLE TECNICO:
+ Backend: TipoNotificacion gano el atributo porCorreo. NotificacionService.notificar publica CorreoNotificacionEvent para esos tipos y CorreoNotificacionListener lo envia con EmailSender despues del commit (@TransactionalEventListener AFTER_COMMIT con fallbackExecution, @Async habilitado por la nueva AsyncConfig); el cuerpo es PlantillaEmail.cuerpoNotificacion con el mismo mensaje de la campana. VentanaPenalizacion gano MAXIMO_DIAS_SUSPENSION (365), MONTO_MINIMO_MULTA (1000) y MONTO_MAXIMO_MULTA (500000), aplicados en crearpenalizacion y resolverdenuncia. @DecimalMax 1000000 en el precio de crearactividad/actualizaractividad y @Max 500 en el cupo de crearclase/actualizarclase. listarrosterclase incluye las inscripciones Cancelada cuando la clase esta Cancelada. No hay casos de uso nuevos ni migraciones.
+ Frontend: nuevos lib/denuncias.ts (etiquetas, descripciones y acciones por tipo, antes privadas de Gestion.tsx), lib/limites.ts, lib/paginado.ts, components/Paginacion.tsx, components/FiltroActividad.tsx y components/ActivarUbicacion.tsx. useGeolocation gano reintentar() y bloqueado (Permissions API). GestionClase busca la clase en listarMisClases cuando no esta en la cache del detalle y tiene modo solo lectura para Finalizada/Cancelada. En el Home, el overflow:hidden de la tarjeta del saludo (que recortaba el desplegable del buscador) se movio a una capa propia de los circulos de fondo.
+ Manual de usuario: actualizados en la copia del asistente (activehub-backend/src/main/resources/manual/manual-usuario-activehub.txt) y en la pantalla /manual (activehub-frontend/src/lib/manual.ts) los nombres de las secciones del administrador y los topes de la suspension y la multa. NO se toco "Manual de usuario Activehub.txt" de la raiz (Anexo 8 del informe). El resto de lo nuevo de esta entrada todavia no esta en el manual: el usuario va a pasar el contenido a agregar.
+ESTADO: IMPLEMENTADO. Con pruebas automatizadas: topes (backend y frontend), notificacion por correo (publicacion del evento y armado del mail, con el envio mockeado), roster de clase cancelada, acciones por tipo, tope y paginacion de "Gestion de denuncias", paginado y reintento de la ubicacion. Sin verificar en el navegador ni con un envio real de correo.
+HISTORIAS DE USUARIO Y CRITERIOS: E4Ad-HU06 (penalizaciones: topes), E4Ad-HU07 (resolucion de denuncias: acciones por tipo), E2I-HU07 (detalle de clase), Historial de clases del instructor, E3A-HU01 (buscador y cercania del Home), E3A-HU11 (reportar inasistencia). Propuesta NUEVA: E1A-HU06 (la serie llegaba hasta HU05) "Recibir por correo las notificaciones importantes".
+PANTALLAS: modificadas E4Ad (Gestion, Gestion de denuncias, Penalizaciones, Auditoria), E2I (Historial, Proximas clases, Gestion de clase, Crear actividad, Detalle de actividad), E3A (Home, Explorar, Detalle, Mis clases). Sin pantallas nuevas (42 archivos en src/pages sin contar pruebas).
+REGLAS DE NEGOCIO: propuestas NUEVAS (la serie llegaba hasta RN-23): RN-24 "Una suspension dura entre 15 y 365 dias y una multa va de $1.000 a $500.000"; RN-25 "Las notificaciones que afectan la agenda, la plata, una denuncia, una sancion o la cuenta se envian tambien por correo".
+MODULOS: Administracion y Soporte; Instructor; Alumno; Busqueda y Filtrado; Gestion de Usuarios, Roles y Permisos (penalizaciones); Autenticacion y Control de Acceso (correo).
+CASOS DE USO: sin casos de uso nuevos (117). Modificados: crearpenalizacion, resolverdenuncia, listarrosterclase, crearactividad, actualizaractividad, crearclase, actualizarclase (validaciones).
+ENTIDADES Y MIGRACIONES: sin migraciones (V1 a V32). Sin cambios de esquema.
+TECNOLOGIAS: sin dependencias nuevas. Se usan @Async y @TransactionalEventListener de Spring y la Permissions API del navegador.
+COSTOS: sin impacto (Gmail SMTP ya en uso).
+RIESGOS: R11 (APIs externas) - el envio de correo depende de Gmail; si falla, la notificacion queda en la campana y el error se registra en el log. R05 - mitigado: los nombres del menu y del manual coinciden.
+SEGURIDAD: el texto del correo se escapa antes de interpolarse en el HTML. No se agregaron variables de entorno (se reusan MAIL_USERNAME, MAIL_PASSWORD y FRONTEND_URL).
+PRUEBAS: backend "Tests run: 1017, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS" (comando: JAVA_HOME=$HOME/.jdks/corretto-21.0.10 ./mvnw -B test), 211 archivos *Test.java; nuevos NotificacionServiceTest y CorreoNotificacionListenerTest, y casos nuevos en CrearPenalizacionServiceTest, ResolverDenunciaServiceTest y ListarRosterClaseServiceTest. Frontend "Test Files 21 passed (21)" - "Tests 170 passed (170)" (comando: npm test); nuevos limites.test.ts, paginado.test.ts y pages/admin/Auditoria.test.tsx (primera prueba de una pantalla de administrador), y dos casos nuevos en geo.test.ts. Manuales: ninguna.
+ANALISIS ESTATICO: "npx eslint ." -> "11 problems (0 errors, 11 warnings)", sin advertencias nuevas. "npx tsc -b" sin errores.
+DESPLIEGUE Y CONFIGURACION: sin cambios. Sin variables nuevas. Sin MAIL_USERNAME/MAIL_PASSWORD los correos de notificacion se escriben en el log, igual que el codigo de verificacion.
+DECISIONES: los nombres internos (keys de menu, rutas y archivos Auditoria.tsx / Trazabilidad.tsx) no se renombraron para no romper permisos, enlaces de notificaciones ni marcadores; solo cambiaron las etiquetas visibles. El boton de inasistencia se rige por la ventana de denuncia del backend (clase Finalizada, 1 h a 24 h desde el inicio) en lugar de ocultarse en toda clase finalizada, porque denunciar exige justamente que la clase este Finalizada (RN-18): ocultarlo siempre en ese estado haria imposible denunciar. El correo usa el mismo texto que la campana para que los dos nunca digan cosas distintas. Mercado Pago: el usuario informa que la integracion quedo terminada y funcionando en otra PC; no se re-verifico en esta sesion.
+ERRORES DETECTADOS: (1) "Gestion de denuncias" ofrecia acciones invalidas sobre denuncias de resenia; causa: la pantalla tenia su propia lista fija de cuatro acciones. (2) El buscador del Home mostraba un solo resultado; causa: overflow:hidden en la tarjeta contenedora. (3) Abrir una clase pasada o una de Proximas clases sin haber visitado su actividad rebotaba a "Mis actividades"; causa: GestionClase leia solo la cache parcial del detalle de actividad. (4) La descripcion de "Reintegrar el pago" contradecia al backend.
+CAPTURAS SUGERIDAS: gestion-denuncias-resenia.png (denuncia de resenia con solo dos acciones); penalizaciones-topes.png; historial-detalle-clase.png; activar-ubicacion.png; home-buscador-desplegable.png; correo-clase-cancelada.png (mail recibido).
+PENDIENTE QUE QUEDA: verificar en el navegador todo lo de esta entrada y un envio real de correo con MAIL_USERNAME/MAIL_PASSWORD cargadas; incorporar al manual de usuario (las dos copias de la plataforma y el Anexo 8) lo que el usuario va a pasar.
+=== FIN ENTRADA 033 ===
+
+=== ENTRADA 034 ===
+FECHA: 2026-10-17
+REPOSITORIO: ambos
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada (backend sobre e9bd52f, frontend sobre 583bc00, ambos con los cambios de la ENTRADA 033 tambien sin commitear) - sin Pull Request
+TIPO: DOCUMENTACION
+TITULO: Manual de usuario vigente (integracion real con Mercado Pago) en las dos copias del sistema, y "Mercado Pago" separado en la pantalla de inscripcion y pago
+QUE CAMBIA PARA EL USUARIO:
+ a) Pantalla de inscripcion y pago (E3A-PAN-07): los cuatro textos que decian "MercadoPago" junto ahora dicen "Mercado Pago" separado. No hay otro texto visible con la forma junta en el frontend ni en el backend (se busco la cadena en los dos repositorios; las que quedan son nombres de clases, componentes, tipos, rutas, constantes y claves, que no se tocan).
+ b) El asistente "¿Dudas?" y la pantalla publica /manual responden y muestran el manual vigente: inscripcion y pago con Mercado Pago real (reserva en la tarjeta y cobro al dictarse la clase, tres resultados posibles, clase que solo acepta efectivo, tarjeta rechazada), cancelaciones y reintegros, los ocho estados de "Mis pagos", "Cobros con Mercado Pago" del Panel del instructor, columnas "Pago" y "A recibir", glosario con En revision, Rechazado y Reembolsado, asistente con modelo de lenguaje e informe de beneficios.
+ c) En /manual, los pasos que tienen opciones o mensajes asociados (por ejemplo los tres resultados de inscribirse) se muestran como vinetas debajo del paso.
+ d) Preguntas frecuentes de Ayuda (tambien las usa el chat cuando la IA no esta): la de medios de pago decia que el pago "se Libera al confirmarse la clase"; ahora dice tarjeta de credito por Mercado Pago o efectivo, sin debito ni prepagas. Se agregaron cinco: "¿Cuándo se me cobra la clase que pagué con tarjeta?", "¿Por qué una clase solo me deja pagar en efectivo?", "Mi pago figura "En revisión", ¿perdí el lugar?", "Si cancelan la clase, ¿cómo recupero mi dinero?" y "Soy instructor, ¿qué necesito para cobrar con tarjeta?". La de cancelar una inscripcion suma que se libera la reserva de una tarjeta todavia no cobrada y que un pago ya cobrado o el efectivo no se devuelven.
+TEXTOS DE INTERFAZ (literales): "Mercado Pago" (opcion de pago; la leyenda "Tarjeta de crédito" no cambia); "Pagar con Mercado Pago" (titulo del panel); "Vas a completar los datos de tu tarjeta de crédito en una ventana segura de Mercado Pago. El monto queda reservado en tu tarjeta y se cobra después de la clase." (leyenda); "Pagar $<importe> con Mercado Pago" (boton; mientras se envia sigue diciendo "Procesando…"). Respuestas nuevas de las FAQ: literales en el campo a) y d) y en activehub-frontend/src/lib/faqs.ts.
+DETALLE TECNICO:
+ Fuente: PARTE B de MANUAL-ACTIVEHUB-TEXTO-VIGENTE.txt (raiz del proyecto), sacada del Anexo 8 ya actualizado. Se reemplazo el contenido completo de activehub-backend/src/main/resources/manual/manual-usuario-activehub.txt y del arreglo MANUAL de activehub-frontend/src/lib/manual.ts.
+ Diferencias deliberadas con la PARTE B, todas por las correcciones de la ENTRADA 033 (la PARTE B se escribio antes): 7 lineas. 4.1: el panel lateral nombra "Gestión de denuncias" y "Auditoría" (antes "Auditoría" y "Trazabilidad"). 4.6: "La sección "Gestión de denuncias"..."; Suspender: "(entre 15 y 365)" dias y multa "(entre $1.000 y $500.000; en 0 no se aplica multa)"; sobre una resenia "las únicas acciones disponibles son "Ocultar la reseña" y "Desestimar"". 4.7: monto entre $1.000 y $500.000 y suspension entre 15 y 365 dias con el calendario limitado. 3.11: "La suspensión dura entre 15 y 365 días". 4.10: "La sección "Auditoría" presenta...". Los titulos de los apartados (incluido "4.10 Registro de auditoría y trazabilidad") no se cambiaron. El Anexo 8 del informe no tiene estas 7 correcciones.
+ Verificacion de fidelidad: se comparo el texto de manual.ts contra la PARTE B corregida, palabra por palabra (conteo de cada palabra, ignorando la numeracion de pasos y el marcado de negritas): sin diferencias.
+ Backend: la PARTE B trae los pasos numerados ("1. En la página de inicio, presionar…"), que ManualUsuario tomaba como titulos de capitulo (la regla aceptaba cualquier linea "numero. texto"). Se separo en esApartado (dos o mas numeros, "2.6 …") y esCapitulo (un numero que tiene que ser el siguiente capitulo, de 60 caracteres o menos, sin comillas ni punto o dos puntos final). Resultado: 44 titulos (5 capitulos y 39 apartados), los mismos de la PARTE B.
+ Frontend: manual.ts se genero desde el texto plano con un conversor (vinetas -> lista, pasos numerados -> pasos, linea corta suelta -> sub, listas "Columna: valor — Columna: valor" -> tabla; 6 secciones, 43 apartados, 73 parrafos, 21 listas, 21 listas de pasos, 16 subtitulos, 2 tablas). Los bloques pasos y lista ganaron el campo opcional sub (vinetas anidadas por item) y la pantalla Manual.tsx las dibuja; textoDeBloque las incluye, asi el buscador de /manual las encuentra. Negrita en el termino de las listas "Termino: definicion", como en la version anterior.
+ESTADO: IMPLEMENTADO. Probado con pruebas automatizadas (estructura del manual en las dos copias, sublistas, FAQ). PENDIENTE: verificacion en el navegador de /manual y de la pantalla de inscripcion y pago, y las 12 preguntas al asistente de la PARTE A.5 del documento (requieren el backend con GROQ_API_KEY).
+HISTORIAS DE USUARIO Y CRITERIOS: E3A-HU06 / E3A-HU07 (inscripcion y pago: textos), ayuda y manual (SYS-PAN-MAN). Sin historias nuevas.
+PANTALLAS: E3A-PAN-07 (inscripcion y pago), SYS-PAN-MAN (/manual), pantalla de Ayuda (FAQ). Sin pantallas nuevas.
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Ayuda y Soporte al Usuario; Reservas y Pagos (solo textos).
+CASOS DE USO: sin cambios (117). Cambia el componente compartido ManualUsuario (shared/ia), que usa preguntaralasistente.
+ENTIDADES Y MIGRACIONES: sin cambios (V1 a V32).
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto. El manual vigente es mas largo, pero el asistente sigue mandando al modelo solo 3 secciones con techo de 6.000 caracteres por consulta.
+RIESGOS: R05 (inconsistencias documentacion-sistema) - mitigado: interfaz, manual del sistema y FAQ alineados; queda la diferencia de 7 lineas con el Anexo 8 (campo DETALLE TECNICO).
+SEGURIDAD: sin cambios. El manual sigue siendo texto publico, sin datos sensibles.
+PRUEBAS: frontend "Test Files 21 passed (21)" - "Tests 172 passed (172)" (comando: npm test); se ajustaron dos pruebas de Manual.test.tsx escritas contra el texto anterior (titulo de la seccion 1 y el termino en negrita usado de ejemplo) y se agregaron dos en manual.test.ts (sub). Backend: nueva prueba ManualUsuarioTest.carga_losPasosNumeradosNoSeConfundenConTitulos; suite completa "Tests run: 1018, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS" (comando: JAVA_HOME=$HOME/.jdks/corretto-21.0.10 ./mvnw -B test), 211 archivos *Test.java. Manuales: ninguna.
+ANALISIS ESTATICO: "npx eslint ." -> "11 problems (0 errors, 11 warnings)", sin cambios. "npx tsc -b" sin errores. "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: (1) Se reemplazo el manual completo, como pide el documento, en vez de intercalar. (2) Se mantuvieron las 7 correcciones de la ENTRADA 033 sobre la PARTE B, porque la PARTE B es anterior y transcribe como literales de la interfaz textos que ya no existen ("Trazabilidad" en el menu) y topes que ya no valen; aplicar la PARTE B tal cual habria dejado al asistente respondiendo cosas falsas. (3) Se cambio el parser del backend en lugar de quitar la numeracion de los pasos del manual, para no tocar el texto. (4) Las preguntas frecuentes se tomaron de A.6 con la misma redaccion; la de medios de pago conserva su identificador y su pregunta porque la usa la guia rapida de Ayuda.
+ERRORES DETECTADOS: con la PARTE B, el parser del asistente habria partido el manual en cada paso numerado (se detecto simulando el particionado antes de correr las pruebas).
+CAPTURAS SUGERIDAS: inscripcion-mercado-pago-separado.png; manual-2-6-subvinetas.png; ayuda-faq-cuando-se-cobra.png.
+PENDIENTE QUE QUEDA: verificar en el navegador; hacer las 12 preguntas de A.5 al asistente; decidir si el Anexo 8 incorpora las 7 lineas de la ENTRADA 033 (y, si se quiere, las funciones nuevas de esa entrada: historial con detalle, filtro por actividad, boton "Activar ubicación", correos de notificaciones importantes), que no estan en la PARTE B y por lo tanto tampoco en el manual del sistema.
+=== FIN ENTRADA 034 ===
+
+=== ENTRADA 035 ===
+FECHA: 2026-10-17
+REPOSITORIO: ambos
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada (sobre los cambios tambien sin commitear de las ENTRADAS 033 y 034) - sin Pull Request
+TIPO: DOCUMENTACION
+TITULO: El manual de usuario incorpora las funciones de las correcciones de cierre (ENTRADA 033)
+QUE CAMBIA PARA EL USUARIO: el asistente "¿Dudas?" y la pantalla /manual ahora explican: los avisos importantes por correo (1.5); el boton "Activar ubicación" y como habilitar la ubicacion a mano si el navegador la bloqueo (2.1, con mencion de Explorar y del detalle); cuando aparece el boton "Inasistencia" y los textos "Reportar inasistencia disponible al finalizar la clase" y "Reporte enviado" (2.11); el tope de precio de $1.000.000 (3.3) y de cupo de 500 personas (3.4); el detalle de clase en modo consulta desde el Historial y el filtro "Actividad" de Proximas clases e Historial (3.8); la paginacion de 10 filas en la moderacion de resenias (4.5) y en las denuncias, mas las columnas "Tipo" y "Denunciado" de "Gestión de denuncias" (4.6). Los titulos de los apartados no cambiaron.
+TEXTOS DE INTERFAZ (literales): los citados en el manual son los de la ENTRADA 033 ("Activar ubicación", "Activá tu ubicación para ver las actividades que tenés cerca.", "Abrir ActiveHub", "Volver al historial", "Todas las actividades", "« Primera", "Anterior", "Siguiente", "Última »", "El precio no puede superar los $1.000.000.", etc.).
+DETALLE TECNICO: se edito activehub-backend/src/main/resources/manual/manual-usuario-activehub.txt y se regenero el arreglo MANUAL de activehub-frontend/src/lib/manual.ts desde ese mismo archivo con el conversor de la ENTRADA 034; la comparacion palabra por palabra entre las dos copias no da diferencias de contenido. El parser del asistente sigue reconociendo 44 titulos (5 capitulos y 39 apartados). Para el Anexo 8 del informe se genero MANUAL-CAMBIOS-PARA-ANEXO-8.txt en la raiz del proyecto: lista, apartado por apartado, cada parrafo de la PARTE B que cambio (12) junto a su version nueva, y los parrafos que se agregan (19 lineas nuevas o reemplazantes en total), incluidas las 7 correcciones de la ENTRADA 034.
+ESTADO: IMPLEMENTADO. Probado con pruebas automatizadas. Sin verificar en el navegador ni con el asistente real.
+HISTORIAS DE USUARIO Y CRITERIOS: las de la ENTRADA 033 (documentacion).
+PANTALLAS: SYS-PAN-MAN (/manual). Sin pantallas nuevas.
+REGLAS DE NEGOCIO: sin cambios (RN-24 y RN-25 propuestas en la ENTRADA 033 quedan descritas en el manual).
+MODULOS: Ayuda y Soporte al Usuario.
+CASOS DE USO: sin cambios (117).
+ENTIDADES Y MIGRACIONES: sin cambios (V1 a V32).
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: R05 - el sistema queda adelante del Anexo 8 hasta que se apliquen los cambios de MANUAL-CAMBIOS-PARA-ANEXO-8.txt.
+SEGURIDAD: sin cambios.
+PRUEBAS: frontend "Test Files 21 passed (21)" - "Tests 172 passed (172)" (npm test). Backend: ManualUsuarioTest y las pruebas del asistente, "Tests run: 28, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS" (JAVA_HOME=$HOME/.jdks/corretto-21.0.10 ./mvnw -B test -Dtest='ManualUsuarioTest,PreguntarAlAsistente*Test'); el codigo Java no cambio desde la suite completa de la ENTRADA 034 (1018 pruebas, 0 fallidas, 2 omitidas).
+ANALISIS ESTATICO: "npx tsc -b" sin errores; ESLint sin cambios (0 errores, 11 advertencias).
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: el Anexo 8 vive fuera de este equipo, asi que no se edito: se entrega el archivo de cambios para aplicarlo. "Manual de usuario Activehub.txt" de la raiz es una copia vieja del anexo y tampoco se toco.
+ERRORES DETECTADOS: sin errores.
+CAPTURAS SUGERIDAS: manual-3-8-historial.png; manual-2-1-activar-ubicacion.png.
+PENDIENTE QUE QUEDA: aplicar MANUAL-CAMBIOS-PARA-ANEXO-8.txt al Anexo 8; verificar /manual en el navegador y hacer al asistente las preguntas de la PARTE A.5 mas alguna de lo nuevo (por ejemplo "¿cómo activo la ubicación?" o "¿me avisan por mail si cancelan una clase?").
+=== FIN ENTRADA 035 ===
+
+=== ENTRADA 036 ===
+FECHA: 2026-10-17
+REPOSITORIO: activehub-frontend (el backend no cambia; se registra en las dos copias de la bitacora)
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: CORRECCION DE ERROR
+TITULO: El menu de notificaciones queda por encima de todo el contenido de la pantalla
+QUE CAMBIA PARA EL USUARIO: al abrir la campana de notificaciones, el menu se muestra siempre por encima de los graficos, tarjetas, mapas y del resto del contenido, en todas las pantallas de los tres roles (la campana esta en la barra superior del alumno y en el menu lateral del instructor y del administrador). Se cierra con un click afuera o con la tecla Escape. En pantallas angostas el menu se ajusta al ancho de la ventana.
+TEXTOS DE INTERFAZ (literales): sin cambios ("Notificaciones", "No tenés notificaciones.").
+DETALLE TECNICO: components/NotificationBell.tsx renderiza el desplegable con createPortal en document.body, con position fixed calculada desde el boton (getBoundingClientRect), recortada a la ventana y recalculada en scroll y resize, y z-index 1100/1101 (por encima de modales, del chatbot y de los controles de Leaflet, que llegan a 1000). Causa: DashSidebar es position:sticky y crea un contexto de apilamiento propio, asi que el z-index del menu solo competia dentro del sidebar y el contenido de la derecha (por ejemplo GraficoBarras en el Panel, Metricas, Dashboard y Reportes) se pintaba encima.
+ESTADO: IMPLEMENTADO. Probado con pruebas automatizadas; sin verificar en el navegador.
+HISTORIAS DE USUARIO Y CRITERIOS: sistema de notificaciones (E1-A / transversal).
+PANTALLAS: todas las que muestran la campana (via AlumnoNav y DashSidebar). Sin pantallas nuevas.
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Alumno; Instructor; Administracion y Soporte (interfaz comun).
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios (createPortal de react-dom, ya usado por Modal y ChatbotWidget).
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios.
+PRUEBAS: nueva components/NotificationBell.test.tsx (2 pruebas: el menu se abre fuera del contenedor, en body, con position fixed y z-index de al menos 1100; se cierra con Escape). "Test Files 22 passed (22)" - "Tests 174 passed (174)" (npm test).
+ANALISIS ESTATICO: "npx eslint ." -> "11 problems (0 errors, 11 warnings)", sin cambios; "npx tsc -b" sin errores.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: portal en vez de subir el z-index del sidebar: el sidebar con z-index alto taparia otros elementos fijos, y cualquier contenedor futuro con transform o filter volveria a encerrar el menu; es el mismo criterio ya documentado para Modal y ChatbotWidget.
+ERRORES DETECTADOS: sintoma: el grafico se superponia al menu de notificaciones. Causa: contexto de apilamiento del sidebar sticky. Correccion: portal. Como se detecto: reporte del usuario.
+CAPTURAS SUGERIDAS: notificaciones-sobre-grafico.png (Panel del instructor con el menu abierto sobre el grafico).
+PENDIENTE QUE QUEDA: verificarlo en el navegador en el Panel del instructor, Metricas, Dashboard y Reportes del admin.
+=== FIN ENTRADA 036 ===
+
+=== ENTRADA 037 ===
+FECHA: 2026-10-17
+REPOSITORIO: activehub-frontend (el backend no cambia; se registra en las dos copias de la bitacora)
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: CAMBIO DE COMPORTAMIENTO
+TITULO: "Activar ubicación" es siempre un boton, tambien con el permiso bloqueado
+QUE CAMBIA PARA EL USUARIO: con la ubicacion desactivada, el Home, Explorar y el detalle de actividad muestran "Activá tu ubicación para ..." y un boton. Ya no se muestra la lista de pasos para habilitarla a mano. Si la persona solo habia cerrado el cartel del navegador, el boton "Activar ubicación" lo vuelve a abrir. Si el permiso estaba bloqueado para el sitio, en Chrome 144 o posterior se muestra el boton nativo del navegador con el mismo estilo (su texto lo pone el navegador, por ejemplo "Usar ubicación") y al tocarlo se abre el cartel de permiso; al elegir "Permitir" la pantalla obtiene la ubicacion sin recargar. Lo mismo pasa si la persona la habilita desde el icono de la barra de direcciones. En navegadores sin ese boton nativo (Firefox, Safari) con el permiso bloqueado, se muestra el boton y una sola linea debajo.
+TEXTOS DE INTERFAZ (literales): "Activá tu ubicación para {para}." (ahora tambien con el permiso bloqueado); boton "Activar ubicación"; linea nueva solo con permiso bloqueado y sin boton nativo: "Tu navegador la tiene bloqueada: habilitala desde el ícono junto a la dirección de la página." RETIRADOS: "Tu navegador tiene bloqueada la ubicación para ActiveHub. Activala para {para}.", "Tocá el ícono que está a la izquierda de la dirección de la página (un candado o dos barritas).", "Buscá "Ubicación" y cambiala a "Permitir".", "Recargá la página."
+DETALLE TECNICO: components/ActivarUbicacion.tsx: con bloqueado y "HTMLGeolocationElement" en window renderiza el elemento HTML <geolocation> (createElement) con el estilo del boton propio; si no, el boton propio que llama a reintentar(). lib/geo.ts: mientras bloqueado, useGeolocation consulta navigator.permissions y asigna PermissionStatus.onchange; al dejar de estar "denied" baja bloqueado y, si queda "granted", vuelve a pedir la posicion.
+ESTADO: IMPLEMENTADO. Probado con pruebas automatizadas; sin verificar en el navegador (en particular el elemento nativo en Chrome).
+HISTORIAS DE USUARIO Y CRITERIOS: E3A-HU01 (Home, "Cerca de tu ubicación") y busqueda por cercania de Explorar; sin cambios de criterios.
+PANTALLAS: E3A Home, Explorar y Detalle de actividad. Sin pantallas nuevas.
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Alumno; Busqueda y Filtrado.
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: elemento HTML <geolocation> del navegador (Chrome 144+), sin dependencias nuevas.
+COSTOS: sin impacto.
+RIESGOS: R11 - el elemento nativo solo existe en Chrome; en otros navegadores el permiso bloqueado no se puede reabrir desde la pagina.
+SEGURIDAD: sin cambios.
+PRUEBAS: lib/geo.test.ts gana 1 prueba (con el permiso bloqueado, si cambia a "granted" se piden las coordenadas solas). "Test Files 22 passed (22)" - "Tests 175 passed (175)" (npm test).
+ANALISIS ESTATICO: "npx eslint ." -> "11 problems (0 errors, 11 warnings)", sin cambios; "npx tsc -b" sin errores.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: pedido del usuario: boton en vez de instrucciones. Con el permiso bloqueado, getCurrentPosition no vuelve a mostrar el cartel (proteccion del navegador); el unico mecanismo que lo reabre es el elemento nativo <geolocation>, cuyo texto no se puede personalizar. Se mantiene una linea de ayuda solo para navegadores sin ese elemento, porque ahi un boton sin efecto se leeria como roto.
+ERRORES DETECTADOS: sin errores.
+CAPTURAS SUGERIDAS: activar-ubicacion-boton.png (Home con la ubicacion desactivada).
+PENDIENTE QUE QUEDA: verificar en Chrome con el permiso bloqueado que el boton nativo abre el cartel y que la pantalla se actualiza al permitir; actualizar el apartado del manual que describe los pasos a mano (lib/manual.ts, manual del asistente y Anexo 8) si los menciona.
+=== FIN ENTRADA 037 ===
+
+=== ENTRADA 038 ===
+FECHA: 2026-10-17
+REPOSITORIO: activehub-frontend y activehub-backend (texto del manual; sin cambios de codigo)
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: DOCUMENTACION
+TITULO: El manual describe el nuevo boton "Activar ubicación" (apartado 2.1)
+QUE CAMBIA PARA EL USUARIO: el apartado 2.1 del manual (pantalla /manual y respuestas del asistente) ya no da los tres pasos para habilitar la ubicacion a mano; explica el boton de la ENTRADA 037.
+TEXTOS DE INTERFAZ (literales): parrafo nuevo del manual: "Activar la ubicación. Si la ubicación está desactivada, en lugar de las actividades cercanas aparece el mensaje "Activá tu ubicación para ver las actividades que tenés cerca." con el botón "Activar ubicación", que abre el cartel del navegador para permitir el acceso. Al elegir "Permitir", la pantalla muestra las actividades cercanas sin necesidad de recargarla. Si el navegador tiene la ubicación bloqueada para ActiveHub, en Google Chrome el botón es el del propio navegador y su texto puede ser otro (por ejemplo "Usar ubicación"), pero funciona igual. En los navegadores que no permiten volver a abrir el cartel con la ubicación bloqueada (por ejemplo Firefox o Safari), debajo del botón aparece "Tu navegador la tiene bloqueada: habilitala desde el ícono junto a la dirección de la página."" RETIRADOS del manual: los pasos "1. Tocar el ícono que está a la izquierda de la dirección de la página (un candado o dos barritas).", "2. Buscar "Ubicación" y cambiarla a "Permitir".", "3. Recargar la página." y la frase final del parrafo anterior ("Si el navegador tiene la ubicación bloqueada para ActiveHub, el cartel no puede volver a mostrarse desde la página; en ese caso el sistema indica cómo habilitarla a mano:").
+DETALLE TECNICO: mismo texto en las dos copias del sistema: activehub-frontend/src/lib/manual.ts (se quito el bloque "pasos") y activehub-backend/src/main/resources/manual/manual-usuario-activehub.txt. Tambien en MANUAL-CAMBIOS-PARA-ANEXO-8.txt (raiz del proyecto), apartado 2.1, para pasarlo al Anexo 8.
+ESTADO: IMPLEMENTADO. Probado con pruebas automatizadas; sin verificar /manual en el navegador.
+HISTORIAS DE USUARIO Y CRITERIOS: sin cambios.
+PANTALLAS: SYS-PAN-MAN Manual de usuario (contenido). Sin pantallas nuevas.
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Ayuda y Soporte al Usuario.
+CASOS DE USO: sin cambios (preguntaralasistente usa el texto nuevo).
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: R05 - el Anexo 8 queda atras hasta aplicar MANUAL-CAMBIOS-PARA-ANEXO-8.txt.
+SEGURIDAD: sin cambios.
+PRUEBAS: frontend "Test Files 22 passed (22)" - "Tests 175 passed (175)" (npm test). Backend "Tests run: 28, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS" (JAVA_HOME=$HOME/.jdks/corretto-21.0.10 ./mvnw -B test -Dtest='ManualUsuarioTest,PreguntarAlAsistente*Test').
+ANALISIS ESTATICO: "npx eslint ." -> "11 problems (0 errors, 11 warnings)", sin cambios; "npx tsc -b" sin errores.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: el Anexo 8 no se edita desde aca; se actualiza el archivo de cambios.
+ERRORES DETECTADOS: sin errores.
+CAPTURAS SUGERIDAS: manual-2-1-activar-ubicacion.png (reemplaza la sugerida en la ENTRADA 035).
+PENDIENTE QUE QUEDA: aplicar MANUAL-CAMBIOS-PARA-ANEXO-8.txt al Anexo 8; preguntarle al asistente "¿cómo activo la ubicación?" y verificar que responda con el texto nuevo.
+=== FIN ENTRADA 038 ===
+
+=== ENTRADA 039 ===
+FECHA: 2026-10-17
+REPOSITORIO: activehub-frontend (codigo) y activehub-backend (texto del manual del asistente)
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: CORRECCION DE ERROR
+TITULO: El boton nativo de ubicacion cerraba Brave; ahora solo se usa en Google Chrome
+QUE CAMBIA PARA EL USUARIO: en Brave, con la ubicacion bloqueada, ya no se muestra el boton nativo del navegador: se muestra el boton "Activar ubicación" y la linea "Tu navegador la tiene bloqueada: habilitala desde el ícono junto a la dirección de la página." En Google Chrome no cambia nada. Edge y otros navegadores basados en Chromium se comportan igual que Brave.
+TEXTOS DE INTERFAZ (literales): sin cambios en la interfaz. Manual, apartado 2.1: "(por ejemplo Firefox o Safari)" pasa a "(por ejemplo Firefox, Safari o Brave)".
+DETALLE TECNICO: nueva funcion soportaElementoNativo en lib/geo.ts (antes era una constante dentro de components/ActivarUbicacion.tsx): exige "HTMLGeolocationElement" en window, que no exista navigator.brave y que navigator.userAgentData.brands incluya "Google Chrome". Es una lista blanca: Brave y Edge exponen el elemento, pero declaran su propia marca.
+ESTADO: IMPLEMENTADO. Probado con pruebas automatizadas; falta confirmar en Brave que ya no se cierra y en Chrome que el boton nativo sigue funcionando.
+HISTORIAS DE USUARIO Y CRITERIOS: sin cambios.
+PANTALLAS: E3A Home, Explorar, Detalle de actividad; SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Alumno; Busqueda y Filtrado; Ayuda y Soporte al Usuario.
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: R11 - el elemento nativo <geolocation> es reciente y su integracion varia entre derivados de Chromium.
+SEGURIDAD: sin cambios.
+PRUEBAS: lib/geo.test.ts gana 4 pruebas (Chrome si; Brave no; Edge no; sin el elemento no). "Test Files 22 passed (22)" - "Tests 179 passed (179)" (npm test).
+ANALISIS ESTATICO: "npx eslint ." -> "11 problems (0 errors, 11 warnings)", sin cambios; "npx tsc -b" sin errores.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: lista blanca (solo Google Chrome) en vez de excluir solo Brave: el fallo es del navegador, no de la pagina, y no se verifico en otros derivados de Chromium.
+ERRORES DETECTADOS: sintoma: en Brave, al confirmar el permiso desde el boton nativo, el navegador se cerraba de golpe y al abrirlo ofrecia restaurar las pestañas (dos de dos intentos). Causa: fallo de Brave con el elemento <geolocation> (no reproducible desde la pagina). Correccion: no usar el elemento fuera de Google Chrome. Como se detecto: reporte del usuario.
+CAPTURAS SUGERIDAS: sin capturas nuevas.
+PENDIENTE QUE QUEDA: verificar en Brave y en Chrome; aplicar MANUAL-CAMBIOS-PARA-ANEXO-8.txt al Anexo 8.
+=== FIN ENTRADA 039 ===
+
+=== ENTRADA 040 ===
+FECHA: 2026-10-17
+REPOSITORIO: activehub-frontend (codigo) y activehub-backend (texto del manual del asistente)
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: CORRECCION DE ERROR
+TITULO: Se retira el boton nativo <geolocation>: seguia cerrando Brave
+QUE CAMBIA PARA EL USUARIO: el boton "Activar ubicación" es siempre el mismo y abre el cartel de permiso habitual del navegador (el de la barra de direcciones). Ya no aparece el cuadro centrado en la pantalla. Con la ubicacion bloqueada, debajo del boton aparece "Tu navegador la tiene bloqueada: habilitala desde el ícono junto a la dirección de la página."; al habilitarla desde ese icono la pantalla se actualiza sola, sin recargar.
+TEXTOS DE INTERFAZ (literales): sin textos nuevos en la interfaz. Manual, apartado 2.1, la frase sobre la ubicacion bloqueada queda: "Si el navegador tiene la ubicación bloqueada para ActiveHub, el cartel no puede abrirse desde la página: debajo del botón aparece "Tu navegador la tiene bloqueada: habilitala desde el ícono junto a la dirección de la página." Al habilitarla desde ese ícono, la pantalla muestra las actividades cercanas sin necesidad de recargarla." RETIRADO del manual: lo del boton propio de Google Chrome y "(por ejemplo Firefox, Safari o Brave)".
+DETALLE TECNICO: components/ActivarUbicacion.tsx deja de renderizar el elemento <geolocation>; siempre es el boton propio que llama a reintentar(). Se borra soportaElementoNativo de lib/geo.ts y sus 4 pruebas. Se mantiene la escucha de PermissionStatus.onchange (ENTRADA 037). Revierte la parte del elemento nativo de las ENTRADAS 037 y 039.
+ESTADO: IMPLEMENTADO. Probado con pruebas automatizadas; falta confirmar en Brave.
+HISTORIAS DE USUARIO Y CRITERIOS: sin cambios.
+PANTALLAS: E3A Home, Explorar, Detalle de actividad; SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Alumno; Busqueda y Filtrado; Ayuda y Soporte al Usuario.
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: RETIRADO el elemento HTML <geolocation> (ENTRADA 037).
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios.
+PRUEBAS: "Test Files 22 passed (22)" - "Tests 175 passed (175)" (npm test). Backend "Tests run: 28, Failures: 0, Errors: 0, Skipped: 0" - "BUILD SUCCESS" (ManualUsuarioTest y PreguntarAlAsistente*Test).
+ANALISIS ESTATICO: "npx eslint ." -> "11 problems (0 errors, 11 warnings)", sin cambios; "npx tsc -b" sin errores.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: el usuario pidio que el boton abra exactamente el mismo cartel que la barra de direcciones. Con el permiso bloqueado eso no es posible desde una pagina web (no existe API para abrir el panel de permisos del navegador); el elemento nativo era la unica alternativa y abre un cuadro distinto que cierra Brave, asi que se descarta.
+ERRORES DETECTADOS: sintoma: en Brave, despues de la ENTRADA 039, el boton seguia abriendo un cuadro centrado y al confirmar se cerraba el navegador; habilitar la ubicacion desde el icono de la barra funcionaba bien. Causa: el elemento <geolocation> seguia renderizandose en Brave (la exclusion por navigator.brave y userAgentData no alcanzo) y Brave falla con el. Correccion: retirar el elemento. Como se detecto: reporte del usuario.
+CAPTURAS SUGERIDAS: sin capturas nuevas.
+PENDIENTE QUE QUEDA: confirmar en Brave; aplicar MANUAL-CAMBIOS-PARA-ANEXO-8.txt al Anexo 8.
+=== FIN ENTRADA 040 ===

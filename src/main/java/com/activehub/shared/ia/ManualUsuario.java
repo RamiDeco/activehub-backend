@@ -185,9 +185,14 @@ public class ManualUsuario {
         String[] lineas = contenido.replace("\r\n", "\n").split("\n");
         String tituloActual = "Introducción y convenciones";
         StringBuilder cuerpo = new StringBuilder();
+        int capitulo = 0;
 
         for (String linea : lineas) {
-            if (esTitulo(linea)) {
+            boolean esCapitulo = esCapitulo(linea, capitulo + 1);
+            if (esCapitulo) {
+                capitulo++;
+            }
+            if (esCapitulo || esApartado(linea)) {
                 if (!cuerpo.toString().isBlank()) {
                     resultado.add(new Seccion(tituloActual, cuerpo.toString().strip()));
                 }
@@ -203,7 +208,28 @@ public class ManualUsuario {
         return resultado;
     }
 
-    private static boolean esTitulo(String linea) {
-        return linea.strip().matches("^\\d+(\\.\\d+)*\\.?\\s+\\p{L}.*");
+    /**
+     * "2.6 Inscribirse y pagar una clase": dos o más números separados por punto. Un paso de una
+     * lista ("2. Presionar …") no entra, porque lleva un solo número.
+     */
+    private static boolean esApartado(String linea) {
+        return linea.strip().matches("^\\d+(\\.\\d+)+\\.?\\s+\\p{L}.*");
+    }
+
+    /**
+     * "2. Manual del Alumno". El manual vigente trae los pasos numerados ("1. En la página de
+     * inicio, presionar …"), que tienen exactamente la misma forma; antes los pasos venían sin
+     * número y bastaba con la forma. Por eso un capítulo tiene que ser además <b>el siguiente</b>
+     * en orden (los pasos reinician en 1 en cada lista) y leerse como un título: corto, sin
+     * comillas y sin punto ni dos puntos al final. Un paso es una oración, casi siempre con un
+     * texto de la interfaz entre comillas.
+     */
+    private static boolean esCapitulo(String linea, int esperado) {
+        String l = linea.strip();
+        return l.matches("^" + esperado + "\\.\\s+\\p{L}.*")
+                && l.length() <= 60
+                && !l.endsWith(".")
+                && !l.endsWith(":")
+                && !l.contains("\"");
     }
 }

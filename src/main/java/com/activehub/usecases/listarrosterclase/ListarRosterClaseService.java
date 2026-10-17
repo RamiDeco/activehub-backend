@@ -2,6 +2,7 @@ package com.activehub.usecases.listarrosterclase;
 
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.actividad.ClaseRepository;
+import com.activehub.domain.actividad.EstadoClase;
 import com.activehub.domain.inscripcion.EstadoInscripcion;
 import com.activehub.domain.inscripcion.Inscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
@@ -20,6 +21,15 @@ public class ListarRosterClaseService {
 
     private static final List<EstadoInscripcion> ESTADOS_ROSTER =
             List.of(EstadoInscripcion.INSCRIPTO, EstadoInscripcion.PAGO_PENDIENTE);
+
+    /**
+     * Una clase cancelada ya no tiene a nadie Inscripto: la cascada de la cancelacion paso
+     * todas sus inscripciones a Cancelada. Desde el Historial el instructor quiere ver quienes
+     * estaban anotados y que paso con su pago (reintegro), asi que en ese caso se listan
+     * tambien las canceladas. En una clase viva no: el roster es la lista de quien viene.
+     */
+    private static final List<EstadoInscripcion> ESTADOS_ROSTER_CANCELADA =
+            List.of(EstadoInscripcion.INSCRIPTO, EstadoInscripcion.PAGO_PENDIENTE, EstadoInscripcion.CANCELADA);
 
     private final ClaseRepository claseRepository;
     private final InscripcionRepository inscripcionRepository;
@@ -46,7 +56,8 @@ public class ListarRosterClaseService {
             throw new SinPermisoException("No podés ver el roster de una clase que no te pertenece.");
         }
 
-        var inscripciones = inscripcionRepository.findByClaseIdAndEstadoInOrderByCreatedAtAsc(claseId, ESTADOS_ROSTER);
+        var inscripciones = inscripcionRepository.findByClaseIdAndEstadoInOrderByCreatedAtAsc(
+                claseId, clase.getEstado() == EstadoClase.Cancelada ? ESTADOS_ROSTER_CANCELADA : ESTADOS_ROSTER);
 
         var alumnos = inscripciones.stream().map(ListarRosterClaseService::aAlumno).toList();
 

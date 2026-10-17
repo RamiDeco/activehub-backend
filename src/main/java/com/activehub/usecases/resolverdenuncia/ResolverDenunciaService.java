@@ -281,6 +281,15 @@ public class ResolverDenunciaService {
             throw new ValidacionException(
                     "La suspensión no puede durar menos de " + VentanaPenalizacion.MINIMO_DIAS_SUSPENSION + " días.");
         }
+        if (dias > VentanaPenalizacion.MAXIMO_DIAS_SUSPENSION) {
+            throw new ValidacionException(VentanaPenalizacion.mensajeMaximoDias());
+        }
+        // Cero (o vacío) sigue significando "sin multa"; lo que se acota es la multa cargada.
+        BigDecimal montoMulta = request.montoMulta();
+        if (montoMulta != null && montoMulta.compareTo(BigDecimal.ZERO) > 0
+                && VentanaPenalizacion.multaFueraDeRango(montoMulta)) {
+            throw new ValidacionException(VentanaPenalizacion.mensajeRangoMulta());
+        }
 
         Usuario instructor = denuncia.getClase().getActividad().getInstructor();
 

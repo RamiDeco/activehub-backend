@@ -135,6 +135,9 @@ public class CrearPenalizacionService {
             if (request.monto() == null || request.monto().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new ValidacionException("Ingresá el monto de la penalización económica.");
             }
+            if (VentanaPenalizacion.multaFueraDeRango(request.monto())) {
+                throw new ValidacionException(VentanaPenalizacion.mensajeRangoMulta());
+            }
             Penalizacion multa = new Penalizacion();
             multa.setUsuario(usuario);
             multa.setTipo(TipoPenalizacion.ECONOMICA);
@@ -154,6 +157,9 @@ public class CrearPenalizacionService {
             if (dias < VentanaPenalizacion.MINIMO_DIAS_SUSPENSION) {
                 throw new ValidacionException(
                         "La suspensión no puede durar menos de " + VentanaPenalizacion.MINIMO_DIAS_SUSPENSION + " días.");
+            }
+            if (dias > VentanaPenalizacion.MAXIMO_DIAS_SUSPENSION) {
+                throw new ValidacionException(VentanaPenalizacion.mensajeMaximoDias());
             }
             Penalizacion suspension = new Penalizacion();
             suspension.setUsuario(usuario);

@@ -482,4 +482,27 @@ class ResolverDenunciaServiceTest {
         assertThat(instructor.getEstado()).isEqualTo(EstadoUsuario.ACTIVO);
         verify(denunciaRepository, never()).save(any());
     }
+
+    @Test
+    void resolver_suspenderPorMasDelMaximo_lanzaValidacion() {
+        assertThatThrownBy(() -> service.resolver(
+                denunciaId, new ResolverDenunciaRequest("SUSPENDER", null, null, 36500), UUID.randomUUID()))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessageContaining("365 días");
+
+        verify(penalizacionRepository, never()).saveAndFlush(any());
+        verify(denunciaRepository, never()).save(any());
+    }
+
+    @Test
+    void resolver_suspenderConMultaFueraDeRango_lanzaValidacion() {
+        assertThatThrownBy(() -> service.resolver(
+                denunciaId, new ResolverDenunciaRequest("SUSPENDER", null, new BigDecimal("1000000"), 30),
+                UUID.randomUUID()))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessageContaining("entre $1.000 y $500.000");
+
+        verify(penalizacionRepository, never()).saveAndFlush(any());
+        verify(denunciaRepository, never()).save(any());
+    }
 }

@@ -149,4 +149,22 @@ class ListarRosterClaseServiceTest {
         assertThatThrownBy(() -> service.listar(claseId, instructorId))
                 .isInstanceOf(NoEncontradoException.class);
     }
+
+    @Test
+    void listar_claseCancelada_incluyeLasInscripcionesCanceladas() {
+        // Desde el Historial el instructor abre una clase cancelada para ver quiénes estaban
+        // anotados: la cascada de la cancelación ya las pasó todas a Cancelada.
+        clase.setEstado(com.activehub.domain.actividad.EstadoClase.Cancelada);
+        Inscripcion cancelada = inscripcionCon(EstadoInscripcion.CANCELADA);
+
+        when(claseRepository.findById(claseId)).thenReturn(Optional.of(clase));
+        when(inscripcionRepository.findByClaseIdAndEstadoInOrderByCreatedAtAsc(claseId,
+                List.of(EstadoInscripcion.INSCRIPTO, EstadoInscripcion.PAGO_PENDIENTE, EstadoInscripcion.CANCELADA)))
+                .thenReturn(List.of(cancelada));
+
+        ListarRosterClaseResponse response = service.listar(claseId, instructorId);
+
+        assertThat(response.alumnos()).hasSize(1);
+        assertThat(response.alumnos().get(0).estado()).isEqualTo("Cancelada");
+    }
 }

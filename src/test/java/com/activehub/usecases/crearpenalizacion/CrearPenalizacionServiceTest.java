@@ -234,7 +234,7 @@ class CrearPenalizacionServiceTest {
     void crear_aSiMismo_lanzaValidacion() {
         when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
         var request = new CrearPenalizacionRequest(
-                usuarioId, List.of("Económica"), "Motivo", new BigDecimal("100"), null, null);
+                usuarioId, List.of("Económica"), "Motivo", new BigDecimal("1500"), null, null);
 
         assertThatThrownBy(() -> service.crear(request, usuarioId))
                 .isInstanceOf(ValidacionException.class);
@@ -245,7 +245,7 @@ class CrearPenalizacionServiceTest {
         usuarioExiste();
         guardaDevolviendoLaMisma();
         var request = new CrearPenalizacionRequest(
-                usuarioId, List.of("Económica"), "Motivo", new BigDecimal("100"), null, null);
+                usuarioId, List.of("Económica"), "Motivo", new BigDecimal("1500"), null, null);
 
         service.crear(request, adminId);
 
@@ -295,10 +295,50 @@ class CrearPenalizacionServiceTest {
         usuarioExiste();
         guardaDevolviendoLaMisma();
         var request = new CrearPenalizacionRequest(
-                usuarioId, List.of("Económica", "Económica"), "Motivo", new BigDecimal("100"), null, null);
+                usuarioId, List.of("Económica", "Económica"), "Motivo", new BigDecimal("1500"), null, null);
 
         CrearPenalizacionResponse response = service.crear(request, adminId);
 
         assertThat(response.penalizaciones()).hasSize(1);
+    }
+
+    @Test
+    void crear_multaPorDebajoDelMinimo_lanzaValidacion() {
+        usuarioExiste();
+        var request = new CrearPenalizacionRequest(
+                usuarioId, List.of("Económica"), "Motivo", new BigDecimal("999"), null, null);
+
+        assertThatThrownBy(() -> service.crear(request, adminId))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessageContaining("entre $1.000 y $500.000");
+        verify(penalizacionRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void crear_multaPorEncimaDelMaximo_lanzaValidacion() {
+        // Pedido del usuario: sin tope, el formulario aceptaba cobrar un millón de multa.
+        usuarioExiste();
+        var request = new CrearPenalizacionRequest(
+                usuarioId, List.of("Económica"), "Motivo", new BigDecimal("1000000"), null, null);
+
+        assertThatThrownBy(() -> service.crear(request, adminId))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessageContaining("entre $1.000 y $500.000");
+        verify(penalizacionRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void crear_suspensionMasLargaQueElMaximo_lanzaValidacion() {
+        // Pedido del usuario: sin tope, se podía suspender a alguien cien años.
+        usuarioExiste();
+        var request = new CrearPenalizacionRequest(
+                usuarioId, List.of("Suspensión temporal"), "Motivo", null,
+                LocalDate.of(2026, 6, 1), LocalDate.of(2126, 6, 1));
+
+        assertThatThrownBy(() -> service.crear(request, adminId))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessageContaining("365 días");
+        verify(penalizacionRepository, never()).saveAndFlush(any());
+        verify(claseRepository, never()).findVivasDeInstructorEntre(any(), any(), any(), any());
     }
 }

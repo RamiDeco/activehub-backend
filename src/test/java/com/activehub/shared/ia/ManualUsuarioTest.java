@@ -26,6 +26,22 @@ class ManualUsuarioTest {
     }
 
     @Test
+    void carga_losPasosNumeradosNoSeConfundenConTitulos() {
+        // El manual vigente (2026-10-16) trae los pasos numerados ("1. En la página de inicio,
+        // presionar …"), con la misma forma que un capítulo ("2. Manual del Alumno"). Si se
+        // tomaran como títulos, cada sección se partiría en pedazos sueltos y "1.1 Crear una
+        // cuenta" quedaría sin sus pasos.
+        assertThat(manual.titulos()).noneMatch(t -> t.matches("^\\d+\\.\\s.*") && t.contains("\""));
+        assertThat(manual.titulos()).noneMatch(t -> t.startsWith("1. En la página"));
+        assertThat(manual.titulos().stream().filter(t -> t.matches("^\\d+\\.\\d+\\s.*")).count()).isEqualTo(39);
+        assertThat(manual.titulos()).contains("4.11 Bandeja de soporte", "5. Glosario de estados");
+
+        var crearCuenta = manual.buscar("crear una cuenta registrarse", 5).stream()
+                .filter(s -> s.titulo().equals("1.1 Crear una cuenta")).findFirst().orElseThrow();
+        assertThat(crearCuenta.texto()).contains("1. En la página de inicio, presionar \"Registrarse\".");
+    }
+
+    @Test
     void buscar_encuentraElTemaAunqueElUsuarioConjugueDistintoQueElManual() {
         // El usuario escribe "cancelo"; el manual dice "cancelar" y "Cancelada". Sin el recorte a
         // la raíz de TextoIa esto no matchea con nada del tema y devuelve cualquier sección donde
