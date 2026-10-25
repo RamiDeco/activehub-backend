@@ -99,10 +99,16 @@ final class DescripcionAuditoria {
             case PAGO_RECHAZADO_MP -> "Mercado Pago rechazó un pago que estaba en revisión: la inscripción se canceló y se liberó el lugar.";
 
             case RESENIA_CREADA -> actor + " escribió una reseña.";
-            case RESENIA_ACTUALIZADA -> actor + " editó su reseña; vuelve a moderación.";
-            case RESENIA_ELIMINADA -> actor + " eliminó una reseña.";
-            case RESENIA_APROBADA -> actor + " aprobó una reseña y quedó publicada.";
-            case RESENIA_RECHAZADA -> actor + " rechazó una reseña.";
+            // Las cuatro siguientes son de funciones retiradas en V33 (moderación previa, edición
+            // y baja de reseñas): sólo aparecen en filas anteriores a ese cambio.
+            case RESENIA_ACTUALIZADA -> actor + " editó su reseña (función retirada).";
+            case RESENIA_ELIMINADA -> actor + " eliminó una reseña (función retirada).";
+            case RESENIA_APROBADA -> actor + " aprobó una reseña en moderación (función retirada).";
+            // Hasta el arreglo de V34 resolverdenuncia auditaba con este valor al ocultar una reseña denunciada,
+            // con la marca OCULTA_POR_DENUNCIA; hoy usa RESENIA_OCULTADA.
+            case RESENIA_RECHAZADA -> "OCULTA_POR_DENUNCIA".equals(meta)
+                    ? actor + " ocultó una reseña al resolver una denuncia."
+                    : actor + " rechazó una reseña en moderación (función retirada).";
             case RESENIA_RESPONDIDA -> actor + " respondió públicamente una reseña que recibió.";
             case RESENIA_DENUNCIADA -> actor + " reportó una reseña que recibió.";
             case RESENIA_OCULTADA -> actor + " ocultó una reseña publicada"
@@ -121,6 +127,7 @@ final class DescripcionAuditoria {
             case PASSWORD_RESTABLECIDA -> actor + " restableció su contraseña con un código enviado a su correo.";
             case CUENTA_DADA_DE_BAJA -> actor + " dio de baja su cuenta.";
             case INTERESES_ACTUALIZADOS -> actor + " actualizó sus intereses deportivos.";
+            case CONDICION_SALUD_ACTUALIZADA -> actor + " actualizó su información de salud.";
 
             case INSTRUCTOR_VALIDADO -> actor + " aprobó la solicitud de un instructor.";
             case INSTRUCTOR_RECHAZADO -> actor + " rechazó la solicitud de un instructor.";

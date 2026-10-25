@@ -21,7 +21,12 @@ public enum TipoNotificacion {
     INSCRIPCION_CONFIRMADA(false),
     COBRO_EFECTIVO_CONFIRMADO(false),
     INSCRIPCION_CANCELADA(true),
+    /**
+     * Ya no se emite: la moderacion previa de resenias se retiro (V33). Se conserva porque hay
+     * notificaciones guardadas con este tipo y la campana las tiene que seguir mostrando.
+     */
     RESENIA_APROBADA(false),
+    /** Hoy la emite ocultarresenia: "Un administrador ocultó tu reseña…". */
     RESENIA_RECHAZADA(false),
     DENUNCIA_RESUELTA(true),
     ACTIVIDAD_ELIMINADA(true),

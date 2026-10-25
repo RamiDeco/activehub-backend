@@ -52,6 +52,14 @@ public enum AuditAccion {
     PAGO_RECHAZADO_MP,
     CLASE_CANCELADA,
     RESENIA_CREADA,
+    /*
+     * RESENIA_ELIMINADA, RESENIA_APROBADA, RESENIA_RECHAZADA y RESENIA_ACTUALIZADA ya no las
+     * escribe ningun caso de uso: la moderacion previa, la edicion y la baja de una resenia se
+     * retiraron (V33). Se conservan porque audit_log es de solo-append y tiene filas con esos
+     * valores, que la pantalla de Auditoria tiene que seguir pudiendo leer. (RESENIA_RECHAZADA
+     * la escribio tambien resolverdenuncia al ocultar una resenia denunciada, con la marca
+     * OCULTA_POR_DENUNCIA, hasta el arreglo de V34; hoy ese camino audita RESENIA_OCULTADA.)
+     */
     RESENIA_ELIMINADA,
     RESENIA_APROBADA,
     RESENIA_RECHAZADA,
@@ -73,10 +81,14 @@ public enum AuditAccion {
      */
     PASSWORD_RESTABLECIDA,
     CUENTA_DADA_DE_BAJA,
+    /** Retirada en V33, ver la nota de RESENIA_ELIMINADA. */
     RESENIA_ACTUALIZADA,
     RESENIA_RESPONDIDA,
     RESENIA_DENUNCIADA,
-    /** Un admin bajo del listado publico una resenia ya publicada, sin denuncia de por medio. */
+    /**
+     * Un admin bajo del listado publico una resenia publicada: por su cuenta (ocultarresenia, con
+     * el motivo que escribio) o al resolver una denuncia (resolverdenuncia con OCULTAR_RESENIA).
+     */
     RESENIA_OCULTADA,
     IMAGEN_ACTIVIDAD_AGREGADA,
     IMAGEN_ACTIVIDAD_ELIMINADA,
@@ -93,6 +105,8 @@ public enum AuditAccion {
     ROL_CREADO,
     PERMISOS_ACTUALIZADOS,
     INTERESES_ACTUALIZADOS,
+    /** El alumno editó "¿Padecés alguna enfermedad o lesión?". Nunca se guarda el contenido. */
+    CONDICION_SALUD_ACTUALIZADA,
     ROL_ASIGNADO,
     NIVEL_INTENSIDAD_CREADO,
     NIVEL_INTENSIDAD_ACTUALIZADO,

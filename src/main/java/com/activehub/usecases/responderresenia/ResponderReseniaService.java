@@ -56,11 +56,6 @@ public class ResponderReseniaService {
             throw new SinPermisoException("No podés responder una reseña de otro instructor.");
         }
 
-        // Responder una reseña que el admin todavía no aprobó publicaría la respuesta antes
-        // que el comentario que contesta.
-        if (resenia.isEnModeracion()) {
-            throw new ValidacionException("Todavía no podés responder: la reseña está pendiente de moderación.");
-        }
         if (resenia.isOculta()) {
             throw new ValidacionException("Esta reseña fue ocultada y ya no se puede responder.");
         }

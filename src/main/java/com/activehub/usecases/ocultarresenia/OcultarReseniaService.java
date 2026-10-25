@@ -18,15 +18,14 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * El administrador baja una reseña <b>ya publicada</b>, sin depender de que alguien la denuncie.
  *
- * <p><b>El agujero que cierra.</b> Hasta acá una reseña publicada solo se podia sacar por un
+ * <p><b>El agujero que cierra.</b> Sin esto una reseña publicada solo se podria sacar por un
  * camino: que el instructor duenio de la actividad la denunciara ({@code denunciarresenia}) y
- * que el admin resolviera esa denuncia con {@code OCULTAR_RESENIA}. O sea que si a la
- * moderacion se le colaba un insulto, el admin que lo veia despues no tenia ningun boton:
- * dependia de que el instructor estuviera mirando y la reportara. Peor, el instructor solo
- * puede denunciar una vez la misma resenia
- * ({@code existsByReseniaIdAndDenuncianteId}), asi que un caso desestimado por error quedaba
- * cerrado para siempre. {@code rechazarresenia} tampoco servia: opera sobre la cola de
- * moderacion, o sea sobre resenias que todavia no se publicaron.
+ * que el admin resolviera esa denuncia con {@code OCULTAR_RESENIA}. O sea que si se publica un
+ * insulto, el admin que lo ve no tendria ningun boton: dependeria de que el instructor
+ * estuviera mirando y la reportara. Peor, el instructor solo puede denunciar una vez la misma
+ * resenia ({@code existsByReseniaIdAndDenuncianteId}), asi que un caso desestimado por error
+ * quedaria cerrado para siempre. Desde V33 las resenias se publican al crearse, sin
+ * moderacion previa, asi que este es el control posterior del administrador.
  *
  * <p><b>Oculta, no borra — y es a proposito.</b> La fila queda entera en la base con su autor,
  * su texto y su fecha. Si el contenido llega a ser algo en lo que deba intervenir la justicia
@@ -66,17 +65,9 @@ public class OcultarReseniaService {
         if (resenia.isOculta()) {
             throw new ValidacionException("Esta reseña ya está oculta.");
         }
-        if (resenia.isEnModeracion()) {
-            // Para una resenia que todavia no se publico el camino es rechazarla en la cola de
-            // moderacion: ocultar algo que nadie vio no tendria sentido, y ademas dejaria dos
-            // mecanismos distintos haciendo lo mismo sobre el mismo estado.
-            throw new ValidacionException(
-                    "Esta reseña todavía está pendiente de moderación: rechazala desde la cola en vez de ocultarla.");
-        }
-
-        // Igual que en aprobarresenia: todo lo que haga falta de la entidad se lee ANTES de
-        // recalcularRating, que es un @Modifying con clearAutomatically y deja la entidad
-        // detached (ver la nota en AprobarReseniaService).
+        // Todo lo que haga falta de la entidad se lee ANTES de recalcularRating, que es un
+        // @Modifying con clearAutomatically y deja la entidad detached: una relacion LAZY leida
+        // despues explota con LazyInitializationException.
         UUID actividadId = resenia.getClase().getActividad().getId();
         UUID alumnoId = resenia.getAlumno().getId();
         String contexto = "la clase de \"" + resenia.getClase().getActividad().getNombre()

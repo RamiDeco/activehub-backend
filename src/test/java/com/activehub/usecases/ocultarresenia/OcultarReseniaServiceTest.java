@@ -66,8 +66,7 @@ class OcultarReseniaServiceTest {
         resenia = new Resenia();
         resenia.setClase(clase);
         resenia.setAlumno(alumno);
-        // Publicada: es el caso que este slice existe para cubrir.
-        resenia.setEnModeracion(false);
+        // Toda reseña está publicada desde que se crea (V33).
         resenia.setOculta(false);
         ReflectionTestUtils.setField(resenia, "id", reseniaId);
     }
@@ -125,20 +124,6 @@ class OcultarReseniaServiceTest {
                 .hasMessageContaining("ya está oculta");
 
         verify(actividadRepository, never()).recalcularRating(any());
-    }
-
-    /**
-     * Para una resenia que todavia no se publico el camino es rechazarla en la cola de
-     * moderacion; ocultar algo que nadie vio dejaria dos mecanismos para el mismo estado.
-     */
-    @Test
-    void ocultar_enModeracion_lanzaValidacionYSugiereRechazar() {
-        resenia.setEnModeracion(true);
-        when(reseniaRepository.findById(reseniaId)).thenReturn(Optional.of(resenia));
-
-        assertThatThrownBy(() -> service.ocultar(reseniaId, req(), UUID.randomUUID()))
-                .isInstanceOf(ValidacionException.class)
-                .hasMessageContaining("rechazala");
     }
 
     @Test

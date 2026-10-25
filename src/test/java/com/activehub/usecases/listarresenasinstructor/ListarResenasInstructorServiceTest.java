@@ -60,7 +60,6 @@ class ListarResenasInstructorServiceTest {
         resenia.setAlumno(alumno);
         resenia.setPuntaje(3);
         resenia.setComentario("Estuvo bien");
-        resenia.setEnModeracion(false);
         ReflectionTestUtils.setField(resenia, "id", UUID.randomUUID());
 
         when(reseniaRepository.findByInstructorIdConDetalle(instructorId)).thenReturn(List.of(resenia));
@@ -72,8 +71,6 @@ class ListarResenasInstructorServiceTest {
         assertThat(response).hasSize(1);
         assertThat(response.get(0).actividadNombre()).isEqualTo("Yoga Integral");
         assertThat(response.get(0).alumno().nombre()).isEqualTo("Ana");
-        assertThat(response.get(0).enModeracion()).isFalse();
-        // Pendiente de moderación y denunciada son cosas distintas: la UI las pintaba igual.
         assertThat(response.get(0).denunciada()).isFalse();
         assertThat(response.get(0).respuestaInstructor()).isNull();
     }
@@ -130,7 +127,6 @@ class ListarResenasInstructorServiceTest {
         resenia.setAlumno(alumno);
         resenia.setPuntaje(3);
         resenia.setComentario("Estuvo bien");
-        resenia.setEnModeracion(false);
         ReflectionTestUtils.setField(resenia, "id", UUID.randomUUID());
         return resenia;
     }

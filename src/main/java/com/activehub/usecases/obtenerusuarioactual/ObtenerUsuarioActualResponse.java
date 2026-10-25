@@ -26,6 +26,12 @@ public record ObtenerUsuarioActualResponse(
         String authProveedor,
         /** Solo para alumnos: para instructor/admin viaja vacía. Alimenta "Recomendado para vos". */
         List<Interes> intereses,
+        /**
+         * Solo para alumnos: lo que informó en "¿Padecés alguna enfermedad o lesión?" (null si
+         * nada). Es la cuenta propia: el alumno lo ve y lo edita desde su perfil
+         * ({@code actualizarmicondicionsalud}).
+         */
+        String condicionSalud,
         /** Claves habilitadas para el rol (RN-19): el frontend oculta lo que el usuario no puede. */
         List<String> permisos
 ) {

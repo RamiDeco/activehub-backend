@@ -78,7 +78,6 @@ class ResponderReseniaServiceTest {
         resenia.setAlumno(alumno);
         resenia.setPuntaje(4);
         resenia.setComentario("Buena clase");
-        resenia.setEnModeracion(false);
         ReflectionTestUtils.setField(resenia, "id", reseniaId);
     }
 
@@ -106,18 +105,6 @@ class ResponderReseniaServiceTest {
                 .isInstanceOf(SinPermisoException.class);
 
         verify(reseniaRepository, never()).save(any());
-    }
-
-    @Test
-    void responder_reseniaEnModeracion_lanzaValidacion() {
-        // Publicaría la respuesta antes que el comentario que contesta.
-        resenia.setEnModeracion(true);
-        when(reseniaRepository.findById(reseniaId)).thenReturn(Optional.of(resenia));
-
-        assertThatThrownBy(() ->
-                service.responder(reseniaId, new ResponderReseniaRequest("Hola"), instructorId))
-                .isInstanceOf(ValidacionException.class)
-                .hasMessageContaining("moderación");
     }
 
     @Test

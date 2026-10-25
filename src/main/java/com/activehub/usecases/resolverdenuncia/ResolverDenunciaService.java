@@ -1,6 +1,7 @@
 package com.activehub.usecases.resolverdenuncia;
 
 import com.activehub.domain.actividad.Actividad;
+import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.actividad.ClaseRepository;
 import com.activehub.domain.actividad.EstadoClase;
@@ -45,6 +46,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ResolverDenunciaService {
 
+    /** Motivo que queda en auditoría al ocultar una reseña por una denuncia resuelta. */
+    static final String MOTIVO_OCULTA_POR_DENUNCIA = "resolución de una denuncia del instructor";
+
     private final DenunciaRepository denunciaRepository;
     private final ClaseRepository claseRepository;
     private final InscripcionRepository inscripcionRepository;
@@ -52,6 +56,7 @@ public class ResolverDenunciaService {
     private final UsuarioRepository usuarioRepository;
     private final PenalizacionRepository penalizacionRepository;
     private final ReseniaRepository reseniaRepository;
+    private final ActividadRepository actividadRepository;
     private final OperacionesPagoMercadoPago operacionesPago;
     private final AuditService auditService;
     private final NotificacionService notificacionService;
@@ -65,6 +70,7 @@ public class ResolverDenunciaService {
             UsuarioRepository usuarioRepository,
             PenalizacionRepository penalizacionRepository,
             ReseniaRepository reseniaRepository,
+            ActividadRepository actividadRepository,
             OperacionesPagoMercadoPago operacionesPago,
             AuditService auditService,
             NotificacionService notificacionService,
@@ -77,6 +83,7 @@ public class ResolverDenunciaService {
         this.usuarioRepository = usuarioRepository;
         this.penalizacionRepository = penalizacionRepository;
         this.reseniaRepository = reseniaRepository;
+        this.actividadRepository = actividadRepository;
         this.operacionesPago = operacionesPago;
         this.auditService = auditService;
         this.notificacionService = notificacionService;
@@ -112,11 +119,13 @@ public class ResolverDenunciaService {
             throw new ValidacionException("Esta denuncia no es sobre una reseña.");
         }
 
+        // Actividad cuya calificación hay que recalcular al final (sólo al ocultar una reseña).
+        UUID actividadARecalcular = null;
         switch (accion) {
             case REINTEGRAR -> reintegrar(denuncia, actorId);
             case SUSPENDER -> suspenderInstructor(denuncia, request, actorId);
             case PENALIZAR -> penalizarInstructor(denuncia, actorId);
-            case OCULTAR_RESENIA -> ocultarResenia(denuncia, actorId);
+            case OCULTAR_RESENIA -> actividadARecalcular = ocultarResenia(denuncia, actorId);
             case DESESTIMAR -> {
                 // sin efecto secundario: se desestima y se cierra el caso.
             }
@@ -134,6 +143,14 @@ public class ResolverDenunciaService {
         notificarResolucion(denuncia, accion);
 
         auditService.registrar(actorId, AuditAccion.DENUNCIA_RESUELTA, "Denuncia", id, accion.name());
+
+        // Una reseña oculta deja de contar en el promedio, igual que en ocultarresenia. Va al
+        // FINAL a propósito: recalcularRating es @Modifying con clearAutomatically, deja las
+        // entidades detached, y notificarResolucion lee la clase y la actividad de la reseña
+        // (relaciones LAZY). Antes no se recalculaba y la reseña oculta seguía sumando estrellas.
+        if (actividadARecalcular != null) {
+            actividadRepository.recalcularRating(actividadARecalcular);
+        }
 
         return new ResolverDenunciaResponse(denuncia.getId(), denuncia.getEstado().getEtiqueta(), accion.name());
     }
@@ -199,11 +216,21 @@ public class ResolverDenunciaService {
         }
     }
 
-    private void ocultarResenia(Denuncia denuncia, UUID actorId) {
+    /**
+     * Oculta la reseña denunciada (no la borra) y devuelve la actividad cuyo rating hay que
+     * recalcular, que el llamador recalcula al final (ver {@code resolver}).
+     *
+     * <p>Audita {@code RESENIA_OCULTADA}, la misma acción que {@code ocultarresenia}: es el mismo
+     * hecho por otro camino. Hasta el arreglo de V34 se auditaba {@code RESENIA_RECHAZADA} con la marca
+     * {@code OCULTA_POR_DENUNCIA}; esas filas viejas las sigue describiendo DescripcionAuditoria.
+     */
+    private UUID ocultarResenia(Denuncia denuncia, UUID actorId) {
         Resenia resenia = denuncia.getResenia();
+        UUID actividadId = resenia.getClase().getActividad().getId();
         resenia.setOculta(true);
         reseniaRepository.save(resenia);
-        auditService.registrar(actorId, AuditAccion.RESENIA_RECHAZADA, "Resenia", resenia.getId(), "OCULTA_POR_DENUNCIA");
+        auditService.registrar(actorId, AuditAccion.RESENIA_OCULTADA, "Resenia", resenia.getId(), MOTIVO_OCULTA_POR_DENUNCIA);
+        return actividadId;
     }
 
     /**

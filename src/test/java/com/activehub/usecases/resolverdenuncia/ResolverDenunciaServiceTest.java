@@ -6,11 +6,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.activehub.domain.actividad.Actividad;
+import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.denuncia.Denuncia;
 import com.activehub.domain.actividad.ClaseRepository;
@@ -32,6 +36,7 @@ import com.activehub.domain.resenia.ReseniaRepository;
 import com.activehub.domain.usuario.EstadoUsuario;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
+import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
 import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.ValidacionException;
@@ -51,6 +56,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -80,6 +86,8 @@ class ResolverDenunciaServiceTest {
     private NotificacionService notificacionService;
     @Mock
     private ReseniaRepository reseniaRepository;
+    @Mock
+    private ActividadRepository actividadRepository;
 
     private ResolverDenunciaService service;
     private UUID denunciaId;
@@ -100,7 +108,8 @@ class ResolverDenunciaServiceTest {
         });
         service = new ResolverDenunciaService(
                 denunciaRepository, claseRepository, inscripcionRepository, pagoRepository, usuarioRepository,
-                penalizacionRepository, reseniaRepository, operacionesPago, auditService, notificacionService,
+                penalizacionRepository, reseniaRepository, actividadRepository, operacionesPago, auditService,
+                notificacionService,
                 Clock.fixed(AHORA, ZoneOffset.UTC));
 
         instructorId = UUID.randomUUID();
@@ -359,6 +368,7 @@ class ResolverDenunciaServiceTest {
         Actividad actividad = new Actividad();
         actividad.setNombre("Running");
         actividad.setInstructor(instructor);
+        ReflectionTestUtils.setField(actividad, "id", UUID.randomUUID());
 
         Clase clase = new Clase();
         clase.setActividad(actividad);
@@ -387,6 +397,61 @@ class ResolverDenunciaServiceTest {
         verify(notificacionService).notificar(eq(autorId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId), eq(Destino.resenia(resenia.getId())));
     }
 
+    /**
+     * Regresión: ocultar por denuncia no recalculaba la calificación. La reseña desaparecía del
+     * detalle pero su puntaje seguía sumando al promedio de la actividad (ocultarresenia, el otro
+     * camino, sí recalculaba). Además se auditaba como RESENIA_RECHAZADA, que desde V33 se lee
+     * "rechazó una reseña en moderación (función retirada)".
+     */
+    @Test
+    void resolver_ocultarResenia_recalculaElRatingDespuesDeNotificarYAuditaComoOcultada() {
+        UUID autorId = UUID.randomUUID();
+        Resenia resenia = reseniaDelAlumno(autorId);
+        denunciaDeResenia(resenia, instructor);
+        UUID actividadId = resenia.getClase().getActividad().getId();
+        UUID actorId = UUID.randomUUID();
+
+        service.resolver(denunciaId, req(ResolucionDenuncia.OCULTAR_RESENIA), actorId);
+
+        InOrder orden = inOrder(reseniaRepository, notificacionService, actividadRepository);
+        orden.verify(reseniaRepository).save(resenia);
+        orden.verify(notificacionService).notificar(eq(autorId), any(), any(), any(), any());
+        orden.verify(actividadRepository).recalcularRating(actividadId);
+        verify(auditService).registrar(
+                eq(actorId), eq(AuditAccion.RESENIA_OCULTADA), eq("Resenia"), eq(resenia.getId()), any());
+        verify(auditService, never()).registrar(any(), eq(AuditAccion.RESENIA_RECHAZADA), any(), any(), any());
+    }
+
+    /**
+     * {@code recalcularRating} es {@code @Modifying(clearAutomatically = true)}: deja la reseña
+     * detached y leer después su clase o su actividad explota con
+     * {@code LazyInitializationException} (ya pasó al aprobar reseñas). Con mocks no se detacha
+     * nada, así que se simula: apenas se recalcula, leer la clase de la reseña empieza a fallar.
+     */
+    @Test
+    void resolver_ocultarResenia_noLeeRelacionesLazyDespuesDeRecalcular() {
+        Resenia espia = spy(reseniaDelAlumno(UUID.randomUUID()));
+        denunciaDeResenia(espia, instructor);
+        UUID actividadId = espia.getClase().getActividad().getId();
+        boolean[] contextoLimpio = {false};
+        doAnswer(inv -> {
+            contextoLimpio[0] = true;
+            return null;
+        }).when(actividadRepository).recalcularRating(actividadId);
+        doAnswer(inv -> {
+            if (contextoLimpio[0]) {
+                throw new org.hibernate.LazyInitializationException("contexto de persistencia limpiado");
+            }
+            return inv.callRealMethod();
+        }).when(espia).getClase();
+
+        ResolverDenunciaResponse response =
+                service.resolver(denunciaId, req(ResolucionDenuncia.OCULTAR_RESENIA), UUID.randomUUID());
+
+        assertThat(response.resolucion()).isEqualTo("OCULTAR_RESENIA");
+        verify(actividadRepository).recalcularRating(actividadId);
+    }
+
     @Test
     void resolver_desestimarDenunciaDeResenia_noLaOculta() {
         UUID autorId = UUID.randomUUID();
@@ -398,6 +463,8 @@ class ResolverDenunciaServiceTest {
         assertThat(resenia.isOculta()).isFalse();
         // Al autor de la reseña no se le avisa nada: su reseña sigue publicada.
         verify(notificacionService, never()).notificar(eq(autorId), any(), any(), any(), any());
+        // Sigue contando igual en el promedio: no hay nada que recalcular.
+        verify(actividadRepository, never()).recalcularRating(any());
     }
 
     @Test

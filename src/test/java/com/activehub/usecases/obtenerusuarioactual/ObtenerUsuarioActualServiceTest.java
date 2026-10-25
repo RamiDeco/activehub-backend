@@ -101,6 +101,7 @@ class ObtenerUsuarioActualServiceTest {
         ObtenerUsuarioActualResponse response = service.obtener(usuarioId);
 
         assertThat(response.intereses()).isNotNull().isEmpty();
+        assertThat(response.condicionSalud()).isNull();
     }
 
     @Test
@@ -115,6 +116,7 @@ class ObtenerUsuarioActualServiceTest {
         ReflectionTestUtils.setField(trekking, "id", UUID.randomUUID());
 
         PerfilAlumno perfil = new PerfilAlumno(usuario, List.of(trekking));
+        perfil.setCondicionSalud("Lesión de rodilla");
 
         when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
         when(perfilAlumnoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(perfil));
@@ -125,6 +127,8 @@ class ObtenerUsuarioActualServiceTest {
         assertThat(response.intereses()).hasSize(1);
         assertThat(response.intereses().get(0).nombre()).isEqualTo("Trekking");
         assertThat(response.intereses().get(0).categoria()).isEqualTo("Aventura");
+        // Lo que informó en el alta: el perfil lo muestra para que lo pueda revisar y editar.
+        assertThat(response.condicionSalud()).isEqualTo("Lesión de rodilla");
     }
 
     @Test

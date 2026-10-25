@@ -16,15 +16,18 @@ public interface ActividadRepository extends JpaRepository<Actividad, UUID>, Jpa
     long countByNivelIntensidadIdAndDeletedFalse(UUID nivelIntensidadId);
 
     /**
-     * Recalcula el promedio de puntaje sobre las resenias visibles (aprobadas,
+     * Recalcula el promedio de puntaje sobre las resenias visibles (no ocultas,
      * no eliminadas) de todas las clases de la actividad. Se dispara cada vez
-     * que cambia la visibilidad de una resenia (aprobar/rechazar/eliminar) —
-     * ver AprobarReseniaService/RechazarReseniaService/EliminarReseniaService.
+     * que cambia el conjunto de resenias visibles: al crear una (se publica en
+     * el acto) y al ocultarla, por los dos caminos — ver CrearReseniaService,
+     * OcultarReseniaService y ResolverDenunciaService (OCULTAR_RESENIA). Un camino nuevo que
+     * cambie la visibilidad de una resenia tiene que llamarlo, y leer todo antes (deja las
+     * entidades detached).
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "UPDATE actividad SET rating = COALESCE((SELECT AVG(r.puntaje) FROM resenia r "
             + "JOIN clase c ON c.id = r.clase_id "
-            + "WHERE c.actividad_id = :actividadId AND r.en_moderacion = false AND r.deleted = false "
+            + "WHERE c.actividad_id = :actividadId AND r.deleted = false "
             + "AND r.oculta = false), 0) "
             + "WHERE id = :actividadId", nativeQuery = true)
     void recalcularRating(@Param("actividadId") UUID actividadId);

@@ -35,34 +35,34 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-10-17, despues de la ENTRADA 040) ===
-Casos de uso implementados en el backend: 117
+=== ESTADO GENERAL (actualizado: 2026-10-24, despues de la ENTRADA 056) ===
+Casos de uso implementados en el backend: 113
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
-Los dos ultimos son desvincularcuentamp y renovartokensmercadopago (ENTRADA 030, KAN-55).
+Los dos ultimos agregados son desvincularcuentamp y renovartokensmercadopago (ENTRADA 030, KAN-55). En la ENTRADA 041 se RETIRARON cinco: aprobarresenia, rechazarresenia, listarresenaspendientes, actualizarresenia y eliminarresenia (117 -> 112). En la ENTRADA 055 se agrego actualizarmicondicionsalud (112 -> 113).
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
 
-Pruebas automatizadas del backend: 211 archivos / 1018 pruebas / resultado: 1016 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
+Pruebas automatizadas del backend: 205 archivos / 1016 pruebas / resultado: 1014 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
 (comando de conteo de archivos: find src/test -name "*Test.java" | wc -l)
-(comando de ejecucion: JAVA_HOME=$HOME/.jdks/corretto-21.0.10 ./mvnw -B test)
-(salida literal: "Tests run: 1018, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS", ejecutada el 2026-10-17 en la ENTRADA 034)
+(comando de ejecucion: JAVA_HOME=$HOME/.jdks/jdk-21.0.12+8 ./mvnw -B test; la ruta del JDK 21 depende de la maquina)
+(salida literal: "Tests run: 1016, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS", ejecutada el 2026-10-24 en la ENTRADA 055; en la ENTRADA 041 bajo de 1018 a 1004 porque se retiraron los slices de moderacion, edicion y baja de reseñas, la 042 sumo 4 y la 055 sumo 8)
 
-Pruebas automatizadas del frontend: 22 archivos / 175 pruebas / resultado: 175 correctas, 0 fallidas (ENTRADA 040)
-(comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  22)
-(comando de ejecucion: npm test; salida literal: "Test Files  22 passed (22)" - "Tests  175 passed (175)")
+Pruebas automatizadas del frontend: 36 archivos / 239 pruebas / resultado: 239 correctas, 0 fallidas (ENTRADA 056)
+(comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  36)
+(comando de ejecucion: npx vitest run --maxWorkers=1; salida literal: "Test Files  36 passed (36)" - "Tests  239 passed (239)". Con npm test y el equipo cargado aparecieron fallas por tiempo agotado en archivos no tocados, ver ENTRADA 046)
 Cobertura sobre los archivos alcanzados: 75.25% de sentencias, 66.86% de ramas, 69.23% de funciones, 78.17% de lineas (comando: npm run test:coverage).
-Cubren lib/ completo salvo nominatim y resaltado (notificaciones tiene pruebas desde la ENTRADA 031, sin medir de nuevo la cobertura), mas las dos pantallas publicas (Ayuda y Manual). Las pantallas de Alumno e Instructor todavia no tienen pruebas; la de Administrador "Gestion de denuncias" tiene la primera desde la ENTRADA 033.
+Cubren lib/ completo salvo nominatim y resaltado (notificaciones tiene pruebas desde la ENTRADA 031, sin medir de nuevo la cobertura), mas las dos pantallas publicas (Ayuda y Manual). La de Administrador "Gestion de denuncias" tiene la primera desde la ENTRADA 033, la de Alumno "Mis reseñas" desde la ENTRADA 041 y la de Instructor "Reseñas" desde la ENTRADA 043.
 
-Migraciones Flyway: V1 a V32 (ultima: V32__pago_intentos_captura, ENTRADA 023)
-(comando: ls src/main/resources/db/migration | wc -l  ->  32)
+Migraciones Flyway: V1 a V34 (ultima: V34__recalcular_rating_resenias_ocultas, ENTRADA 042)
+(comando: ls src/main/resources/db/migration | wc -l  ->  34)
 
-ESLint del frontend: 0 errores / 11 advertencias
-(comando: npx eslint .  en activehub-frontend; salida literal: "11 problems (0 errors, 11 warnings)")
+ESLint del frontend: 0 errores / 10 advertencias
+(comando: npx eslint .  en activehub-frontend; salida literal: "10 problems (0 errors, 10 warnings)"; eran 11 hasta la ENTRADA 045, que corrigio la de la lista filtrada de Explorar)
 Cambio respecto de la linea de base: eran 12 advertencias. La que desaparecio es la del useMemo de "Recomendado para vos" del Home, que dejo de existir al mover el calculo al backend (ENTRADA 004).
 Typecheck del frontend: sin errores (comando: npx tsc -b). Desde la ENTRADA 010 los dos comandos incluyen los 16 archivos de prueba, que estan dentro de src y del mismo proyecto de TypeScript.
 Integracion continua: desde la ENTRADA 010 existe .github/workflows/ci.yml en activehub-frontend, que corre ESLint, typecheck, pruebas y compilacion de produccion en cada push y en cada Pull Request sobre integracion y main. El backend no tiene flujo equivalente: sus 842 pruebas se ejecutan solo a mano.
 
-Pantallas implementadas: 42 archivos de pantalla en activehub-frontend/src/pages (nuevas respecto de la linea de base: E1A-PAN-10 Recuperar contrasenia y SYS-PAN-MAN Manual de usuario, los dos codigos propuestos NUEVOS)
-(comando: find src/pages -name "*.tsx" | wc -l  ->  42)
+Pantallas implementadas: 43 archivos de pantalla en activehub-frontend/src/pages (nuevas respecto de la linea de base: E1A-PAN-10 Recuperar contrasenia, SYS-PAN-MAN Manual de usuario y E3A-PAN-14 Perfil del instructor (ENTRADA 047), los tres codigos propuestos NUEVOS)
+(comando: find src/pages -name "*.tsx" ! -name "*.test.tsx" | wc -l  ->  43; se excluyen los archivos de prueba, que desde la ENTRADA 041 tambien viven en src/pages)
 Observacion: sigue sin verificarse la correspondencia entre los 45 codigos de pantalla del catalogo y los archivos de src/pages (ver ENTRADA 001).
 
 Estado por modulo (los 15):
@@ -74,7 +74,7 @@ Estado por modulo (los 15):
 6. Instructor - PROBADO.
 7. Actividades - PROBADO - alta, edicion, taxonomia, niveles, fotos (ahora en Supabase Storage), geolocalizacion.
 8. Reservas y Pagos - PARCIAL en esta bitacora; el usuario informa el 2026-10-16 que la integracion con Mercado Pago quedo terminada y funcionando (pruebas hechas en otra PC, no re-verificadas en esta sesion) - la pasarela simulada se retiro (ENTRADA 013); la inscripcion autoriza contra Mercado Pago real (probado en sandbox, KAN-58); la captura al finalizar la clase y el reembolso de un pago capturado estan PROBADOS en sandbox (ENTRADA 025); la cancelacion de una autorizacion sin capturar sigue sin prueba en sandbox. Auditoria duplicada del reembolso corregida (KAN-66, ENTRADAS 027 y 032), pendiente de verificar en sandbox. Renovacion automatica de la vinculacion y desvinculacion de la cuenta (KAN-55, ENTRADA 030) IMPLEMENTADAS y con pruebas automatizadas; la prueba manual con la base (vencimiento forzado) esta PENDIENTE. Boton "Desvincular" en el Panel del instructor (KAN-67, ENTRADA 031) IMPLEMENTADO, sin verificar en el navegador.
-9. Historial y Calificaciones - PROBADO.
+9. Historial y Calificaciones - PROBADO - desde la ENTRADA 041 las reseñas se publican al crearse, sin moderacion previa, y no se editan ni se eliminan (pruebas automatizadas; falta verificarlo en el navegador).
 10. Busqueda y Filtrado - PROBADO - filtrado tradicional en Explorar y, desde esta actualizacion, motor de recomendaciones con puntaje en el Home del alumno.
 11. Administracion y Soporte - PROBADO.
 12. Reportes e Informes - PROBADO.
@@ -2233,3 +2233,466 @@ ERRORES DETECTADOS: sintoma: en Brave, despues de la ENTRADA 039, el boton segui
 CAPTURAS SUGERIDAS: sin capturas nuevas.
 PENDIENTE QUE QUEDA: confirmar en Brave; aplicar MANUAL-CAMBIOS-PARA-ANEXO-8.txt al Anexo 8.
 === FIN ENTRADA 040 ===
+
+=== ENTRADA 041 ===
+FECHA: 2026-10-23
+REPOSITORIO: ambos
+RAMA Y COMMITS: main en los dos repositorios - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: CAMBIO FUNCIONAL
+TITULO: Las resenias se publican al crearse, sin moderacion previa, y una resenia publicada no se edita ni se elimina
+QUE CAMBIA PARA EL USUARIO: Alumno: al presionar "Publicar" la reseña queda visible en el detalle de la actividad y suma al promedio en el momento; el formulario avisa antes que despues no se va a poder cambiar; en "Mis reseñas" ya no estan "Editar", "Eliminar" ni la etiqueta "En moderación". Instructor: las resenias que recibe estan publicadas desde el primer momento, desaparece la etiqueta "Pendiente de moderación" y la alerta del Panel cuenta las resenias denunciadas sin resolver. Administrador: la pestaña "Reseñas" de "Gestión" ya no tiene la cola "Pendientes de moderación" ni los botones "Aprobar" y "Rechazar"; muestra un solo listado "Reseñas publicadas" con "Ocultar". Las denuncias de resenias se siguen resolviendo en "Gestión de denuncias" y en "Reclamos", sin cambios.
+TEXTOS DE INTERFAZ (literales): nuevos: "La reseña se publica en el momento y después no se puede editar ni eliminar." (modal "Dejar reseña"); "Oculta por un administrador" (reemplaza "Oculta por moderación"); "Tenés N reseñas denunciadas en revisión." / "Tenés 1 reseña denunciada en revisión." (Panel del instructor, reemplaza "Tenés N reseña(s) en revisión."); "Reseñas publicadas" y "Las reseñas se publican en el momento en que el alumno las crea. Las que denuncia un instructor se resuelven en la pestaña "Reclamos"." (Gestión, pestaña Reseñas). Retirados: botones "Editar", "Eliminar", "Aprobar", "Rechazar" y "Guardar cambios"; etiquetas "En moderación" y "Pendiente de moderación"; sub-pestañas "Pendientes de moderación" y "Publicadas"; "Editar reseña"; "Al editarla vuelve a moderación hasta que un administrador la apruebe."; "¿Eliminar esta reseña? No se puede deshacer."; "No hay reseñas pendientes de moderación.". Manual de usuario (las dos copias del sistema): apartados 2.10, 3.6, 3.10, 4.5 (titulo nuevo "Reseñas publicadas", antes "Moderar reseñas"), 4.6 y tabla de estados; el texto literal completo esta en activehub-backend/docs/BITACORA-RESENIAS.txt, ENTRADA 002.
+DETALLE TECNICO: backend: se retiran los slices aprobarresenia, rechazarresenia, listarresenaspendientes, actualizarresenia y eliminarresenia con sus pruebas; crearresenia publica y llama a ActividadRepository.recalcularRating (leyendo todo antes, porque es @Modifying con clearAutomatically); Resenia pierde el atributo enModeracion; findVisiblesPorActividad, findPublicadasConDetalle y recalcularRating dejan de filtrar por moderacion; las respuestas de crearresenia, listarmisresenas y listarresenasinstructor pierden enModeracion; ocultarresenia y responderresenia pierden la validacion de moderacion. Los valores RESENIA_APROBADA, RESENIA_RECHAZADA, RESENIA_ACTUALIZADA y RESENIA_ELIMINADA de AuditAccion y RESENIA_APROBADA de TipoNotificacion se conservan por las filas historicas y ya no se escriben. Prueba de arquitectura nueva ReseniaInmutableTest. Frontend: alumno/MisResenas.tsx, instructor/Resenas.tsx, instructor/Panel.tsx, admin/Gestion.tsx, context/DataContext.tsx (fuera listarResenasPendientes, aprobarResenia, rechazarResenia, actualizarResenia, eliminarResenia y ReseniaPendiente) y lib/types.ts. Detalle completo en activehub-backend/docs/BITACORA-RESENIAS.txt (bitacora propia del cambio, con el formato de BITACORA-MERCADOPAGO.txt).
+ESTADO: IMPLEMENTADO. PROBADO con pruebas automatizadas en los dos repositorios. No probado en el navegador.
+HISTORIAS DE USUARIO Y CRITERIOS: E3A-HU10: criterio NUEVO propuesto "la reseña se publica al enviarse y no puede editarse ni eliminarse"; los criterios de edicion y baja de la reseña propia, si existen en el informe, quedan RETIRADOS. E2I-HU11 criterio 4: sin cambios (desaparece la restriccion de responder una reseña en moderacion). Historia del administrador sobre moderacion de reseñas (E4-Ad, codigo a confirmar): aprobar y rechazar quedan RETIRADOS; ocultar y resolver denuncias se mantienen.
+PANTALLAS: Mis reseñas (alumno); Reseñas y Panel (instructor); Gestion, pestaña Reseñas (administrador); SYS-PAN-MAN (texto). Codigos E3A/E2I/E4Ad a confirmar.
+REGLAS DE NEGOCIO: RN-32 NUEVA (propuesta, numerada a continuacion de las RN-25 a RN-31 de BITACORA-MERCADOPAGO.txt): "Una reseña se publica en el momento en que el alumno la envía, sin aprobación previa, y una vez publicada no puede editarse ni eliminarse. Solo admite la respuesta y la denuncia del instructor, y el ocultamiento por parte del administrador, que no la borra."
+MODULOS: Historial y Calificaciones; Administracion y Soporte; Ayuda y Soporte al Usuario (manual).
+CASOS DE USO: de 117 a 112. RETIRADOS: aprobarresenia, rechazarresenia, listarresenaspendientes, actualizarresenia, eliminarresenia. Modificados: crearresenia, listarmisresenas, listarresenasinstructor, listarreseniaspublicadas, ocultarresenia, responderresenia, listarauditoria.
+ENTIDADES Y MIGRACIONES: V33__resenia_sin_moderacion (nueva, idempotente): recalcula el rating de las actividades con reseñas pendientes, publica esas reseñas (en_moderacion = false) y pone DEFAULT false. La columna resenia.en_moderacion NO se borra: la base de Supabase es compartida y el codigo anterior la sigue usando; queda sin mapear y se elimina en una migracion posterior. Salida de Flyway: "Successfully applied 1 migration to schema "public", now at version v33 (execution time 00:01.530s)".
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: R04 mitigado (regla resuelta con el usuario). R05 vigente hasta actualizar el informe y el Anexo 8. R30 NUEVO propuesto: cambios de esquema sobre una base compartida por integrantes con versiones distintas del codigo; mitigado al no borrar la columna.
+SEGURIDAD: sin cambios de permisos; la API pierde cinco endpoints (GET /api/admin/resenas, POST /api/admin/resenas/{id}/aprobar, POST /api/admin/resenas/{id}/rechazar, PUT /api/alumno/resenas/{id}, DELETE /api/alumno/resenas/{id}). Ninguna reseña se borra: se conserva como evidencia.
+PRUEBAS: backend: "Tests run: 1004, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS" (JAVA_HOME=$HOME/.jdks/jdk-21.0.12+8 ./mvnw -B test, 03:43 min); antes 1018: -17 pruebas en 9 archivos retirados, -2 de moderacion, +5 nuevas (2 en CrearReseniaServiceTest y 3 en ReseniaInmutableTest). Frontend: "Test Files  23 passed (23)" - "Tests  178 passed (178)" (npm test); nuevo pages/alumno/MisResenas.test.tsx con 3 pruebas, que fallan contra la pantalla anterior y pasan con la nueva. Manuales: ninguna.
+ANALISIS ESTATICO: "npx eslint ." -> "11 problems (0 errors, 11 warnings)", sin cambios; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: el usuario resolvio que el alumno no puede borrar su reseña, que el administrador conserva "Ocultar" sin denuncia y que se retira el aviso RESENIA_APROBADA. Se retiraron los slices en vez de dejarlos sin uso. No se borro la columna en_moderacion (antes se habia recomendado borrarla en V33) por la base compartida.
+ERRORES DETECTADOS: sintoma: el manual (2.10, paso 3) nombraba un boton "Enviar reseña" y un mensaje "¡Gracias por tu reseña!" que la pantalla no tiene. Causa: texto desactualizado. Correccion: "Presionar "Publicar".". Como se detecto: al revisar los textos para esta entrada.
+CAPTURAS SUGERIDAS: Mis reseñas sin botones de edicion; modal "Dejar reseña" con el aviso; Gestion > Reseñas con "Reseñas publicadas"; consola con "Tests run: 1004" y con "Tests  178 passed (178)".
+PENDIENTE QUE QUEDA: probar en el navegador los tres roles; borrar la columna en_moderacion cuando todos usen este codigo; actualizar el informe y el Anexo 8; commitear y empujar.
+=== FIN ENTRADA 041 ===
+
+=== ENTRADA 042 ===
+FECHA: 2026-10-23
+REPOSITORIO: activehub-backend
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: CORRECCION DE ERROR
+TITULO: Ocultar una resenia al resolver su denuncia no recalculaba la calificacion de la actividad
+QUE CAMBIA PARA EL USUARIO: cuando el administrador resuelve una denuncia de reseña con "Ocultar la reseña", la reseña deja de contar en el promedio de la actividad en el momento, igual que al ocultarla desde "Gestión" > "Reseñas". Antes desaparecia del detalle pero seguia sumando estrellas. En "Auditoría" ese hecho se lee "... ocultó una reseña publicada. Motivo: resolución de una denuncia del instructor.".
+TEXTOS DE INTERFAZ (literales): columna "Detalle" de Auditoria: nuevo "<actor> ocultó una reseña publicada. Motivo: resolución de una denuncia del instructor."; filas anteriores del mismo hecho: "<actor> ocultó una reseña al resolver una denuncia." (desde la ENTRADA 041 se leian por error "rechazó una reseña en moderación (función retirada).").
+DETALLE TECNICO: ResolverDenunciaService recibe ActividadRepository; ocultarResenia devuelve el id de la actividad y resolver() llama a recalcularRating al final, despues de notificarResolucion (recalcularRating es @Modifying con clearAutomatically y las notificaciones leen relaciones LAZY de la reseña). La auditoria pasa de RESENIA_RECHAZADA con la marca OCULTA_POR_DENUNCIA a RESENIA_OCULTADA. DescripcionAuditoria describe las filas viejas con la marca como ocultamiento. Detalle completo en activehub-backend/docs/BITACORA-RESENIAS.txt, ENTRADA 003.
+ESTADO: IMPLEMENTADO. PROBADO con pruebas automatizadas. No probado en el navegador.
+HISTORIAS DE USUARIO Y CRITERIOS: historia del administrador sobre denuncias de reseñas (E4-Ad, codigo a confirmar): "una reseña oculta no cuenta en la calificacion" se cumple tambien por este camino.
+PANTALLAS: detalle de actividad (calificacion); Gestion de denuncias y Reclamos; Auditoria (texto).
+REGLAS DE NEGOCIO: RN-32 (ENTRADA 041) sin cambios.
+MODULOS: Historial y Calificaciones; Auditoria y Trazabilidad; Administracion y Soporte.
+CASOS DE USO: sin altas ni bajas (112). Modificados: resolverdenuncia, listarauditoria.
+ENTIDADES Y MIGRACIONES: V34__recalcular_rating_resenias_ocultas (nueva, idempotente): recalcula actividad.rating de todas las actividades con la formula de recalcularRating. Cuantas cambiaron: no medido. Sin cambios de esquema.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios.
+PRUEBAS: backend "Tests run: 1008, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS" (JAVA_HOME=$HOME/.jdks/jdk-21.0.12+8 ./mvnw -B test, 01:25 min); +4 nuevas: 2 en ResolverDenunciaServiceTest (recalculo en orden y auditoria; sin lecturas LAZY despues del recalculo), que fallan sin la llamada a recalcularRating ("Tests run: 24, Failures: 2") y pasan con ella, y 2 en DescripcionAuditoriaTest. Frontend sin cambios.
+ANALISIS ESTATICO: sin cambios en el frontend.
+DESPLIEGUE Y CONFIGURACION: sin cambios; reiniciar el backend en ejecucion para tomar el arreglo.
+DECISIONES: recalcular al final de resolver() y no al ocultar, por las lecturas LAZY de las notificaciones; V34 recalcula todas las actividades porque el valor correcto es siempre el de la formula.
+ERRORES DETECTADOS: 1) sintoma: una reseña oculta por denuncia seguia sumando a la calificacion; causa: ResolverDenunciaService.ocultarResenia no llamaba a recalcularRating (ocultarresenia si); como se detecto: pregunta del usuario y revision del codigo; anterior a la ENTRADA 041. 2) sintoma: en Auditoria el ocultamiento por denuncia se leia "rechazó una reseña en moderación (función retirada)."; causa: en la ENTRADA 041 se dio por hecho que nadie escribia RESENIA_RECHAZADA; como se detecto: en la misma revision.
+CAPTURAS SUGERIDAS: detalle de actividad antes y despues de ocultar por denuncia; fila de Auditoria con el texto nuevo; consola con "Tests run: 1008".
+PENDIENTE QUE QUEDA: probar en el navegador; los de la ENTRADA 041.
+=== FIN ENTRADA 042 ===
+
+=== ENTRADA 043 ===
+FECHA: 2026-10-23
+REPOSITORIO: activehub-frontend (codigo) y activehub-backend (copia del manual del asistente)
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: CORRECCION DE ERROR
+TITULO: La pantalla Resenias del instructor contaba las resenias ocultas en la cantidad y la calificacion
+QUE CAMBIA PARA EL USUARIO: cuando el administrador oculta una reseña, el instructor ve en "Reseñas" la cantidad y el promedio de la actividad sin esa reseña, igual que el detalle publico. La oculta se sigue listando con la etiqueta "Oculta" y el resumen avisa cuantas hay.
+TEXTOS DE INTERFAZ (literales): nuevo, solo si hay ocultas: "1 oculta, no cuenta en la calificación" / "N ocultas, no cuentan en la calificación". Manual 3.10 (las dos copias): se agrega "La cantidad y la calificación promedio no incluyen las reseñas ocultas por un administrador: esas se siguen listando con su etiqueta, y el resumen de la actividad indica cuántas hay ("1 oculta, no cuenta en la calificación")."
+DETALLE TECNICO: reportado por el usuario al probar la ENTRADA 042. instructor/Resenas.tsx promediaba todas las reseñas de GET /api/instructor/resenas, que incluye las ocultas; la funcion nueva estadisticas() calcula sobre las no ocultas para la lista lateral y el resumen. Sin cambios en el backend. Detalle en activehub-backend/docs/BITACORA-RESENIAS.txt, ENTRADA 004.
+ESTADO: IMPLEMENTADO. PROBADO con pruebas automatizadas. No probado en el navegador despues de la correccion.
+HISTORIAS DE USUARIO Y CRITERIOS: E2I-HU11: la calificacion que ve el instructor coincide con la publica (criterio a numerar).
+PANTALLAS: Reseñas del instructor; SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: RN-32 sin cambios.
+MODULOS: Instructor; Historial y Calificaciones; Ayuda y Soporte al Usuario.
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios.
+PRUEBAS: nuevo pages/instructor/Resenas.test.tsx (2 pruebas); la principal falla contra la pantalla anterior ("Tests  1 failed | 1 passed (2)") y pasa con la nueva. Frontend: "Test Files  24 passed (24)" - "Tests  180 passed (180)" (npm test). Manual: "Tests  27 passed (27)" (frontend) y "Tests run: 21, Failures: 0, Errors: 0, Skipped: 0" (ManualUsuarioTest y PreguntarAlAsistenteServiceTest).
+ANALISIS ESTATICO: "npx eslint ." -> "11 problems (0 errors, 11 warnings)", sin cambios; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: las ocultas se siguen listando para el instructor y se excluyen solo de los numeros.
+ERRORES DETECTADOS: sintoma: ocultar una reseña no cambiaba la cantidad ni la calificacion en la pantalla del instructor; causa: el calculo en el cliente no filtraba oculta; como se detecto: prueba en el navegador del usuario; anterior a la ENTRADA 041.
+CAPTURAS SUGERIDAS: Reseñas del instructor con "1 oculta, no cuenta en la calificación".
+PENDIENTE QUE QUEDA: probar en el navegador; los de las ENTRADAS 041 y 042.
+=== FIN ENTRADA 043 ===
+
+=== ENTRADA 044 ===
+FECHA: 2026-10-23
+REPOSITORIO: activehub-frontend (codigo) y activehub-backend (copia del manual del asistente)
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: INTERFAZ
+TITULO: El filtro Distancia de Explorar pasa de chips fijos a una barra de rango con dos manijas
+QUE CAMBIA PARA EL USUARIO: en "Explorar" el alumno elige un rango de distancia arrastrando dos manijas sobre una barra de 0 a 30 km (por ejemplo, entre 3 y 12 km), en lugar de siete opciones fijas. Con la manija derecha en el tope no hay limite superior; con la barra completa no se filtra ni se pide la ubicacion. El filtro rapido "A menos de 25 km" del Home ahora si filtra.
+TEXTOS DE INTERFAZ (literales): leyenda "De <mínimo> hasta <máximo>" (por ejemplo "De 3 km hasta 12 km"; en el tope "30+ km"); manijas "Distancia mínima" y "Distancia máxima". Retirados los chips "Cualquier distancia", "Menos de 2 km", "2 km", "5 km", "8 km", "10 km" y "Más de 10 km". Manual (las dos copias), apartado de Explorar: "radio de cercanía" pasa a "distancia" y el parrafo del filtro queda: "El filtro "Distancia" es una barra con dos manijas, de 0 a 30 km: se arrastra la izquierda para fijar la distancia mínima y la derecha para la máxima, y la leyenda de arriba muestra el rango elegido (por ejemplo, "De 3 km hasta 12 km"). Con la manija derecha en el tope el rango no tiene límite superior ("30+ km"), y con la barra completa no se filtra por distancia. Al empezar a filtrar se pide autorizar el acceso a la ubicación del navegador; las actividades cuya distancia no puede calcularse quedan fuera de ese filtro."
+DETALLE TECNICO: componente nuevo components/RangoDoble.tsx (dos input range superpuestos, estilos de manija en index.css clase .ah-rango) y lib/distancia.ts (DISTANCIA_MAX_KM = 30, paso 1 km, dentroDelRangoDistancia, rangoHasta). Explorar.tsx retira RADIOS y dentroDelRadio; Home.tsx manda distanciaMaxKm (numero) en lugar de radio (texto). Detalle completo en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 001 (bitacora nueva de esta serie de ajustes, con el formato de BITACORA-MERCADOPAGO.txt).
+ESTADO: IMPLEMENTADO. PROBADO con pruebas automatizadas; la barra se verifico en el navegador en una pagina aislada; la pantalla Explorar completa no se probo en el navegador (requiere sesion de alumno).
+HISTORIAS DE USUARIO Y CRITERIOS: E3A, busqueda y filtrado del alumno (codigo a confirmar): el filtro por radio pasa a ser un rango minimo-maximo.
+PANTALLAS: Explorar e Inicio del alumno; SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Busqueda y Filtrado; Alumno; Ayuda y Soporte al Usuario.
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios; sin dependencias nuevas.
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios.
+PRUEBAS: nuevas lib/distancia.test.ts (6) y components/RangoDoble.test.tsx (3). Frontend: "Test Files  26 passed (26)" - "Tests  189 passed (189)" (npm test). Manual en el backend: "Tests run: 21, Failures: 0, Errors: 0, Skipped: 0".
+ANALISIS ESTATICO: "npx eslint ." -> "11 problems (0 errors, 11 warnings)", sin cambios; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: tope de 30 km con "sin limite" en el extremo (cubre el "A menos de 25 km" del Home y permite "mas de X km"); paso de 1 km; componente reutilizable.
+ERRORES DETECTADOS: sintoma: "A menos de 25 km" del Home no filtraba en Explorar; causa: mandaba el texto "25 km", que no coincidia con ningun chip y se ignoraba; correccion: el Home manda un numero y Explorar lo acota a la barra; como se detecto: al revisar los usos del filtro para este cambio.
+CAPTURAS SUGERIDAS: filtros de Explorar con "De 3 km hasta 12 km"; consola con "Tests  189 passed (189)".
+PENDIENTE QUE QUEDA: probar Explorar en el navegador con una cuenta de alumno.
+=== FIN ENTRADA 044 ===
+
+=== ENTRADA 045 ===
+FECHA: 2026-10-23
+REPOSITORIO: activehub-frontend
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: CORRECCION DE ERROR
+TITULO: En Explorar, elegir una fecha o un horario no filtraba la lista, y Limpiar no los borraba
+QUE CAMBIA PARA EL USUARIO: en "Explorar", elegir una fecha o una franja horaria actualiza la lista en el momento (antes seguia mostrando lo anterior hasta tocar otro filtro), y "Limpiar" ahora borra tambien la fecha y el horario.
+TEXTOS DE INTERFAZ (literales): sin cambios.
+DETALLE TECNICO: el useMemo de la lista filtrada de Explorar.tsx no tenia fecha ni franja en sus dependencias (ESLint lo avisaba); clearFilters no reseteaba fecha ni franja. Se corrigieron las dos cosas. Detalle en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 002.
+ESTADO: IMPLEMENTADO. PROBADO con pruebas automatizadas. No probado en el navegador.
+HISTORIAS DE USUARIO Y CRITERIOS: E3A, busqueda y filtrado (codigo a confirmar).
+PANTALLAS: Explorar del alumno.
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Busqueda y Filtrado; Alumno.
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: R06: Explorar tiene su primera prueba de pantalla.
+SEGURIDAD: sin cambios.
+PRUEBAS: nuevo pages/alumno/Explorar.test.tsx (3 pruebas), que fallan sin la correccion ("Tests  3 failed (3)") y pasan con ella. Frontend: "Test Files  27 passed (27)" - "Tests  192 passed (192)" (npm test). Una corrida previa dio 7 fallas por "Test timed out in 5000ms" en archivos no relacionados; repetida con --maxWorkers=2 y con npm test paso entera; se atribuye a la carga del equipo.
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)" (eran 11); "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: se corrigio tambien "Limpiar", fuera del pedido, por tocar los mismos filtros.
+ERRORES DETECTADOS: 1) sintoma: elegir fecha u horario no filtraba; causa: dependencias faltantes del useMemo; como se detecto: advertencia de ESLint. 2) sintoma: "Limpiar" no borraba fecha ni horario; causa: clearFilters no los reseteaba; como se detecto: revision del codigo.
+CAPTURAS SUGERIDAS: Explorar con una franja elegida y la lista filtrada.
+PENDIENTE QUE QUEDA: probar en el navegador.
+=== FIN ENTRADA 045 ===
+
+=== ENTRADA 046 ===
+FECHA: 2026-10-23
+REPOSITORIO: activehub-frontend (codigo) y activehub-backend (copia del manual del asistente)
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: CAMBIO FUNCIONAL
+TITULO: Se retira el filtro Disponibilidad - Solo con cupos de Explorar
+QUE CAMBIA PARA EL USUARIO: en "Explorar" ya no aparece la seccion "Disponibilidad" con la casilla "Solo con cupos". El resto de los filtros y las tarjetas no cambian.
+TEXTOS DE INTERFAZ (literales): retirados "Disponibilidad" y "Solo con cupos". Manual (las dos copias), paso de los filtros de Explorar: "Aplicar los filtros deseados: texto, categoría, tipo de actividad (se actualiza según la categoría elegida), nivel de intensidad, precio máximo, fecha, franja horaria, distancia e instructor."
+DETALLE TECNICO: el filtro miraba solo la proxima clase de cada actividad (es la unica que trae el catalogo): una actividad sin clases pasaba como "con cupos" y una con la proxima clase llena quedaba afuera aunque tuviera otras con lugar. El usuario descarto tocar el backend y decidio retirarlo. Explorar.tsx pierde el estado soloDisponibles, su condicion, su reseteo y la interfaz; getCategoria sale de las dependencias de la lista. Backend sin cambios (soloConCupos sigue existiendo y el frontend no lo usa). Detalle en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 003.
+ESTADO: RETIRADO. PROBADO con pruebas automatizadas. No probado en el navegador.
+HISTORIAS DE USUARIO Y CRITERIOS: E3A, busqueda y filtrado (codigo a confirmar): RETIRADO el filtro por disponibilidad de cupos.
+PANTALLAS: Explorar del alumno; SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Busqueda y Filtrado; Alumno; Ayuda y Soporte al Usuario.
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios.
+PRUEBAS: Explorar.test.tsx suma "no se ofrece 'Solo con cupos'". Frontend: "Test Files  27 passed (27)" - "Tests  193 passed (193)" con "npx vitest run --maxWorkers=1"; con npm test hubo entre 5 y 13 fallas por "Test timed out in 5000ms" en archivos no tocados, con otros procesos java y node corriendo en el equipo. Manual en el backend: "Tests run: 21, Failures: 0, Errors: 0, Skipped: 0".
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: retirar el filtro (decision del usuario) en lugar de corregirlo sin backend.
+ERRORES DETECTADOS: queda vigente, fuera de este ajuste, que una actividad sin clases muestra "Disponible" en su tarjeta.
+CAPTURAS SUGERIDAS: filtros de Explorar sin "Disponibilidad".
+PENDIENTE QUE QUEDA: probar en el navegador.
+=== FIN ENTRADA 046 ===
+
+=== ENTRADA 047 ===
+FECHA: 2026-10-23
+REPOSITORIO: activehub-frontend (codigo) y activehub-backend (copia del manual del asistente)
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: NUEVA FUNCIONALIDAD
+TITULO: Perfil publico del instructor, al que lleva Ver perfil del detalle de una actividad
+QUE CAMBIA PARA EL USUARIO: "Ver perfil" en la tarjeta del instructor del detalle de una actividad (antes no hacia nada) abre el perfil publico del instructor: nombre, foto, "Instructor verificado", categorias que dicta, actividades publicadas, calificacion promedio y proxima clase, y debajo todas sus actividades, 9 por pagina, con buscador, filtros por categoria y nivel, y orden. Sin datos de contacto ni personales.
+TEXTOS DE INTERFAZ (literales): "← Volver"; "Instructor verificado"; "Dicta:"; "Actividades publicadas"; "Calificación promedio" / "Sin calificaciones todavía"; "Próxima clase" / "Sin clases programadas"; "Actividades de <nombre>"; "Buscar entre sus actividades…"; "Ordenar por" ("Próxima clase", "Nombre", "Precio: menor", "Precio: mayor", "Mejor valoradas"); "Categoría" ("Todas"); "Nivel" ("Todos"); "N actividades" / "1 actividad" y "de <total>"; "Limpiar filtros"; "Ninguna de sus actividades coincide con la búsqueda."; "Este instructor no tiene actividades publicadas en este momento." con "Ir a Explorar"; "Cargando perfil del instructor, por favor espere". Manual 2.3 (las dos copias), parrafo nuevo: ver activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 004.
+DETALLE TECNICO: pantalla nueva pages/alumno/PerfilInstructor.tsx en /alumno/instructor/:id (area alumno, junto al detalle de actividad). Solo frontend por decision del usuario: usa instructorNombre, el catalogo del DataContext y Avatar; no consume GET /api/admin/instructores/{id} (endpoint de administrador con datos sensibles). Paginacion de 9 con usePaginado/Paginacion. Detalle.tsx: "Ver perfil" pasa de button sin accion a Link.
+ESTADO: IMPLEMENTADO. PROBADO con pruebas automatizadas; verificado en el navegador con el catalogo real en una pagina aislada (luego borrada); no probado dentro de la aplicacion con sesion de alumno.
+HISTORIAS DE USUARIO Y CRITERIOS: E3A-HU NUEVA (propuesta, codigo a asignar): ver el perfil publico de un instructor y sus actividades.
+PANTALLAS: E3A-PAN-14 NUEVA (propuesta): Perfil del instructor. Modificada: detalle de actividad. SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: sin reglas nuevas; se apoya en RN-16 (el catalogo solo trae instructores verificados).
+MODULOS: Alumno; Instructor; Busqueda y Filtrado; Ayuda y Soporte al Usuario.
+CASOS DE USO: sin cambios en el backend.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: solo datos publicos (nombre, foto, catalogo).
+PRUEBAS: nuevo pages/alumno/PerfilInstructor.test.tsx (6 pruebas). Frontend: "Test Files  28 passed (28)" - "Tests  199 passed (199)" (npx vitest run --maxWorkers=1). Manual: frontend "Tests  27 passed (27)"; backend "Tests run: 21, Failures: 0, Errors: 0, Skipped: 0".
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: solo frontend (decision del usuario); 9 por pagina; orden por defecto por proxima clase; sin entrada en lib/areas.ts (no es item de menu).
+ERRORES DETECTADOS: "Ver perfil" era un button sin accion (reporte del usuario). Observado sin corregir: AlumnoNav se desborda a la derecha en anchos de 800 px o menos.
+CAPTURAS SUGERIDAS: perfil de un instructor con indicadores y grilla; boton "Ver perfil" del detalle.
+PENDIENTE QUE QUEDA: probar dentro de la aplicacion con sesion de alumno.
+=== FIN ENTRADA 047 ===
+
+=== ENTRADA 048 ===
+FECHA: 2026-10-24
+REPOSITORIO: activehub-frontend
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: INTERFAZ
+TITULO: Se retira la seccion fija Preguntas frecuentes del detalle de una actividad
+QUE CAMBIA PARA EL USUARIO: el detalle de una actividad ya no termina con "Preguntas frecuentes"; termina en las reseñas. Las preguntas frecuentes de Ayuda, el chat "¿Dudas?" y el manual no cambian.
+TEXTOS DE INTERFAZ (literales): retirados "Preguntas frecuentes", "¿Qué pasa si no puedo asistir?", "¿Necesito experiencia previa?" y "¿Qué tengo que llevar?" con sus respuestas (literales en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 005). Manual sin cambios.
+DETALLE TECNICO: eran tres preguntas fijas en el codigo (const FAQS de Detalle.tsx), iguales para toda actividad, y dos respuestas contradecian al sistema (una "politica de cancelacion de la clase" inexistente; "no hace falta experiencia" tambien en nivel "Física alta"). El usuario eligio retirarla. lib/faqs.ts no cambia.
+ESTADO: RETIRADO. PROBADO con pruebas automatizadas. No probado en el navegador.
+HISTORIAS DE USUARIO Y CRITERIOS: E3A, detalle de actividad (codigo a confirmar).
+PANTALLAS: detalle de la actividad del alumno.
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Alumno; Ayuda y Soporte al Usuario.
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: R05: se elimina un texto que contradecia las reglas de reintegro.
+SEGURIDAD: sin cambios.
+PRUEBAS: nuevo pages/alumno/Detalle.test.tsx (2 pruebas: "Ver perfil" y la seccion retirada), que fallan contra la version commiteada y pasan con la actual. Frontend: "Test Files  29 passed (29)" - "Tests  201 passed (201)" (npx vitest run --maxWorkers=1).
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: retirar en lugar de corregir (decision del usuario).
+ERRORES DETECTADOS: respuestas de la seccion que contradecian al sistema; revision pedida por el usuario.
+CAPTURAS SUGERIDAS: final del detalle de una actividad.
+PENDIENTE QUE QUEDA: probar en el navegador.
+=== FIN ENTRADA 048 ===
+
+=== ENTRADA 049 ===
+FECHA: 2026-10-24
+REPOSITORIO: activehub-frontend (codigo) y activehub-backend (copia del manual del asistente)
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: INTERFAZ
+TITULO: Opiniones del detalle de una actividad: todas, con scroll propio, filtro por calificacion y orden
+QUE CAMBIA PARA EL USUARIO: "Opiniones de alumnos" muestra todas las opiniones (antes solo las 5 primeras) en un recuadro con barra de desplazamiento, con filtro por calificacion ("Todas" o 5 a 1 estrella, con la cantidad de cada una) y "Ordenar por".
+TEXTOS DE INTERFAZ (literales): "Calificación" con "Todas" y "5 ★ (N)" … "1 ★ (N)"; "Ordenar por" con "Más recientes", "Más antiguas", "Mejor calificación", "Peor calificación"; "N opiniones" / "1 opinión"; "Mostrando N de M opiniones"; "No hay opiniones con N estrellas.". Manual 2.3 (las dos copias): frase nueva de las reseñas, literal en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 006.
+DETALLE TECNICO: Detalle.tsx reemplaza slice(0, 5) por la lista completa filtrada y ordenada en un contenedor de 620 px con overflow-y auto; al cambiar un filtro la lista vuelve al inicio. Logica en lib/opiniones.ts (nuevo). Clase .ah-scroll nueva en index.css. Sin cambios en el backend.
+ESTADO: IMPLEMENTADO. PROBADO con pruebas automatizadas; verificado en el navegador con 19 opiniones reales en una pagina aislada (luego borrada).
+HISTORIAS DE USUARIO Y CRITERIOS: E3A, detalle de actividad (codigo a confirmar): criterios NUEVOS propuestos de ver todas las opiniones, filtrarlas y ordenarlas.
+PANTALLAS: detalle de la actividad del alumno; SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Historial y Calificaciones; Busqueda y Filtrado; Alumno; Ayuda y Soporte al Usuario.
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios.
+PRUEBAS: nuevo lib/opiniones.test.ts (5); Detalle.test.tsx suma 3. Frontend: "Test Files  30 passed (30)" - "Tests  209 passed (209)" (npx vitest run --maxWorkers=1). Manual: frontend "Tests  27 passed (27)"; backend "Tests run: 21, Failures: 0, Errors: 0, Skipped: 0".
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: se sumaron tres ordenes al pedido ("Más recientes") porque un selector de una opcion no ordena; scroll en lugar de paginar, como pidio el usuario.
+ERRORES DETECTADOS: el detalle mostraba solo 5 opiniones (slice(0, 5)) y el resto no se podia ver.
+CAPTURAS SUGERIDAS: opiniones filtradas por 5 estrellas con "Mostrando 12 de 19 opiniones".
+PENDIENTE QUE QUEDA: probar dentro de la aplicacion con sesion de alumno.
+=== FIN ENTRADA 049 ===
+
+=== ENTRADA 050 ===
+FECHA: 2026-10-24
+REPOSITORIO: activehub-frontend
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: INTERFAZ
+TITULO: Foto de fondo en el buscador del Home del alumno y fecha del saludo con mayuscula solo al principio
+QUE CAMBIA PARA EL USUARIO: el recuadro del saludo y el buscador del inicio del alumno tiene una foto de fondo (personas entrenando al aire libre al atardecer) con un velo azul que deja leer el texto; en celular el velo es parejo. La fecha dice "Sábado, 24 de octubre" en lugar de "Sábado, 24 De Octubre".
+TEXTOS DE INTERFAZ (literales): sin textos nuevos; cambia el uso de mayusculas de la fecha del saludo ("Sábado, 24 de octubre · Mendoza").
+DETALLE TECNICO: imagen public/home-hero.webp provista por el usuario (2000 x 668 px, 117.496 bytes, WebP), como fondo CSS anclado a la derecha; velo en index.css (.ah-home-hero-velo, degradado horizontal y parejo por debajo de 820 px); se quitan las manchas decorativas del degradado anterior. Fecha: fechaSaludo() en lib/mockData.ts reemplaza text-transform:capitalize. Detalle en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 007.
+ESTADO: IMPLEMENTADO. PROBADO: prueba automatizada de la fecha; fondo verificado en el navegador en escritorio y celular en una pagina aislada (luego borrada); falta verlo con sesion real.
+HISTORIAS DE USUARIO Y CRITERIOS: E3A-HU01 sin cambios de criterios.
+PANTALLAS: Inicio del alumno.
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Alumno.
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: sin cambios; queda por registrar el origen y la licencia de la imagen.
+SEGURIDAD: sin cambios.
+PRUEBAS: lib/mockData.test.ts suma la prueba de fechaSaludo. Frontend: "Test Files  30 passed (30)" - "Tests  210 passed (210)" (npx vitest run --maxWorkers=1).
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: imagen sin recomprimir (ya era WebP de 117 KB); velo denso a la izquierda y parejo en celular; fecha con mayuscula solo al principio.
+ERRORES DETECTADOS: "24 De Octubre" por text-transform:capitalize (corregido). Observado sin corregir: en celular, la barra del buscador del Home no entra en el ancho y el boton "Buscar" se sale del recuadro.
+CAPTURAS SUGERIDAS: inicio del alumno con la foto, en escritorio y en celular.
+PENDIENTE QUE QUEDA: verlo con sesion real; registrar origen y licencia de la imagen.
+=== FIN ENTRADA 050 ===
+
+=== ENTRADA 051 ===
+FECHA: 2026-10-24
+REPOSITORIO: activehub-frontend
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: CORRECCION DE ERROR
+TITULO: La barra del buscador del Home no entraba en el ancho de un celular
+QUE CAMBIA PARA EL USUARIO: en el celular el buscador del inicio del alumno se ve completo: el campo de texto arriba, a todo el ancho, y "Cerca tuyo · 5 km" y "Buscar" abajo. Antes el campo quedaba reducido a una letra y el boton se salia del recuadro. En la computadora no cambia.
+TEXTOS DE INTERFAZ (literales): sin cambios.
+DETALLE TECNICO: por debajo de 560 px (index.css: .ah-home-hero, .ah-buscador, .ah-buscador-texto, .ah-buscador-separador) el recuadro baja su relleno a 24/18 px y la barra se parte en dos filas; min-width:0 en los bloques flexibles de Home.tsx. Detalle en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 008.
+ESTADO: IMPLEMENTADO. Verificado en el navegador a 375 y 700 px en una pagina aislada (luego borrada), incluido el desplegable de resultados. Sin prueba automatizada: jsdom no aplica media queries.
+HISTORIAS DE USUARIO Y CRITERIOS: E3A-HU01 sin cambios de criterios.
+PANTALLAS: Inicio del alumno.
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Alumno; Busqueda y Filtrado.
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios.
+PRUEBAS: sin pruebas nuevas. Frontend: "Test Files  30 passed (30)" - "Tests  210 passed (210)" (npx vitest run --maxWorkers=1).
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: dos filas en celular en lugar de esconder "Cerca tuyo · 5 km".
+ERRORES DETECTADOS: el corregido. Sigue vigente el desborde de la barra de navegacion del alumno en pantallas angostas.
+CAPTURAS SUGERIDAS: inicio del alumno en celular con el buscador en dos filas.
+PENDIENTE QUE QUEDA: verlo con sesion real en un telefono.
+=== FIN ENTRADA 051 ===
+
+=== ENTRADA 052 ===
+FECHA: 2026-10-24
+REPOSITORIO: activehub-frontend
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: INTERFAZ
+TITULO: Foto de fondo en el banner del buscador de Explorar
+QUE CAMBIA PARA EL USUARIO: el banner de "Explorar" (titulo y buscador) tiene una foto de fondo (grupo entrenando en un parque, pesas sobre el pasto) con un velo azul que deja leer el texto, igual que el inicio; en celular el velo es parejo.
+TEXTOS DE INTERFAZ (literales): sin cambios.
+DETALLE TECNICO: imagen public/explorar-hero.webp provista por el usuario (1024 x 434 px, 70.454 bytes, WebP), fondo CSS a todo el ancho con background-position center 65%; velo .ah-explorar-hero-velo en index.css. Detalle en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 009.
+ESTADO: IMPLEMENTADO. Verificado en el navegador a 1280 y 375 px en una pagina aislada (luego borrada); falta verlo con sesion real.
+HISTORIAS DE USUARIO Y CRITERIOS: sin cambios.
+PANTALLAS: Explorar del alumno.
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Alumno; Busqueda y Filtrado.
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: sin cambios; queda por registrar el origen y la licencia de la imagen.
+SEGURIDAD: sin cambios.
+PRUEBAS: sin pruebas nuevas (cambio visual). Frontend: "Test Files  30 passed (30)" - "Tests  210 passed (210)" (npx vitest run --maxWorkers=1).
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: mismo tratamiento que el buscador del inicio (ENTRADA 050).
+ERRORES DETECTADOS: ninguno. Observacion: la imagen mide 1024 px y el banner ocupa todo el ancho; en monitores grandes se estira.
+CAPTURAS SUGERIDAS: Explorar con el banner con foto, en escritorio y celular.
+PENDIENTE QUE QUEDA: verlo con sesion real; registrar origen y licencia de la imagen.
+=== FIN ENTRADA 052 ===
+
+=== ENTRADA 053 ===
+FECHA: 2026-10-24
+REPOSITORIO: activehub-frontend (codigo) y activehub-backend (copia del manual del asistente)
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: CAMBIO FUNCIONAL
+TITULO: Filtros rapidos del Home del alumno: de siete a tres (Categoria, Nivel y Precio), y Precio con montos redondos
+QUE CAMBIA PARA EL USUARIO: debajo del buscador del inicio quedan "Categoría", "Nivel" y "Precio"; desaparecen "Tipo", "Ubicación", "Fecha" y "Horario" (siguen en Explorar). "Precio" ofrece montos redondos ("Hasta $5.000", "Hasta $10.000") en lugar de montos como "Hasta $9.500".
+TEXTOS DE INTERFAZ (literales): retirados "Tipo", "Ubicación" ("A menos de 5 km", "A menos de 10 km", "A menos de 25 km"), "Fecha" ("Hoy", "Mañana", "Pasado mañana") y "Horario" ("Mañana", "Tarde", "Noche"). Manual (las dos copias): "Filtros rápidos: "Categoría", "Nivel" y "Precio" (montos redondos, por ejemplo "Hasta $5.000"); cada opción conduce a la pantalla "Explorar" con el filtro ya aplicado, donde están el resto de los filtros."
+DETALLE TECNICO: Home.tsx deja categoria, nivel y precio en FILTROS_RAPIDOS. lib/precios.ts (nuevo, cortesDePrecio): montos de una escala fija que separan el catalogo, hasta tres. Explorar no cambia. Detalle en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 010.
+ESTADO: IMPLEMENTADO. PROBADO con pruebas automatizadas. No probado en el navegador.
+HISTORIAS DE USUARIO Y CRITERIOS: E3A-HU01 criterio 1 CAMBIA: de siete filtros rapidos a tres (Categoria, Nivel y Precio). Actualizar el informe.
+PANTALLAS: Inicio del alumno; SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Alumno; Busqueda y Filtrado; Ayuda y Soporte al Usuario.
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: R05 vigente hasta actualizar el criterio en el informe; R10 cambio de alcance menor decidido por el usuario.
+SEGURIDAD: sin cambios.
+PRUEBAS: nuevos lib/precios.test.ts (4) y pages/alumno/Home.test.tsx (2), que fallan por lo esperado contra el Home anterior. Frontend: "Test Files  32 passed (32)" - "Tests  216 passed (216)" (npx vitest run --maxWorkers=1).
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: dejar Categoria, Nivel y Precio (decision del usuario); montos redondos de escala fija.
+ERRORES DETECTADOS: "Fecha" y "Horario" solo miraban la proxima clase; quedan fuera del Home.
+CAPTURAS SUGERIDAS: filtros rapidos del Home y desplegable de Precio.
+PENDIENTE QUE QUEDA: probar en el navegador; actualizar el criterio 1 de E3A-HU01 en el informe.
+=== FIN ENTRADA 053 ===
+
+=== ENTRADA 054 ===
+FECHA: 2026-10-24
+REPOSITORIO: activehub-frontend (codigo) y activehub-backend (copia del manual del asistente)
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: INTERFAZ
+TITULO: Secciones de actividades del Home: hasta 6 actividades en una fila deslizable con flechas
+QUE CAMBIA PARA EL USUARIO: "Recomendado para vos", "Cerca de tu ubicación" y "Próximas clases disponibles" muestran hasta 6 actividades (antes 3): se ven 3 y las demas se recorren con flechas a los costados, que aparecen solo si hay mas hacia ese lado; en celular se desliza con el dedo.
+TEXTOS DE INTERFAZ (literales): flechas (solo nombre accesible) "Ver anteriores de <sección>" y "Ver más de <sección>". Manual (las dos copias), item nuevo de la pantalla de inicio: literal en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 011.
+DETALLE TECNICO: components/Carrusel.tsx (nuevo): desplazamiento nativo con scroll-snap, flechas que avanzan el ancho visible; estilos .ah-carrusel en index.css (3 visibles; en celular 78 % de ancho y sin flechas). Home.tsx: POR_SECCION = 6, recomendaciones con limite 6 (el backend acepta hasta 20, sin cambios).
+ESTADO: IMPLEMENTADO. PROBADO con pruebas automatizadas; verificado en el navegador a 1280 y 375 px con el catalogo real en una pagina aislada (luego borrada).
+HISTORIAS DE USUARIO Y CRITERIOS: E3A-HU01: las secciones muestran hasta 6 actividades (antes 3).
+PANTALLAS: Inicio del alumno; SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Alumno; Busqueda y Filtrado.
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios; sin dependencias nuevas.
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios.
+PRUEBAS: nuevo components/Carrusel.test.tsx (4); Home.test.tsx suma 2. Frontend: "Test Files  33 passed (33)" - "Tests  222 passed (222)" (npx vitest run --maxWorkers=1).
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: desplazamiento nativo en lugar de una libreria; flechas solo en escritorio; avance de a una pagina.
+ERRORES DETECTADOS: ninguno.
+CAPTURAS SUGERIDAS: Proximas clases con la flecha derecha y luego la izquierda.
+PENDIENTE QUE QUEDA: ver las secciones de recomendaciones y cercania con sesion y ubicacion reales.
+=== FIN ENTRADA 054 ===
+
+=== ENTRADA 055 ===
+FECHA: 2026-10-24
+REPOSITORIO: ambos
+RAMA Y COMMITS: main en los dos - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: NUEVA FUNCIONALIDAD
+TITULO: Perfil del alumno: se retira el Historial de actividades y se puede ver y editar la informacion de salud
+QUE CAMBIA PARA EL USUARIO: en "Mi perfil" del alumno ya no esta "Historial de actividades" (esta completo en "Mis clases") y aparece la tarjeta "Información de salud" para ver y cambiar lo respondido en el registro en "¿Padecés alguna enfermedad o lesión?" (antes no se podia cambiar). En el registro, la ayuda de esa pregunta deja de decir que el dato ayuda al instructor.
+TEXTOS DE INTERFAZ (literales): retirados "Historial de actividades" y "Todavía no tenés clases registradas."; nuevos "Información de salud", "Se usa para personalizar el informe de beneficios y prevenciones de cada actividad. No la ven los instructores ni otros alumnos.", "No informaste ninguna enfermedad ni lesión.", "Información de salud actualizada.", "No pudimos guardar tu información de salud."; registro: "Opcional. Se usa para personalizar el informe de beneficios y prevenciones de cada actividad. Podés cambiarlo después desde tu perfil." (antes "Opcional. Ayuda al instructor a dar la clase de forma segura para vos."); auditoria: "<actor> actualizó su información de salud.". Manual: dos parrafos nuevos, literales en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 012.
+DETALLE TECNICO: backend: caso de uso NUEVO actualizarmicondicionsalud (PUT /api/usuarios/me/salud, max 500, @SinHtml, vacio = null, sin @PreAuthorize como actualizarmisintereses, 404 sin perfil de alumno, audita CONDICION_SALUD_ACTUALIZADA sin el contenido); obtenerusuarioactual devuelve condicionSalud. Frontend: AuthContext (dato desde /me y actualizarMiCondicionSalud), Perfil.tsx (sin historial, con InformacionSaludCard), Registro.tsx (texto de ayuda). Sin migracion.
+ESTADO: IMPLEMENTADO. PROBADO con pruebas automatizadas en los dos repositorios. No probado en el navegador.
+HISTORIAS DE USUARIO Y CRITERIOS: E3A-HU12: criterio NUEVO propuesto "el alumno puede ver y editar su informacion de salud"; si algun criterio pedia el historial en el perfil, queda RETIRADO.
+PANTALLAS: Mi perfil del alumno; registro (texto); SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Alumno; Autenticacion y Control de Acceso; Auditoria y Trazabilidad; Ayuda y Soporte al Usuario.
+CASOS DE USO: de 112 a 113. NUEVO: actualizarmicondicionsalud. Modificados: obtenerusuarioactual, listarauditoria.
+ENTIDADES Y MIGRACIONES: sin cambios (perfil_alumno.condicion_salud ya existia).
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: R05: se corrige un texto que atribuia al instructor acceso a un dato de salud.
+SEGURIDAD: el dato solo lo lee y edita su dueño (sale del token); la auditoria no guarda el contenido; validacion contra HTML.
+PRUEBAS: backend nuevas ActualizarMiCondicionSaludServiceTest (3) y ControllerTest (4), mas ObtenerUsuarioActualServiceTest ampliado; suite "Tests run: 1016, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS" (antes 1008). Frontend nuevo Perfil.test.tsx (3); "Test Files  34 passed (34)" - "Tests  225 passed (225)" (npx vitest run --maxWorkers=1). Manual: frontend "Tests  27 passed (27)", backend "Tests run: 21, Failures: 0, Errors: 0, Skipped: 0".
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin variables nuevas; reiniciar el backend.
+DECISIONES: caso de uso propio (decision del usuario); auditar sin el contenido; corregir el texto del registro.
+ERRORES DETECTADOS: el texto del registro decia que el dato de salud ayudaba al instructor, que no tiene acceso a el.
+CAPTURAS SUGERIDAS: tarjeta "Información de salud" en lectura y en edicion.
+PENDIENTE QUE QUEDA: probar en el navegador con una cuenta de alumno.
+=== FIN ENTRADA 055 ===
+=== ENTRADA 056 ===
+FECHA: 2026-10-24
+REPOSITORIO: activehub-frontend (codigo) y activehub-backend (copia del manual del asistente)
+RAMA Y COMMITS: main en los dos - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: INTERFAZ
+TITULO: Paginacion en Explorar; paginacion y filtros en Favoritos y en todas las pestañas de Mis clases
+QUE CAMBIA PARA EL USUARIO: Explorar muestra los resultados de a 12 por pagina y cualquier cambio de filtro u orden vuelve a la pagina 1. Favoritos pasa a tener 12 por pagina, buscador por actividad o instructor, filtros por categoria y por nivel, "Ordenar por" y contador; quitar un favorito no vuelve a la pagina 1. Mis clases suma una barra de filtros comun a todas las pestañas (actividad, Desde, Hasta, Ordenar por), los contadores de las pestañas cuentan lo filtrado y cada pestaña muestra 10 por pagina; desde una notificacion abre en la pagina donde esta la clase. Los controles de paginacion son los existentes (components/Paginacion.tsx) y no aparecen con una sola pagina.
+TEXTOS DE INTERFAZ (literales): Favoritos: "Buscar por actividad o instructor…", "Ordenar por" ("Nombre", "Precio: menor", "Precio: mayor", "Mejor valoradas", "Próxima clase"), chips "Categoría" ("Todas") y "Nivel" ("Todos"), contador "<n> favoritas" / "1 favorita" y, con filtros, "<n> favoritas de <total>", "Limpiar filtros", "Ninguna de tus favoritas coincide con la búsqueda.". Mis clases: "Actividad" ("Buscar por actividad…"), "Desde", "Hasta", "Ordenar por" ("Más recientes primero", "Próximas primero"), "Limpiar filtros", "Ninguna clase de esta categoría coincide con los filtros." (sin filtros sigue "No hay clases en esta categoría."). Paginacion, sin cambios: "« Primera", "Anterior", "Página <n> de <total>", "Siguiente", "Última »". Manual: tres parrafos nuevos (apartados 2.2, 2.4 y 2.7), literales en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 013.
+DETALLE TECNICO: solo frontend; se filtra y pagina en el cliente, como en el resto del proyecto. lib/paginado.ts (usePaginado) suma dos parametros opcionales y derivados, sin efectos: claveReinicio (si cambia, vuelve a la pagina 1) y paginaPreferida (la que se muestra mientras el usuario no eligio ninguna). Explorar.tsx: 12 por pagina, clave = ids de la lista filtrada, scroll a los resultados al cambiar de pagina. Favoritos.tsx: 12 por pagina, clave = los filtros (no la lista). MisClases.tsx: 10 por pagina, filtros antes de repartir en pestañas, clave con la pestaña, paginaPreferida desde ?inscripcion= o ?clase=; "Desde"/"Hasta" contra el dia local de la clase; "Calificar mis clases" sigue mirando todas las inscripciones.
+ESTADO: IMPLEMENTADO. PROBADO con pruebas automatizadas. No probado en el navegador.
+HISTORIAS DE USUARIO Y CRITERIOS: criterios NUEVOS propuestos (E3A, codigos a confirmar): Explorar "los resultados se paginan de a 12"; Favoritos "el alumno puede buscar, filtrar y ordenar sus favoritos, paginados de a 12"; Mis clases "el alumno puede filtrar por actividad, por rango de fechas y ordenar, en todas las pestañas, paginadas de a 10".
+PANTALLAS: Explorar, Favoritos y Mis clases del alumno (E3A, codigos a confirmar); SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Alumno; Busqueda y Filtrado; Ayuda y Soporte al Usuario (manual).
+CASOS DE USO: sin cambios (113).
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios; sin dependencias nuevas.
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios.
+PRUEBAS: lib/paginado.test.ts suma 2 (6 en total); Explorar.test.tsx suma 2 (6); nuevos pages/alumno/Favoritos.test.tsx (5) y pages/alumno/MisClases.test.tsx (5). Frontend: "Test Files  36 passed (36)" - "Tests  239 passed (239)" (npx vitest run --maxWorkers=1; antes 225 en 34). Manual: frontend "Tests  15 passed (15)" (npx vitest run src/lib/manual); backend ManualUsuarioTest 9 pruebas, 0 fallas, 0 errores (./mvnw -B -q test -Dtest=ManualUsuarioTest).
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios; reiniciar el backend para que el asistente tome el manual nuevo.
+DECISIONES: 12 por pagina en las grillas (filas completas en 3 y 4 columnas) y 10 en la lista de Mis clases; filtros de Favoritos iguales a los del perfil publico del instructor; en Mis clases un solo juego de filtros para todas las pestañas; sin filtro de estado en Mis clases porque ya lo hacen las pestañas.
+ERRORES DETECTADOS: ninguno en la aplicacion. Un mock de useAuth inestable en la prueba de Favoritos recargaba los favoritos en cada render; se corrigio el mock.
+CAPTURAS SUGERIDAS: Explorar con la paginacion al pie; Favoritos con un filtro y el contador "de <total>"; Mis clases con la barra de filtros.
+PENDIENTE QUE QUEDA: probar en el navegador con una cuenta de alumno.
+=== FIN ENTRADA 056 ===

@@ -2,11 +2,13 @@ package com.activehub.usecases.obtenerusuarioactual;
 
 import com.activehub.domain.permiso.ConfiguracionRol;
 import com.activehub.domain.permiso.ConfiguracionRolRepository;
+import com.activehub.domain.usuario.PerfilAlumno;
 import com.activehub.domain.usuario.PerfilAlumnoRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.error.NoEncontradoException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +36,8 @@ public class ObtenerUsuarioActualService {
 
         // Los intereses viven en el perfil de alumno; para los otros dos roles no hay perfil
         // y la lista viaja vacia (no null: el frontend los recorre sin chequear).
-        List<ObtenerUsuarioActualResponse.Interes> intereses = perfilAlumnoRepository.findByUsuarioId(usuarioId)
+        Optional<PerfilAlumno> perfilAlumno = perfilAlumnoRepository.findByUsuarioId(usuarioId);
+        List<ObtenerUsuarioActualResponse.Interes> intereses = perfilAlumno
                 .map(perfil -> perfil.getInteresesOrdenados().stream()
                         .map(t -> new ObtenerUsuarioActualResponse.Interes(
                                 t.getId(), t.getNombre(), t.getCategoria().getId(), t.getCategoria().getNombre()))
@@ -61,6 +64,7 @@ public class ObtenerUsuarioActualService {
                 usuario.isEmailVerificado(),
                 usuario.getAuthProveedor().name(),
                 intereses,
+                perfilAlumno.map(PerfilAlumno::getCondicionSalud).orElse(null),
                 permisos
         );
     }

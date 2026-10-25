@@ -12,8 +12,6 @@ public record ListarResenasInstructorResponse(
         Alumno alumno,
         int puntaje,
         String comentario,
-        /** Pendiente de aprobación del admin. NO significa "denunciada" — para eso está `denunciada`. */
-        boolean enModeracion,
         String respuestaInstructor,
         Instant respuestaInstructorAt,
         /** El instructor ya la denunció y la denuncia sigue abierta. */

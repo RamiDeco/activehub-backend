@@ -6,11 +6,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Las resenias ya aprobadas, para que el admin pueda moderarlas DESPUES de publicadas.
- *
- * <p>{@code listarresenaspendientes} solo devuelve las que estan en la cola
- * ({@code enModeracion = true}), asi que una resenia impropia que se colo en la moderacion
- * desaparecia del alcance del admin. Ver {@code ocultarresenia}.
+ * Las resenias publicadas, para que el admin pueda ocultar una sin esperar a que la denuncie el
+ * instructor. Desde V33 toda resenia se publica al crearse (no hay cola de moderacion), asi que
+ * este es el unico listado de resenias del admin. Ver {@code ocultarresenia}.
  */
 @Service
 public class ListarReseniasPublicadasService {

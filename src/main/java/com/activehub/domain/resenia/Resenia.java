@@ -37,10 +37,6 @@ public class Resenia extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String comentario;
 
-    /** Pendiente de aprobación del admin. NO significa "denunciada" — ver `oculta`. */
-    @Column(name = "en_moderacion", nullable = false)
-    private boolean enModeracion = true;
-
     /** E2I-HU11 criterio 4: el instructor responde públicamente la reseña. */
     @Column(name = "respuesta_instructor", columnDefinition = "TEXT")
     private String respuestaInstructor;
@@ -48,7 +44,11 @@ public class Resenia extends BaseEntity {
     @Column(name = "respuesta_instructor_at")
     private Instant respuestaInstructorAt;
 
-    /** Baja del listado público por denuncia resuelta, sin borrar la reseña. */
+    /**
+     * Baja del listado público y del rating, sin borrar la reseña: por una denuncia resuelta
+     * con {@code OCULTAR_RESENIA} o por {@code ocultarresenia}. Desde V33 una reseña se publica
+     * al crearse (no hay moderación previa) y ésta es la única forma de sacarla de circulación.
+     */
     @Column(nullable = false)
     private boolean oculta = false;
 }

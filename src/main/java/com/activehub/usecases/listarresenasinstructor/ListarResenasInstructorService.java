@@ -26,8 +26,7 @@ public class ListarResenasInstructorService {
     public List<ListarResenasInstructorResponse> listar(UUID instructorId) {
         List<Resenia> resenias = reseniaRepository.findByInstructorIdConDetalle(instructorId);
 
-        // Una sola consulta para todas: `enModeracion` (pendiente de aprobación) y `denunciada`
-        // son cosas distintas, y la UI las pintaba como si fueran lo mismo.
+        // Una sola consulta para todas: cuáles denunció el instructor y siguen sin resolver.
         List<UUID> ids = resenias.stream().map(Resenia::getId).toList();
         Set<UUID> denunciadas = ids.isEmpty()
                 ? Set.of()
@@ -47,7 +46,6 @@ public class ListarResenasInstructorService {
                             new ListarResenasInstructorResponse.Alumno(alumno.getId(), alumno.getNombre(), alumno.getApellido()),
                             r.getPuntaje(),
                             r.getComentario(),
-                            r.isEnModeracion(),
                             r.getRespuestaInstructor(),
                             r.getRespuestaInstructorAt(),
                             denunciadas.contains(r.getId()),

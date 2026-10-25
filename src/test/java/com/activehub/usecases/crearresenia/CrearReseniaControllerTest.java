@@ -38,7 +38,7 @@ class CrearReseniaControllerTest {
     @Test
     void crear_bodyValido_devuelve201() {
         when(crearReseniaService.crear(any(), any(), any())).thenReturn(
-                new CrearReseniaResponse(UUID.randomUUID(), CLASE_ID, UUID.randomUUID(), 5, "Muy buena", true, Instant.now()));
+                new CrearReseniaResponse(UUID.randomUUID(), CLASE_ID, UUID.randomUUID(), 5, "Muy buena", Instant.now()));
 
         assertThat(mvc.post().uri("/api/alumno/clases/{claseId}/resenas", CLASE_ID)
                 .principal(principal())
@@ -47,14 +47,14 @@ class CrearReseniaControllerTest {
                 .exchange())
                 .hasStatus(201)
                 .bodyJson()
-                .extractingPath("$.enModeracion").isEqualTo(true);
+                .extractingPath("$.puntaje").isEqualTo(5);
     }
 
     @Test
     void crear_sinComentario_devuelve201() {
         // E3A-HU10 criterio 3: la calificación es obligatoria, el comentario es opcional.
         when(crearReseniaService.crear(any(), any(), any())).thenReturn(
-                new CrearReseniaResponse(UUID.randomUUID(), CLASE_ID, UUID.randomUUID(), 5, null, true, Instant.now()));
+                new CrearReseniaResponse(UUID.randomUUID(), CLASE_ID, UUID.randomUUID(), 5, null, Instant.now()));
 
         assertThat(mvc.post().uri("/api/alumno/clases/{claseId}/resenas", CLASE_ID)
                 .principal(principal())

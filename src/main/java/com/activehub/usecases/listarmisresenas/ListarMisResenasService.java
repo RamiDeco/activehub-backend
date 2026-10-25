@@ -31,7 +31,6 @@ public class ListarMisResenasService {
                             instructor.getNombre() + " " + instructor.getApellido(),
                             r.getPuntaje(),
                             r.getComentario(),
-                            r.isEnModeracion(),
                             r.isOculta(),
                             r.getRespuestaInstructor(),
                             r.getRespuestaInstructorAt(),

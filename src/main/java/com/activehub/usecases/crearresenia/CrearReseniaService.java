@@ -1,5 +1,6 @@
 package com.activehub.usecases.crearresenia;
 
+import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.domain.actividad.Clase;
 import com.activehub.domain.actividad.ClaseRepository;
 import com.activehub.domain.actividad.EstadoClase;
@@ -20,6 +21,17 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * El alumno califica una clase finalizada a la que asistio. <b>La resenia se publica en el
+ * acto</b>: se ve en el detalle de la actividad y suma al rating apenas se guarda.
+ *
+ * <p>Antes nacia en moderacion ({@code en_moderacion = true}) y no se veia hasta que un
+ * administrador la aprobaba. Se retiro (V33): el administrador no revisa cada resenia, atiende
+ * las <b>denuncias</b> que hace el instructor ({@code denunciarresenia} ->
+ * {@code resolverdenuncia} con {@code OCULTAR_RESENIA}) y puede ocultar una publicada por su
+ * cuenta ({@code ocultarresenia}). Una resenia publicada tampoco se edita ni se elimina: los
+ * slices {@code actualizarresenia} y {@code eliminarresenia} se retiraron con el mismo cambio.
+ */
 @Service
 public class CrearReseniaService {
 
@@ -27,6 +39,7 @@ public class CrearReseniaService {
     private final InscripcionRepository inscripcionRepository;
     private final ReseniaRepository reseniaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final ActividadRepository actividadRepository;
     private final AuditService auditService;
     private final NotificacionService notificacionService;
 
@@ -35,6 +48,7 @@ public class CrearReseniaService {
             InscripcionRepository inscripcionRepository,
             ReseniaRepository reseniaRepository,
             UsuarioRepository usuarioRepository,
+            ActividadRepository actividadRepository,
             AuditService auditService,
             NotificacionService notificacionService
     ) {
@@ -42,6 +56,7 @@ public class CrearReseniaService {
         this.inscripcionRepository = inscripcionRepository;
         this.reseniaRepository = reseniaRepository;
         this.usuarioRepository = usuarioRepository;
+        this.actividadRepository = actividadRepository;
         this.auditService = auditService;
         this.notificacionService = notificacionService;
     }
@@ -66,21 +81,28 @@ public class CrearReseniaService {
         resenia.setAlumno(usuarioRepository.getReferenceById(alumnoId));
         resenia.setPuntaje(request.puntaje());
         resenia.setComentario(normalizar(request.comentario()));
-        resenia.setEnModeracion(true);
         resenia = reseniaRepository.saveAndFlush(resenia);
 
-        notificacionService.notificar(
-                clase.getActividad().getInstructor().getId(),
-                TipoNotificacion.NUEVA_RESENIA,
-                "Recibiste una nueva reseña en la clase de \"" + clase.getActividad().getNombre()
-                        + "\" del " + NotificacionMensajes.formatFechaHora(clase.getFechaHora()) + ".",
-                resenia.getId(), Destino.resenia(resenia.getId()));
+        // Todo lo que haga falta de la clase y la actividad se lee ANTES de recalcularRating:
+        // es un @Modifying con clearAutomatically, deja las entidades detached y una relacion
+        // LAZY sin tocar explota despues con LazyInitializationException (ya paso al aprobar).
+        UUID actividadId = clase.getActividad().getId();
+        UUID instructorId = clase.getActividad().getInstructor().getId();
+        String mensaje = "Recibiste una nueva reseña en la clase de \"" + clase.getActividad().getNombre()
+                + "\" del " + NotificacionMensajes.formatFechaHora(clase.getFechaHora()) + ".";
+        CrearReseniaResponse response = new CrearReseniaResponse(
+                resenia.getId(), claseId, alumnoId, resenia.getPuntaje(), resenia.getComentario(),
+                resenia.getCreatedAt());
 
+        notificacionService.notificar(
+                instructorId, TipoNotificacion.NUEVA_RESENIA, mensaje,
+                resenia.getId(), Destino.resenia(resenia.getId()));
         auditService.registrar(alumnoId, AuditAccion.RESENIA_CREADA, "Resenia", resenia.getId(), null);
 
-        return new CrearReseniaResponse(
-                resenia.getId(), claseId, alumnoId, resenia.getPuntaje(), resenia.getComentario(),
-                resenia.isEnModeracion(), resenia.getCreatedAt());
+        // Publicada en el acto: suma al promedio de la actividad desde ahora.
+        actividadRepository.recalcularRating(actividadId);
+
+        return response;
     }
 
     /** Un comentario en blanco es "sin comentario", no una cadena vacía guardada. */

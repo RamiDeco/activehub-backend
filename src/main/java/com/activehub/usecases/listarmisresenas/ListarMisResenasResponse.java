@@ -12,11 +12,9 @@ public record ListarMisResenasResponse(
         String instructorNombre,
         int puntaje,
         String comentario,
-        boolean enModeracion,
         /**
-         * Bajada por un administrador. A diferencia de una rechazada (que se borra), sigue
-         * apareciendo en la lista del alumno: se le notifica que la ocultaron y el click de
-         * esa notificación tiene que llevarlo a algo que exista.
+         * Bajada por un administrador. Sigue apareciendo en la lista del alumno: se le notifica
+         * que la ocultaron y el click de esa notificación tiene que llevarlo a algo que exista.
          */
         boolean oculta,
         /** La respuesta del instructor, si contestó: es lo que abre {@code RESENIA_RESPONDIDA}. */

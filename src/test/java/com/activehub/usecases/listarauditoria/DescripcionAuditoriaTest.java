@@ -72,6 +72,25 @@ class DescripcionAuditoriaTest {
     }
 
     /**
+     * Hasta el arreglo de V34, resolverdenuncia auditaba el ocultamiento de una reseña denunciada
+     * como RESENIA_RECHAZADA con la marca OCULTA_POR_DENUNCIA. Esas filas siguen en audit_log y
+     * no pueden leerse como "rechazó una reseña en moderación", que es la función retirada.
+     */
+    @Test
+    void reseniaRechazadaPorDenuncia_seLeeComoOcultamiento() {
+        assertThat(describir(AuditAccion.RESENIA_RECHAZADA, "OCULTA_POR_DENUNCIA"))
+                .isEqualTo("Ana López ocultó una reseña al resolver una denuncia.");
+        assertThat(describir(AuditAccion.RESENIA_RECHAZADA, null))
+                .isEqualTo("Ana López rechazó una reseña en moderación (función retirada).");
+    }
+
+    @Test
+    void reseniaOcultada_incluyeElMotivo() {
+        assertThat(describir(AuditAccion.RESENIA_OCULTADA, "resolución de una denuncia del instructor"))
+                .isEqualTo("Ana López ocultó una reseña publicada. Motivo: resolución de una denuncia del instructor.");
+    }
+
+    /**
      * El switch es exhaustivo sobre el enum (no tiene {@code default}), asi que agregar un
      * {@link AuditAccion} nuevo sin describirlo no compila. Este test cubre lo otro: que
      * ninguna rama devuelva algo vacio, y que ninguna filtre un UUID crudo al texto — que era
