@@ -1,8 +1,10 @@
 package com.activehub.usecases.rechazarinstructor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -11,9 +13,13 @@ import com.activehub.domain.usuario.PerfilInstructorRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
+import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.notificacion.Destino;
 import com.activehub.shared.notificacion.NotificacionService;
 import com.activehub.shared.notificacion.TipoNotificacion;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,13 +39,16 @@ class RechazarInstructorServiceTest {
     @Mock
     private NotificacionService notificacionService;
 
+    private static final Instant AHORA = Instant.parse("2026-10-26T15:00:00Z");
+
     private RechazarInstructorService service;
     private UUID usuarioId;
     private PerfilInstructor perfil;
 
     @BeforeEach
     void setUp() {
-        service = new RechazarInstructorService(perfilInstructorRepository, auditService, notificacionService);
+        service = new RechazarInstructorService(
+                perfilInstructorRepository, auditService, notificacionService, Clock.fixed(AHORA, ZoneOffset.UTC));
 
         usuarioId = UUID.randomUUID();
         Usuario usuario = new Usuario();
@@ -56,16 +65,25 @@ class RechazarInstructorServiceTest {
 
         assertThat(response.estadoVerificacion()).isEqualTo("RECHAZADO");
         assertThat(response.motivoRechazo()).isEqualTo("Documentación incompleta");
+        // Desde acá cuenta la documentación "nueva" que se le pide para volver a postularse.
+        assertThat(perfil.getRechazadoAt()).isEqualTo(AHORA);
         verify(auditService).registrar(any(UUID.class), eq(AuditAccion.INSTRUCTOR_RECHAZADO), eq("PerfilInstructor"), eq(usuarioId), eq("Documentación incompleta"));
         verify(notificacionService).notificar(eq(usuarioId), eq(TipoNotificacion.INSTRUCTOR_RECHAZADO), any(), eq(usuarioId), eq(Destino.perfilInstructor(usuarioId)));
     }
 
+    /**
+     * Desde el 2026-10-26 el motivo es obligatorio: es lo que lee el instructor para corregir.
+     * Antes quedaba en null y la pantalla mostraba un texto genérico que podía ser falso.
+     */
     @Test
-    void rechazar_sinMotivo_quedaEnNull() {
+    void rechazar_sinMotivo_lanzaValidacionYNoRechaza() {
         when(perfilInstructorRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(perfil));
 
-        RechazarInstructorResponse response = service.rechazar(usuarioId, new RechazarInstructorRequest(null), UUID.randomUUID());
-
-        assertThat(response.motivoRechazo()).isNull();
+        assertThatThrownBy(() -> service.rechazar(usuarioId, new RechazarInstructorRequest("   "), UUID.randomUUID()))
+                .isInstanceOf(ValidacionException.class);
+        assertThatThrownBy(() -> service.rechazar(usuarioId, new RechazarInstructorRequest(null), UUID.randomUUID()))
+                .isInstanceOf(ValidacionException.class);
+        verify(perfilInstructorRepository, never()).save(any());
+        verify(notificacionService, never()).notificar(any(), any(), any(), any(), any());
     }
 }

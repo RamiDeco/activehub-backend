@@ -1,5 +1,7 @@
 package com.activehub.usecases.reabrirsolicitudinstructor;
 
+import com.activehub.domain.usuario.DocumentoInstructor;
+import com.activehub.domain.usuario.DocumentoInstructorRepository;
 import com.activehub.domain.usuario.EstadoVerificacion;
 import com.activehub.domain.usuario.PerfilInstructor;
 import com.activehub.domain.usuario.PerfilInstructorRepository;
@@ -13,7 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * E2I-HU12 criterio 6: desde Rechazada, el instructor vuelve a postularse y su perfil pasa a
- * En revision (PENDIENTE), limpiando el motivo del rechazo anterior.
+ * En revision (PENDIENTE).
+ *
+ * <p>Desde el 2026-10-26 exige documentación NUEVA: al menos un documento vigente subido después
+ * del rechazo. Antes se podía volver a postular sin cambiar nada y el administrador recibía de
+ * nuevo exactamente lo que había rechazado. El motivo y la fecha del rechazo se CONSERVAN: el
+ * administrador los ve al revisar la solicitud otra vez, y la fecha es la que marca qué es nuevo.
  *
  * <p>Es la unica transicion de EstadoVerificacion que no dispara el admin. Antes no existia:
  * el boton "Volver a postularme" llamaba a una funcion del frontend que mutaba una lista mock,
@@ -24,11 +31,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReabrirSolicitudInstructorService {
 
     private final PerfilInstructorRepository perfilInstructorRepository;
+    private final DocumentoInstructorRepository documentoInstructorRepository;
     private final AuditService auditService;
 
     public ReabrirSolicitudInstructorService(
-            PerfilInstructorRepository perfilInstructorRepository, AuditService auditService) {
+            PerfilInstructorRepository perfilInstructorRepository,
+            DocumentoInstructorRepository documentoInstructorRepository,
+            AuditService auditService) {
         this.perfilInstructorRepository = perfilInstructorRepository;
+        this.documentoInstructorRepository = documentoInstructorRepository;
         this.auditService = auditService;
     }
 
@@ -41,8 +52,15 @@ public class ReabrirSolicitudInstructorService {
             throw new ValidacionException("Solo podés volver a postularte si tu solicitud fue rechazada.");
         }
 
+        // Sin fecha de rechazo (no debería pasar después de V35, que completó las viejas) no hay
+        // contra qué comparar: no se bloquea a nadie por un dato que el sistema no tiene.
+        if (perfil.getRechazadoAt() != null
+                && !documentoInstructorRepository.existsByPerfilInstructorIdAndEstadoNotAndCreatedAtAfter(
+                        perfil.getId(), DocumentoInstructor.RETIRADO, perfil.getRechazadoAt())) {
+            throw new ValidacionException(
+                    "Antes de volver a postularte, subí la documentación nueva que te pidieron en el motivo del rechazo.");
+        }
         perfil.setEstadoVerificacion(EstadoVerificacion.PENDIENTE);
-        perfil.setMotivoRechazo(null);
         perfilInstructorRepository.save(perfil);
 
         auditService.registrar(

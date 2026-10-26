@@ -21,6 +21,8 @@ import org.springframework.web.multipart.MultipartFile;
 public class SubirDocumentoService {
 
     private static final Set<String> TIPOS_PERMITIDOS = Set.of("application/pdf", "image/jpeg", "image/png");
+    /** Documentos vigentes por instructor (2026-10-26): con el ABM abierto, un tope evita acumular sin fin. */
+    static final int MAXIMO_VIGENTES = 10;
 
     private final PerfilInstructorRepository perfilInstructorRepository;
     private final DocumentoInstructorRepository documentoInstructorRepository;
@@ -51,6 +53,12 @@ public class SubirDocumentoService {
 
         PerfilInstructor perfil = perfilInstructorRepository.findByUsuarioId(actorId)
                 .orElseThrow(() -> new NoEncontradoException("No encontramos tu perfil de instructor."));
+
+        if (documentoInstructorRepository.countByPerfilInstructorIdAndEstadoNot(perfil.getId(), DocumentoInstructor.RETIRADO)
+                >= MAXIMO_VIGENTES) {
+            throw new ValidacionException("Podés tener hasta " + MAXIMO_VIGENTES
+                    + " documentos cargados. Quitá alguno que ya no sirva para subir otro.");
+        }
 
         String nombreOriginal = archivo.getOriginalFilename() != null ? archivo.getOriginalFilename() : "documento";
         String nombreGuardado = UUID.randomUUID() + extension(nombreOriginal);

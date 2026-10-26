@@ -100,6 +100,8 @@ public enum AuditAccion {
     CATEGORIA_ACTUALIZADA,
     CATEGORIA_ELIMINADA,
     DOCUMENTO_INSTRUCTOR_SUBIDO,
+    /** El instructor quitó un documento propio (queda como historial para el admin). */
+    DOCUMENTO_INSTRUCTOR_RETIRADO,
     FOTO_PERFIL_SUBIDA,
     FOTO_ACTIVIDAD_SUBIDA,
     ROL_CREADO,

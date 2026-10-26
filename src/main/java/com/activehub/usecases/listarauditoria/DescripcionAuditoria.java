@@ -133,6 +133,7 @@ final class DescripcionAuditoria {
             case INSTRUCTOR_RECHAZADO -> actor + " rechazó la solicitud de un instructor.";
             case SOLICITUD_INSTRUCTOR_REABIERTA -> actor + " volvió a postularse como instructor.";
             case DOCUMENTO_INSTRUCTOR_SUBIDO -> actor + " subió documentación de instructor.";
+            case DOCUMENTO_INSTRUCTOR_RETIRADO -> actor + " quitó un documento de su documentación de instructor.";
             case AUSENCIA_PROFESOR_NOTIFICADA -> actor + " notificó que no va a dictar una clase; se reintegró a los inscriptos.";
 
             case CATEGORIA_CREADA -> actor + " creó una categoría.";

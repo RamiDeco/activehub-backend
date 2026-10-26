@@ -56,9 +56,14 @@ public class ObtenerActividadService {
                         c.getPrecio()))
                 .toList();
 
-        var imagenes = actividadImagenRepository.findByActividadIdOrderByOrdenAsc(id).stream()
+        var galeria = actividadImagenRepository.findByActividadIdOrderByOrdenAsc(id);
+        var imagenes = galeria.stream().map(ActividadImagen::getId).toList();
+        String portada = actividad.getFotoPath();
+        UUID portadaImagenId = portada == null ? null : galeria.stream()
+                .filter(i -> portada.equals(i.getPath()))
                 .map(ActividadImagen::getId)
-                .toList();
+                .findFirst()
+                .orElse(null);
 
         return new ObtenerActividadResponse(
                 actividad.getId(),
@@ -75,6 +80,8 @@ public class ObtenerActividadService {
                 actividad.getRating(),
                 actividad.getDuracionMin(),
                 imagenes,
+                portada != null,
+                portadaImagenId,
                 clases,
                 actividad.getLatitud(),
                 actividad.getLongitud()

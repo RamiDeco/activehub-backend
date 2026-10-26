@@ -32,7 +32,7 @@ class ListarDocumentosInstructorControllerTest {
     @Test
     void listar_devuelve200() {
         when(listarDocumentosInstructorService.listar(INSTRUCTOR_ID)).thenReturn(List.of(
-                new ListarDocumentosInstructorResponse(UUID.randomUUID(), "cert.pdf", "application/pdf", 1234, Instant.now())));
+                new ListarDocumentosInstructorResponse(UUID.randomUUID(), "cert.pdf", "application/pdf", 1234, Instant.now(), true, false)));
 
         var authentication = new UsernamePasswordAuthenticationToken(UUID.randomUUID(), null, List.of());
 

@@ -81,6 +81,21 @@ class SubirDocumentoServiceTest {
                 eq(instructorId), eq(AuditAccion.DOCUMENTO_INSTRUCTOR_SUBIDO), eq("DocumentoInstructor"), any(), isNull());
     }
 
+    /** Tope de documentos vigentes (2026-10-26): con el ABM abierto no se acumulan sin fin. */
+    @Test
+    void subir_conElTopeDeDocumentos_lanzaValidacionYNoGuarda() {
+        MockMultipartFile archivo =
+                new MockMultipartFile("archivo", "cert.pdf", "application/pdf", "contenido".getBytes());
+        when(perfilInstructorRepository.findByUsuarioId(instructorId)).thenReturn(Optional.of(perfil));
+        when(documentoInstructorRepository.countByPerfilInstructorIdAndEstadoNot(perfil.getId(), DocumentoInstructor.RETIRADO))
+                .thenReturn((long) SubirDocumentoService.MAXIMO_VIGENTES);
+
+        assertThatThrownBy(() -> service.subir(archivo, instructorId))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessageContaining("hasta " + SubirDocumentoService.MAXIMO_VIGENTES);
+        verify(documentoInstructorRepository, org.mockito.Mockito.never()).save(any());
+    }
+
     @Test
     void subir_formatoNoPermitido_lanzaValidacion() {
         MockMultipartFile archivo = new MockMultipartFile("archivo", "video.mp4", "video/mp4", "x".getBytes());

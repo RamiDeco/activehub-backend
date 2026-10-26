@@ -25,6 +25,11 @@ import org.hibernate.annotations.SQLRestriction;
 @NoArgsConstructor
 public class DocumentoInstructor extends BaseEntity {
 
+    /** Vigente. El valor es el default histórico de la columna (V1), que nunca se usó para otra cosa. */
+    public static final String VIGENTE = "PENDIENTE";
+    /** Quitado por el instructor: él ya no lo ve, el admin lo conserva como historial (V35). */
+    public static final String RETIRADO = "RETIRADO";
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "perfil_instructor_id", nullable = false)
     private PerfilInstructor perfilInstructor;
@@ -42,5 +47,9 @@ public class DocumentoInstructor extends BaseEntity {
     private long tamanioBytes;
 
     @Column(nullable = false, length = 20)
-    private String estado = "PENDIENTE";
+    private String estado = VIGENTE;
+
+    public boolean isRetirado() {
+        return RETIRADO.equals(estado);
+    }
 }

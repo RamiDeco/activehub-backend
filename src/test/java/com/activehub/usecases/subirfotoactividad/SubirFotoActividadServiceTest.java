@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.activehub.domain.actividad.Actividad;
+import com.activehub.domain.actividad.ActividadImagenRepository;
 import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.shared.audit.AuditAccion;
@@ -16,6 +17,7 @@ import com.activehub.shared.error.NoEncontradoException;
 import com.activehub.shared.error.SinPermisoException;
 import com.activehub.shared.error.ValidacionException;
 import com.activehub.shared.storage.AlmacenamientoDisco;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,6 +36,8 @@ class SubirFotoActividadServiceTest {
     @Mock
     private ActividadRepository actividadRepository;
     @Mock
+    private ActividadImagenRepository actividadImagenRepository;
+    @Mock
     private AuditService auditService;
 
     @TempDir
@@ -48,7 +52,7 @@ class SubirFotoActividadServiceTest {
     void setUp() {
         AlmacenamientoDisco almacenamiento =
                 new AlmacenamientoDisco(tempDir.toString(), tempDir.toString(), tempDir.toString());
-        service = new SubirFotoActividadService(actividadRepository, auditService, almacenamiento);
+        service = new SubirFotoActividadService(actividadRepository, actividadImagenRepository, auditService, almacenamiento);
 
         instructorId = UUID.randomUUID();
         Usuario instructor = new Usuario();
@@ -72,6 +76,37 @@ class SubirFotoActividadServiceTest {
         verify(actividadRepository).save(actividad);
         verify(auditService).registrar(
                 eq(instructorId), eq(AuditAccion.FOTO_ACTIVIDAD_SUBIDA), eq("Actividad"), eq(actividadId), isNull());
+    }
+
+    /**
+     * Regresión: la primera imagen de la galería queda también como portada y comparten el
+     * archivo. Cambiar la portada borraba ese archivo y la imagen de la galería quedaba rota.
+     */
+    @Test
+    void subir_portadaAnteriorEsDeLaGaleria_noBorraElArchivo() throws Exception {
+        Path anterior = Files.writeString(tempDir.resolve("de-la-galeria.jpg"), "galeria");
+        actividad.setFotoPath("de-la-galeria.jpg");
+        when(actividadRepository.findById(actividadId)).thenReturn(Optional.of(actividad));
+        when(actividadImagenRepository.existsByActividadIdAndPath(actividadId, "de-la-galeria.jpg")).thenReturn(true);
+        MockMultipartFile archivo = new MockMultipartFile("archivo", "nueva.jpg", "image/jpeg", "nueva".getBytes());
+
+        service.subir(actividadId, archivo, instructorId, false);
+
+        assertThat(actividad.getFotoPath()).isNotEqualTo("de-la-galeria.jpg");
+        assertThat(anterior).exists();
+    }
+
+    @Test
+    void subir_portadaAnteriorSubidaAparte_borraElArchivo() throws Exception {
+        Path anterior = Files.writeString(tempDir.resolve("suelta.jpg"), "portada");
+        actividad.setFotoPath("suelta.jpg");
+        when(actividadRepository.findById(actividadId)).thenReturn(Optional.of(actividad));
+        when(actividadImagenRepository.existsByActividadIdAndPath(actividadId, "suelta.jpg")).thenReturn(false);
+        MockMultipartFile archivo = new MockMultipartFile("archivo", "nueva.jpg", "image/jpeg", "nueva".getBytes());
+
+        service.subir(actividadId, archivo, instructorId, false);
+
+        assertThat(anterior).doesNotExist();
     }
 
     @Test

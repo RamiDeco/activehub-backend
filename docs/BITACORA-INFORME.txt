@@ -35,25 +35,25 @@ CAMPOS DE CADA ENTRADA (se completan todos; si no aplica, se escribe "sin cambio
 FECHA / REPOSITORIO / RAMA Y COMMITS / TIPO / TITULO / QUE CAMBIA PARA EL USUARIO / TEXTOS DE INTERFAZ (literales) / DETALLE TECNICO / ESTADO / HISTORIAS DE USUARIO Y CRITERIOS / PANTALLAS / REGLAS DE NEGOCIO / MODULOS / CASOS DE USO / ENTIDADES Y MIGRACIONES / TECNOLOGIAS / COSTOS / RIESGOS / SEGURIDAD / PRUEBAS / ANALISIS ESTATICO / DESPLIEGUE Y CONFIGURACION / DECISIONES / ERRORES DETECTADOS / CAPTURAS SUGERIDAS / PENDIENTE QUE QUEDA
 TIPO es uno de: NUEVA FUNCIONALIDAD, CAMBIO FUNCIONAL, CORRECCION DE ERROR, CAMBIO DE TECNOLOGIA, INFRAESTRUCTURA/DESPLIEGUE, PRUEBAS, SEGURIDAD, DATOS/MIGRACION, INTERFAZ, REFACTOR, DOCUMENTACION.
 
-=== ESTADO GENERAL (actualizado: 2026-10-24, despues de la ENTRADA 056) ===
-Casos de uso implementados en el backend: 113
+=== ESTADO GENERAL (actualizado: 2026-10-26, despues de la ENTRADA 063) ===
+Casos de uso implementados en el backend: 116
 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1 -type d | wc -l)
-Los dos ultimos agregados son desvincularcuentamp y renovartokensmercadopago (ENTRADA 030, KAN-55). En la ENTRADA 041 se RETIRARON cinco: aprobarresenia, rechazarresenia, listarresenaspendientes, actualizarresenia y eliminarresenia (117 -> 112). En la ENTRADA 055 se agrego actualizarmicondicionsalud (112 -> 113).
+Los dos ultimos agregados son desvincularcuentamp y renovartokensmercadopago (ENTRADA 030, KAN-55). En la ENTRADA 041 se RETIRARON cinco: aprobarresenia, rechazarresenia, listarresenaspendientes, actualizarresenia y eliminarresenia (117 -> 112). En la ENTRADA 055 se agrego actualizarmicondicionsalud (112 -> 113). En la ENTRADA 061 se agregaron listarmisdocumentos, descargarmidocumento y retirarmidocumento (113 -> 116).
 Nuevos respecto de la linea de base (105): solicitarrecuperacionpassword, restablecerpassword, recomendaractividades, registrarinteraccion, preguntaralasistente, generarinformeactividad.
 
-Pruebas automatizadas del backend: 205 archivos / 1016 pruebas / resultado: 1014 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
+Pruebas automatizadas del backend: 212 archivos / 1039 pruebas / resultado: 1037 correctas, 0 fallidas, 0 con error, 2 omitidas a proposito (prueba manual de sandbox, ENTRADA 013)
 (comando de conteo de archivos: find src/test -name "*Test.java" | wc -l)
 (comando de ejecucion: JAVA_HOME=$HOME/.jdks/jdk-21.0.12+8 ./mvnw -B test; la ruta del JDK 21 depende de la maquina)
-(salida literal: "Tests run: 1016, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS", ejecutada el 2026-10-24 en la ENTRADA 055; en la ENTRADA 041 bajo de 1018 a 1004 porque se retiraron los slices de moderacion, edicion y baja de reseñas, la 042 sumo 4 y la 055 sumo 8)
+(salida literal: "Tests run: 1039, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS", ejecutada el 2026-10-26 en la ENTRADA 061; en la ENTRADA 041 bajo de 1018 a 1004 porque se retiraron los slices de moderacion, edicion y baja de reseñas, la 042 sumo 4, la 055 sumo 8, la 057 sumo 4 y la 061 sumo 19)
 
-Pruebas automatizadas del frontend: 36 archivos / 239 pruebas / resultado: 239 correctas, 0 fallidas (ENTRADA 056)
-(comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  36)
-(comando de ejecucion: npx vitest run --maxWorkers=1; salida literal: "Test Files  36 passed (36)" - "Tests  239 passed (239)". Con npm test y el equipo cargado aparecieron fallas por tiempo agotado en archivos no tocados, ver ENTRADA 046)
+Pruebas automatizadas del frontend: 49 archivos / 295 pruebas / resultado: 295 correctas, 0 fallidas (ENTRADA 063)
+(comando de conteo en activehub-frontend: find src -name "*.test.*" | wc -l  ->  49)
+(comando de ejecucion: npx vitest run --maxWorkers=1; salida literal: "Test Files  49 passed (49)" - "Tests  295 passed (295)". Con npm test y el equipo cargado aparecieron fallas por tiempo agotado en archivos no tocados, ver ENTRADA 046)
 Cobertura sobre los archivos alcanzados: 75.25% de sentencias, 66.86% de ramas, 69.23% de funciones, 78.17% de lineas (comando: npm run test:coverage).
 Cubren lib/ completo salvo nominatim y resaltado (notificaciones tiene pruebas desde la ENTRADA 031, sin medir de nuevo la cobertura), mas las dos pantallas publicas (Ayuda y Manual). La de Administrador "Gestion de denuncias" tiene la primera desde la ENTRADA 033, la de Alumno "Mis reseñas" desde la ENTRADA 041 y la de Instructor "Reseñas" desde la ENTRADA 043.
 
-Migraciones Flyway: V1 a V34 (ultima: V34__recalcular_rating_resenias_ocultas, ENTRADA 042)
-(comando: ls src/main/resources/db/migration | wc -l  ->  34)
+Migraciones Flyway: V1 a V35 (ultima: V35__documentacion_instructor_reabrir, ENTRADA 061)
+(comando: ls src/main/resources/db/migration | wc -l  ->  35)
 
 ESLint del frontend: 0 errores / 10 advertencias
 (comando: npx eslint .  en activehub-frontend; salida literal: "10 problems (0 errors, 10 warnings)"; eran 11 hasta la ENTRADA 045, que corrigio la de la lista filtrada de Explorar)
@@ -2696,3 +2696,199 @@ ERRORES DETECTADOS: ninguno en la aplicacion. Un mock de useAuth inestable en la
 CAPTURAS SUGERIDAS: Explorar con la paginacion al pie; Favoritos con un filtro y el contador "de <total>"; Mis clases con la barra de filtros.
 PENDIENTE QUE QUEDA: probar en el navegador con una cuenta de alumno.
 === FIN ENTRADA 056 ===
+=== ENTRADA 057 ===
+FECHA: 2026-10-25
+REPOSITORIO: ambos
+RAMA Y COMMITS: main en los dos - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: CORRECCION DE ERROR
+TITULO: Carrusel de fotos en el detalle de una actividad; cambiar la portada ya no borra una foto de la galeria
+QUE CAMBIA PARA EL USUARIO: en el detalle de una actividad el alumno recorre las fotos con flechas (circulares), contador "N / M", miniaturas, teclado y deslizamiento en el celular; primero la portada y despues la galeria, sin repetir; una foto que no carga no se muestra. Antes solo habia miniaturas (con dos fotos o mas), la portada aparecia repetida, una portada subida aparte se perdia al tocar una miniatura y la foto elegida podia pasar a otra actividad. Del lado del instructor, "Cambiar foto" ya no borra la primera foto de la galeria (comparten archivo), que al alumno le quedaba rota.
+TEXTOS DE INTERFAZ (literales): contador "<n> / <total>"; nombres accesibles "Fotos de <actividad>", "Foto anterior", "Foto siguiente", "Ver foto <n> de <total>", "<actividad>, foto <n> de <total>". Sin cambios: "FOTO · <actividad>". Manual: parrafo nuevo en 2.3 y paso 3 del alta de actividad ampliado, literales en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 014.
+DETALLE TECNICO: causa: agregarimagenactividad pone la primera imagen como portada (mismo archivo) y subirfotoactividad borraba siempre el archivo de la portada anterior. Backend: ActividadImagenRepository.existsByActividadIdAndPath; SubirFotoActividadService solo borra si el archivo no es de la galeria; obteneractividad devuelve tienePortada y portadaImagenId. Frontend: lib/galeria.ts (fotosDeActividad, NUEVO), components/GaleriaActividad.tsx (NUEVO), Detalle.tsx usa el carrusel con key = id de la actividad; DataContext y types con los dos campos. Las actividades que ya perdieron la foto conservan la fila sin archivo: el carrusel la oculta y el instructor puede quitarla y volver a subirla (no se consulto la base para contarlas).
+ESTADO: corregido; IMPLEMENTADO y PROBADO con pruebas automatizadas en los dos repositorios; carrusel verificado en el navegador en una pagina aislada (1280 y 375 px). No probado con una actividad real dentro de la aplicacion.
+HISTORIAS DE USUARIO Y CRITERIOS: sin criterios nuevos; corrige la galeria del detalle (seccion 2, imagenes[]).
+PANTALLAS: detalle de una actividad del alumno; SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Actividades; Alumno; Ayuda y Soporte al Usuario.
+CASOS DE USO: sin altas ni bajas (113). Modificados: subirfotoactividad, obteneractividad.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios; sin dependencias nuevas.
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios.
+PRUEBAS: backend SubirFotoActividadServiceTest +2 y ObtenerActividadServiceTest +2; suite "Tests run: 1020, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS" (antes 1016). Frontend nuevos lib/galeria.test.ts (5) y components/GaleriaActividad.test.tsx (6); "Test Files  38 passed (38)" - "Tests  250 passed (250)" (npx vitest run --maxWorkers=1; antes 239 en 36). Manual: frontend "Tests  40 passed (40)"; backend ManualUsuarioTest 9 y PreguntarAlAsistenteServiceTest 12, sin fallas.
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin variables nuevas; reiniciar el backend.
+DECISIONES: corregir en el backend (decision del usuario); el backend informa que imagen es la portada en lugar de compararlo en el cliente; flechas circulares sin reproduccion automatica.
+ERRORES DETECTADOS: "Cambiar foto" borraba el archivo de la primera imagen de la galeria; portada repetida; portada subida aparte inaccesible tras elegir una miniatura; foto elegida que no se reiniciaba al cambiar de actividad.
+CAPTURAS SUGERIDAS: detalle con varias fotos (flechas, contador y miniaturas) en escritorio y en celular.
+PENDIENTE QUE QUEDA: probar con una actividad real; revisar actividades con una foto ya perdida.
+=== FIN ENTRADA 057 ===
+=== ENTRADA 058 ===
+FECHA: 2026-10-25
+REPOSITORIO: activehub-frontend
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: INTERFAZ
+TITULO: Ilustracion de ActiveHub de fondo en el panel izquierdo del Login
+QUE CAMBIA PARA EL USUARIO: el panel izquierdo de "Iniciar sesión" muestra la ilustracion provista por el usuario (con el logo de ActiveHub arriba a la izquierda) en lugar del degradé azul, con un velo oscuro para leer el texto, que no cambia. El panel deja de dibujar su propio logo; tocar el de la imagen lleva al inicio. En el celular queda arriba del formulario.
+TEXTOS DE INTERFAZ (literales): sin cambios en los textos visibles. Retirado el logotipo dibujado del panel. Nuevo nombre accesible "ActiveHub, ir al inicio". Manual sin cambios.
+DETALLE TECNICO: public/login-fondo.webp (NUEVO, 1600x1600, 54 KB). Login.tsx usa .ah-login-fondo (cuadrado del lado mas largo del panel, anclado arriba a la izquierda), .ah-login-logo (enlace en porcentajes de la imagen) y .ah-login-velo, definidos en index.css con su variante por debajo de 820 px.
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas; verificado en el navegador en /login a 1440x900 y 375 px (sin desborde; el logo lleva a "/").
+HISTORIAS DE USUARIO Y CRITERIOS: sin cambios.
+PANTALLAS: Login (E1A).
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Autenticacion y Control de Acceso (presentacion).
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios.
+PRUEBAS: nuevo pages/auth/Login.test.tsx (2); "Test Files  39 passed (39)" - "Tests  252 passed (252)" (npx vitest run --maxWorkers=1; antes 250 en 38).
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: usar el logo de la ilustracion como en la maqueta; fondo CSS por ser decorativa; no se agrego la marca de agua de la maqueta, que no esta en la ilustracion.
+ERRORES DETECTADOS: ninguno.
+CAPTURAS SUGERIDAS: Login en escritorio y en celular.
+PENDIENTE QUE QUEDA: registrar origen y licencia de la ilustracion.
+=== FIN ENTRADA 058 ===
+=== ENTRADA 059 ===
+FECHA: 2026-10-25
+REPOSITORIO: activehub-frontend (codigo) y activehub-backend (copia del manual)
+RAMA Y COMMITS: main en los dos - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: INTERFAZ
+TITULO: Instructor: paginacion, scroll y busqueda en Historial; paginacion y scroll en Proximas clases; 12 por pagina y busqueda en Mis actividades; filtros en Reseñas
+QUE CAMBIA PARA EL USUARIO: Historial con 10 clases por pagina, lista con scroll propio y lupa por nombre de la actividad o por fecha (los contadores de estado siguen la busqueda). Proximas clases con 10 por pagina y scroll propio (un dia que sigue en la pagina siguiente repite su fecha). Mis actividades con 12 por pagina y busqueda por nombre, categoria, tipo o nivel. Reseñas con filtros por estado y calificacion, "Ordenar por" y "Limpiar filtros", como las opiniones del detalle del alumno, y scroll propio. Antes ninguna paginaba ni buscaba.
+TEXTOS DE INTERFAZ (literales): Historial: "Buscar por actividad o fecha (ej. 24/10)", "Limpiar búsqueda". Mis actividades: "Buscar por nombre, categoría, tipo o nivel", "<n> de <total> actividades", "Ninguna de tus actividades coincide con la búsqueda.". Reseñas: "Estado" ("Todas", "Sin responder", "Respondidas", "Denunciadas", "Ocultas"), "Calificación", "Ordenar por" ("Más recientes", "Más antiguas", "Mejor calificación", "Peor calificación"), "Mostrando las <n> reseñas", "Mostrando <n> de <total> reseñas", "Limpiar filtros", "Ninguna reseña de esta actividad coincide con los filtros.". Manual: tres parrafos nuevos (3.3, 3.8 y 3.10), literales en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 016.
+DETALLE TECNICO: solo frontend. Nuevos components/BuscadorLupa.tsx y lib/busquedaClases.ts (claseCoincide: nombre sin tildes o fecha numerica, abreviada o con el mes completo). lib/opiniones.ts generico para reutilizar el orden. HistorialClases, ProximasClases (pagina por clase y agrupa la pagina por dia), MisActividades (clave de reinicio = busqueda) y Resenas ("Sin responder" incluye denunciadas sin respuesta y excluye ocultas; el resumen no cambia con los filtros). Se restauraron finales de linea CRLF que sed -i habia convertido a LF en cuatro archivos.
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas. No probado en el navegador (sin sesion de instructor en el navegador de la sesion; no se usaron credenciales).
+HISTORIAS DE USUARIO Y CRITERIOS: criterios NUEVOS propuestos (E2I, codigos a confirmar) para Historial, Proximas clases, Mis actividades y Reseñas.
+PANTALLAS: Historial, Proximas clases, Mis actividades y Reseñas del instructor; SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Instructor; Historial y Calificaciones; Ayuda y Soporte al Usuario.
+CASOS DE USO: sin cambios (113).
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios.
+PRUEBAS: nuevos lib/busquedaClases.test.ts (4), HistorialClases.test.tsx (5), ProximasClases.test.tsx (1), MisActividades.test.tsx (3); Resenas.test.tsx +2. "Test Files  43 passed (43)" - "Tests  267 passed (267)" (npx vitest run --maxWorkers=1; antes 252 en 39). Manual: frontend "Tests  40 passed (40)"; backend ManualUsuarioTest 9 y PreguntarAlAsistenteServiceTest 12, sin fallas.
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios; reiniciar el backend para el manual del asistente.
+DECISIONES: 10 por pagina en listas de clases y 12 en la grilla (pedido del usuario); paginacion mas scroll; filtro de estado en Reseñas; un solo campo de busqueda para nombre y fecha.
+ERRORES DETECTADOS: ninguno en la aplicacion.
+CAPTURAS SUGERIDAS: Historial buscando por fecha; Mis actividades con busqueda y paginacion; Reseñas con un filtro.
+PENDIENTE QUE QUEDA: probar con una cuenta de instructor aprobada.
+=== FIN ENTRADA 059 ===
+=== ENTRADA 060 ===
+FECHA: 2026-10-25
+REPOSITORIO: activehub-frontend
+RAMA Y COMMITS: main - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: CORRECCION DE ERROR
+TITULO: El logo del panel lateral del instructor y del administrador ya no lleva a la landing publica
+QUE CAMBIA PARA EL USUARIO: tocar el logo "ActiveHub" del panel lateral no hace nada (antes llevaba a la landing publica). Aplica al instructor y al administrador, que comparten el panel.
+TEXTOS DE INTERFAZ (literales): sin cambios. Manual sin cambios.
+DETALLE TECNICO: components/DashSidebar.tsx: se quito el onClick con navigate("/") y el cursor de enlace del logo. El logo del alumno (AlumnoNav, lleva a /alumno) y los de las pantallas publicas no cambian.
+ESTADO: corregido; PROBADO con prueba automatizada. No probado en el navegador.
+HISTORIAS DE USUARIO Y CRITERIOS: sin cambios.
+PANTALLAS: todas las del instructor y del administrador (panel lateral).
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Instructor; Gestion de Usuarios, Roles y Permisos.
+CASOS DE USO: sin cambios.
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios.
+PRUEBAS: nuevo components/DashSidebar.test.tsx (1); "Test Files  44 passed (44)" - "Tests  268 passed (268)" (npx vitest run --maxWorkers=1; antes 267 en 43).
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: el logo queda sin accion (pedido del usuario) en lugar de llevar al Panel, que ya esta en el menu.
+ERRORES DETECTADOS: el logo del panel lateral llevaba a la landing publica.
+CAPTURAS SUGERIDAS: no aplica.
+PENDIENTE QUE QUEDA: confirmarlo en el navegador.
+=== FIN ENTRADA 060 ===
+=== ENTRADA 061 ===
+FECHA: 2026-10-26
+REPOSITORIO: ambos
+RAMA Y COMMITS: main en los dos - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: NUEVA FUNCIONALIDAD
+TITULO: El instructor administra su documentacion; volver a postularse exige documentacion nueva; motivo de rechazo obligatorio
+QUE CAMBIA PARA EL USUARIO: el instructor ve, sube y quita su documentacion (tarjeta "Documentación" en "Mis datos" sin aprobar y en "Mi perfil" ya aprobado); antes solo se cargaba en el registro y solo la veia el admin. Con la solicitud rechazada ve el motivo y "Volver a postularme" se habilita recien con un documento nuevo; antes reenviaba lo mismo que le habian rechazado. El admin debe escribir el motivo del rechazo, ve "Validación rechazada" (decia "Pago rechazado"), el motivo anterior al volver a postularse y que documentos son nuevos o quitados; "Rechazar" en Gestion lleva a la validacion con el campo del motivo.
+TEXTOS DE INTERFAZ (literales): "Documentación", "Subir documento", "Ver", "Quitar", "Nuevo", "PDF, JPG o PNG, hasta 5 MB por archivo.", "Subí al menos un documento nuevo en "Documentación" para volver a postularte.", "Motivo del rechazo *", "Se volvió a postular. Motivo del rechazo anterior: <motivo>", "Nuevo desde el rechazo", "Quitado por el instructor", "Validación rechazada"; mensajes del servidor "Antes de volver a postularte, subí la documentación nueva que te pidieron en el motivo del rechazo.", "Tenés que tener al menos un documento cargado. Subí el nuevo antes de quitar este.", "Podés tener hasta 10 documentos cargados. Quitá alguno que ya no sirva para subir otro.", "Escribí el motivo del rechazo: es lo que va a leer el instructor para corregir su solicitud.". Lista completa, textos modificados y parrafos del manual (3.1 y 4.2): activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 018.
+DETALLE TECNICO: backend: V35 (perfil_instructor.rechazado_at, completada en los ya rechazados; documento_instructor.estado distingue vigente de RETIRADO); casos de uso NUEVOS listarmisdocumentos, descargarmidocumento y retirarmidocumento (sin permiso, "Mis datos", solo documentos propios; retirar no borra y no deja quitar el ultimo); rechazarinstructor con motivo obligatorio, rechazado_at y @Valid (no tenia, no corria ninguna validacion); reabrirsolicitudinstructor exige documento posterior al rechazo y conserva motivo y fecha; subirdocumento con tope de 10; listardocumentosinstructor con nuevo y retirado; AuditAccion.DOCUMENTO_INSTRUCTOR_RETIRADO. Frontend: components/DocumentacionCard.tsx (NUEVO), Solicitud.tsx, Perfil.tsx del instructor, admin/ValidarInstructor.tsx (motivo obligatorio, marcas, ?accion=rechazar y correccion de "Rechazar solicitud" en una solicitud aprobada, que no hacia nada), admin/Gestion.tsx, StatusBadge (validacionRechazada), DataContext.
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas en los dos repositorios. No probado en el navegador. V35 aplicada en la base compartida al correr la suite.
+HISTORIAS DE USUARIO Y CRITERIOS: E2I-HU12 criterio 6 MODIFICADO (exige documentacion nueva); criterios NUEVOS propuestos para el ABM de documentacion y el motivo obligatorio.
+PANTALLAS: Mis datos y Mi perfil del instructor; Validar instructor y Gestion > Instructores; SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: RN-12 extendida (no quedarse sin documentacion vigente); NUEVA propuesta RN-21 (documentacion posterior al rechazo para volver a postularse).
+MODULOS: Instructor; Gestion de Usuarios, Roles y Permisos; Auditoria y Trazabilidad; Ayuda y Soporte al Usuario.
+CASOS DE USO: de 113 a 116. NUEVOS: listarmisdocumentos, descargarmidocumento, retirarmidocumento. Modificados: rechazarinstructor, reabrirsolicitudinstructor, subirdocumento, listardocumentosinstructor, listarauditoria.
+ENTIDADES Y MIGRACIONES: V35__documentacion_instructor_reabrir (de 34 a 35 migraciones).
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: R05: el manual ya decia que el motivo era obligatorio y no lo era; ahora coincide.
+SEGURIDAD: los endpoints nuevos solo alcanzan documentos propios (ajeno = 404); se activo la validacion del request de rechazo, incluido @SinHtml.
+PRUEBAS: backend nuevas ListarMisDocumentos (3+1), DescargarMiDocumento (2+1), RetirarMiDocumento (3+2), RechazarInstructorControllerTest (3), y modificadas Rechazar/Reabrir/ListarDocumentos/SubirDocumento; "Tests run: 1039, Failures: 0, Errors: 0, Skipped: 2" - "BUILD SUCCESS" (antes 1020). Frontend nuevos DocumentacionCard.test.tsx (5), Solicitud.test.tsx (3), ValidarInstructor.test.tsx (4); "Test Files  47 passed (47)" - "Tests  280 passed (280)" (antes 268 en 44). Manual: frontend 40, backend 9 + 12, sin fallas.
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin variables nuevas; reiniciar el backend.
+DECISIONES: documentacion nueva obligatoria (la variante del usuario); retirar no borra; se reuso documento_instructor.estado; motivo y fecha del rechazo se conservan; el instructor aprobado tambien administra su documentacion sin volver a revision; "Rechazar" del listado lleva a la validacion.
+ERRORES DETECTADOS: request de rechazo sin @Valid; "Rechazar solicitud" no hacia nada en una solicitud aprobada; "Pago rechazado" en solicitudes de instructor; "Mi perfil" mandaba a "Mis datos", inaccesible para un aprobado.
+CAPTURAS SUGERIDAS: Mis datos rechazado con la documentacion y el boton deshabilitado; Validar instructor con las marcas y el motivo anterior.
+PENDIENTE QUE QUEDA: probar en el navegador; opcional, avisar al admin cuando un instructor aprobado sube documentacion nueva.
+=== FIN ENTRADA 061 ===
+=== ENTRADA 062 ===
+FECHA: 2026-10-26
+REPOSITORIO: activehub-frontend (codigo) y activehub-backend (copia del manual)
+RAMA Y COMMITS: main en los dos - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: INTERFAZ
+TITULO: Gestion del administrador: se retira "Editar" de Actividades y las seis pestañas ganan paginacion, scroll y filtros
+QUE CAMBIA PARA EL USUARIO: Gestion > Actividades ya no muestra "Editar" (estaba deshabilitado, "Próximamente", y la actividad la edita su instructor). Las seis pestañas (Usuarios, Instructores, Actividades, Reclamos, Reseñas, Soporte) muestran 10 filas por pagina en un recuadro con scroll propio, con buscador sin tildes, filtros propios (rol y estado; validacion; categoria y nivel; tipo y estado; visibilidad y puntaje; estado), contador y "Limpiar filtros". Antes solo Reclamos y Reseñas paginaban. Consulta sin cambios de codigo: el documento del instructor se abre como "blob:http://localhost:5173/…" porque el navegador lo muestra desde una direccion temporal de la pagina que lo pidio con la sesion del admin; desplegado mostrara el dominio real y no queda publicado.
+TEXTOS DE INTERFAZ (literales): retirado "Editar" ("Próximamente") de Actividades; buscadores "Buscar por nombre o correo", "Buscar por nombre, correo o especialidad", "Buscar por actividad o instructor", "Buscar por persona, actividad o motivo", "Buscar por alumno, actividad o comentario", "Buscar por persona, correo, asunto o detalle"; contador "<n> en total" / "<n> de <total>"; "Limpiar filtros"; "Sin resultados.". Selectores y manual (4.1 parrafo nuevo, 4.3 modificado): literales en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 019.
+DETALLE TECNICO: solo frontend. lib/filtrosGestion.ts (NUEVO, una funcion pura por pestaña); admin/Gestion.tsx con un filtro por pestaña, usePaginado en las seis (clave = filtro), .ah-scroll de 620 px y BarraFiltros con BuscadorLupa; opciones de rol, categoria y nivel desde los datos. De paso: lib/busquedaClases.ts reutiliza el formateador de fecha (toLocaleDateString costaba 117 ms contra 2 ms cada 1000 llamadas) y HistorialClases.test.tsx usa consultas por texto y etiqueta en lugar de getByRole (de unos 5 s a unos 100 ms por prueba; tres cortaban por tiempo).
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas. No probado en el navegador.
+HISTORIAS DE USUARIO Y CRITERIOS: E4Ad (Gestion): criterios NUEVOS propuestos de paginacion y filtros; E4Ad-HU02 gana el filtro por estado.
+PANTALLAS: Gestion del administrador; SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Gestion de Usuarios, Roles y Permisos; Administracion y Soporte; Ayuda y Soporte al Usuario.
+CASOS DE USO: sin cambios (116).
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: R05: el manual 4.2 prometia filtrar instructores por validacion y no se podia; ahora coincide.
+SEGURIDAD: sin cambios.
+PRUEBAS: nuevos lib/filtrosGestion.test.ts (6) y admin/Gestion.test.tsx (3); "Test Files  49 passed (49)" - "Tests  289 passed (289)" (npx vitest run --maxWorkers=1; antes 280 en 47). Manual: frontend 40, backend 9 + 12, sin fallas.
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: retirar "Editar" (la actividad es del instructor); 10 por pagina en todas; filtros en el cliente; el documento sigue abriendose como direccion temporal del navegador.
+ERRORES DETECTADOS: boton "Editar" sin funcion; filtro de rol sin los roles creados por el admin; lentitud de la lupa del Historial del instructor.
+CAPTURAS SUGERIDAS: una pestaña de Gestion con filtros y paginacion.
+PENDIENTE QUE QUEDA: probar con una cuenta de administrador.
+=== FIN ENTRADA 062 ===
+=== ENTRADA 063 ===
+FECHA: 2026-10-26
+REPOSITORIO: activehub-frontend (codigo) y activehub-backend (copia del manual)
+RAMA Y COMMITS: main en los dos - sin commitear al cerrar esta entrada - sin Pull Request
+TIPO: INTERFAZ
+TITULO: Gestion del administrador: selector "Ordenar por" en las seis pestañas
+QUE CAMBIA PARA EL USUARIO: cada pestaña de Gestion tiene "Ordenar por" con opciones propias; antes el orden era fijo. El inicial es el de antes, salvo Actividades (pasa de orden del catalogo a nombre). Cambiar el orden vuelve a la pagina 1 y "Limpiar filtros" no lo cambia.
+TEXTOS DE INTERFAZ (literales): "Ordenar por". Usuarios: "Más nuevos primero", "Más antiguos primero", "Nombre (A-Z)". Instructores: "Nombre (A-Z)", "Solicitud más antigua primero", "Solicitud más reciente primero". Actividades: "Nombre (A-Z)", "Precio: menor", "Precio: mayor", "Mejor calificadas", "Peor calificadas". Reclamos: "Más recientes primero", "Más antiguos primero". Reseñas: "Más recientes primero", "Más antiguas primero", "Peor puntaje", "Mejor puntaje". Soporte: "Abiertos primero", "Más recientes primero", "Más antiguos primero". Manual 4.1 ampliado: literal en activehub-frontend/docs/BITACORA-AJUSTES.txt, ENTRADA 020.
+DETALLE TECNICO: solo frontend. lib/filtrosGestion.ts: ORDENES_* y una funcion de orden pura por pestaña (copia; nombres con Intl.Collator es-AR; actividades sin reseñas al final en ambos ordenes por calificacion; reseñas a igual puntaje la mas reciente). admin/Gestion.tsx: orden por pestaña aparte de los filtros; filtra, ordena y pagina; la clave de reinicio incluye el orden.
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas. No probado en el navegador.
+HISTORIAS DE USUARIO Y CRITERIOS: E4Ad (Gestion): criterio NUEVO propuesto "cada listado se puede ordenar".
+PANTALLAS: Gestion del administrador; SYS-PAN-MAN (texto).
+REGLAS DE NEGOCIO: sin cambios.
+MODULOS: Gestion de Usuarios, Roles y Permisos; Administracion y Soporte; Ayuda y Soporte al Usuario.
+CASOS DE USO: sin cambios (116).
+ENTIDADES Y MIGRACIONES: sin cambios.
+TECNOLOGIAS: sin cambios.
+COSTOS: sin impacto.
+RIESGOS: sin cambios.
+SEGURIDAD: sin cambios.
+PRUEBAS: lib/filtrosGestion.test.ts +5 y admin/Gestion.test.tsx +1; "Test Files  49 passed (49)" - "Tests  295 passed (295)" (npx vitest run --maxWorkers=1; antes 289).
+ANALISIS ESTATICO: "npx eslint ." -> "10 problems (0 errors, 10 warnings)"; "npx tsc -b" sin errores; "npm run build" correcto.
+DESPLIEGUE Y CONFIGURACION: sin cambios.
+DECISIONES: opciones propias por pestaña; el orden aparte de los filtros.
+ERRORES DETECTADOS: ninguno.
+CAPTURAS SUGERIDAS: una pestaña de Gestion con "Ordenar por" desplegado.
+PENDIENTE QUE QUEDA: probar con una cuenta de administrador.
+=== FIN ENTRADA 063 ===

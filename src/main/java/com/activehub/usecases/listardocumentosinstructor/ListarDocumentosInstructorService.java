@@ -28,9 +28,17 @@ public class ListarDocumentosInstructorService {
         PerfilInstructor perfil = perfilInstructorRepository.findByUsuarioId(instructorId)
                 .orElseThrow(() -> new NoEncontradoException("Instructor no encontrado."));
 
+        var rechazadoAt = perfil.getRechazadoAt();
+        // Incluye los retirados por el instructor: son la documentación con la que se lo evaluó.
         return documentoInstructorRepository.findByPerfilInstructorIdOrderByCreatedAtDesc(perfil.getId()).stream()
                 .map(d -> new ListarDocumentosInstructorResponse(
-                        d.getId(), d.getNombreArchivo(), d.getTipoDocumento(), d.getTamanioBytes(), d.getCreatedAt()))
+                        d.getId(),
+                        d.getNombreArchivo(),
+                        d.getTipoDocumento(),
+                        d.getTamanioBytes(),
+                        d.getCreatedAt(),
+                        rechazadoAt != null && d.getCreatedAt() != null && d.getCreatedAt().isAfter(rechazadoAt),
+                        d.isRetirado()))
                 .toList();
     }
 }

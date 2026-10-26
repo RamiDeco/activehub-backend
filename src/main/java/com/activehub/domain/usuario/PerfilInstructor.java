@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -39,8 +40,16 @@ public class PerfilInstructor extends BaseEntity {
     @Column(name = "estado_verificacion", nullable = false, length = 20)
     private EstadoVerificacion estadoVerificacion = EstadoVerificacion.PENDIENTE;
 
+    /** Motivo del ÚLTIMO rechazo. Se conserva al volver a postularse (el admin lo ve para comparar). */
     @Column(name = "motivo_rechazo", columnDefinition = "TEXT")
     private String motivoRechazo;
+
+    /**
+     * Cuándo fue el último rechazo (V35). Para volver a postularse hace falta documentación
+     * subida DESPUÉS de esta fecha, y es lo que marca como "nuevo" un documento para el admin.
+     */
+    @Column(name = "rechazado_at")
+    private Instant rechazadoAt;
 
     public PerfilInstructor(Usuario usuario, String especialidad, Integer aniosExperiencia, String descripcion) {
         this.usuario = usuario;

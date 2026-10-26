@@ -1,6 +1,7 @@
 package com.activehub.usecases.subirfotoactividad;
 
 import com.activehub.domain.actividad.Actividad;
+import com.activehub.domain.actividad.ActividadImagenRepository;
 import com.activehub.domain.actividad.ActividadRepository;
 import com.activehub.shared.audit.AuditAccion;
 import com.activehub.shared.audit.AuditService;
@@ -22,15 +23,18 @@ public class SubirFotoActividadService {
     private static final Set<String> TIPOS_PERMITIDOS = Set.of("image/jpeg", "image/png");
 
     private final ActividadRepository actividadRepository;
+    private final ActividadImagenRepository actividadImagenRepository;
     private final AuditService auditService;
     private final AlmacenamientoArchivos almacenamiento;
 
     public SubirFotoActividadService(
             ActividadRepository actividadRepository,
+            ActividadImagenRepository actividadImagenRepository,
             AuditService auditService,
             AlmacenamientoArchivos almacenamiento
     ) {
         this.actividadRepository = actividadRepository;
+        this.actividadImagenRepository = actividadImagenRepository;
         this.auditService = auditService;
         this.almacenamiento = almacenamiento;
     }
@@ -65,7 +69,10 @@ public class SubirFotoActividadService {
         actividad.setFotoPath(nombreGuardado);
         actividadRepository.save(actividad);
 
-        if (fotoAnterior != null) {
+        // La portada anterior puede ser también una imagen de la galería: la primera que se sube
+        // queda como portada (agregarimagenactividad) y comparte el archivo. Borrarlo dejaba esa
+        // imagen de la galería apuntando a un archivo inexistente, que el alumno veía rota.
+        if (fotoAnterior != null && !actividadImagenRepository.existsByActividadIdAndPath(actividad.getId(), fotoAnterior)) {
             almacenamiento.borrarSiExiste(CarpetaArchivos.FOTOS_ACTIVIDAD, fotoAnterior);
         }
 

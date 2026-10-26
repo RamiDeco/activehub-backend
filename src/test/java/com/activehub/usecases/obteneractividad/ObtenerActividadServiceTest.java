@@ -134,6 +134,42 @@ class ObtenerActividadServiceTest {
     }
 
     @Test
+    void obtener_informaQueImagenDeLaGaleriaEsLaPortada() {
+        when(actividadRepository.findById(actividadId)).thenReturn(Optional.of(actividad));
+        when(claseRepository.findByActividadIdAndEstadoNotInOrderByFechaHoraAsc(any(), any())).thenReturn(List.of());
+        ActividadImagen otra = new ActividadImagen();
+        ReflectionTestUtils.setField(otra, "id", UUID.randomUUID());
+        otra.setPath("otra.jpg");
+        ActividadImagen portada = new ActividadImagen();
+        UUID portadaId = UUID.randomUUID();
+        ReflectionTestUtils.setField(portada, "id", portadaId);
+        portada.setPath("portada.jpg");
+        actividad.setFotoPath("portada.jpg");
+        when(actividadImagenRepository.findByActividadIdOrderByOrdenAsc(actividadId)).thenReturn(List.of(otra, portada));
+
+        ObtenerActividadResponse response = service.obtener(actividadId);
+
+        assertThat(response.tienePortada()).isTrue();
+        assertThat(response.portadaImagenId()).isEqualTo(portadaId);
+    }
+
+    @Test
+    void obtener_portadaSubidaAparte_noLaAsociaANingunaImagen() {
+        when(actividadRepository.findById(actividadId)).thenReturn(Optional.of(actividad));
+        when(claseRepository.findByActividadIdAndEstadoNotInOrderByFechaHoraAsc(any(), any())).thenReturn(List.of());
+        ActividadImagen imagen = new ActividadImagen();
+        ReflectionTestUtils.setField(imagen, "id", UUID.randomUUID());
+        imagen.setPath("galeria.jpg");
+        actividad.setFotoPath("suelta.jpg");
+        when(actividadImagenRepository.findByActividadIdOrderByOrdenAsc(actividadId)).thenReturn(List.of(imagen));
+
+        ObtenerActividadResponse response = service.obtener(actividadId);
+
+        assertThat(response.tienePortada()).isTrue();
+        assertThat(response.portadaImagenId()).isNull();
+    }
+
+    @Test
     void obtener_instructorConCuentaVinculada_aceptaMercadoPagoYExponeSoloLaPublicKey() {
         when(actividadRepository.findById(actividadId)).thenReturn(Optional.of(actividad));
         when(claseRepository.findByActividadIdAndEstadoNotInOrderByFechaHoraAsc(any(), any())).thenReturn(List.of());

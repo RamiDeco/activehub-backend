@@ -20,6 +20,13 @@ public record ObtenerActividadResponse(
         int duracionMin,
         /** Galería completa (sección 2: `imagenes[]`). La portada sigue siendo `fotoPath`. */
         List<UUID> imagenes,
+        /** Si la actividad tiene portada (se sirve por `/api/fotos/actividad/{id}`). */
+        boolean tienePortada,
+        /**
+         * La imagen de la galería que es además la portada (comparten el archivo), o null si la
+         * portada se subió aparte o no hay. Sirve para no mostrar la misma foto dos veces.
+         */
+        UUID portadaImagenId,
         List<Clase> clases,
         Double latitud,
         Double longitud
