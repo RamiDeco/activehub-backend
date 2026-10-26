@@ -1,0 +1,764 @@
+BITÁCORA DE CAMBIOS EN LA LÓGICA DE RESEÑAS — ActiveHub
+Repositorio: activehub-backend (incluye cambios de activehub-frontend)
+Formato: el de docs/BITACORA-MERCADOPAGO.txt (FORMATO-BITACORA-MERCADOPAGO.txt, versión 1 del
+11/10/2026), aplicado a este cambio. Se toma solo el formato; el contenido es el de las reseñas.
+Estructura: PARTE A (ESTADO GENERAL, se reemplaza completo en cada actualización) y PARTE B
+(ENTRADAS, solo se agregan). Al final, DUDAS ABIERTAS.
+
+================================================================================
+PARTE A — ESTADO GENERAL
+================================================================================
+
+ESTADO GENERAL
+Fecha de actualización: 23/10/2026 (después de la ENTRADA 004)
+
+Reseñas
+  Regla vigente (desde la ENTRADA 002): una reseña se publica en el momento en que el alumno la
+    crea. Se muestra en el detalle de la actividad y suma a su calificación promedio en el acto.
+    No hay moderación previa del administrador, y una reseña publicada no se edita ni se
+    elimina.
+  Acciones posibles sobre una reseña publicada:
+    - Instructor: responderla (responderresenia, sin cambios) y denunciarla una vez
+      (denunciarresenia, sin cambios).
+    - Administrador: ocultarla al resolver la denuncia del instructor (resolverdenuncia con
+      OCULTAR_RESENIA, que desde la ENTRADA 003 también recalcula la calificación) u ocultarla
+      por su cuenta con motivo obligatorio (ocultarresenia, se mantiene por decisión del
+      usuario).
+    - Ocultar no borra: la reseña queda en la base con su autor, su texto y su fecha; deja de
+      verse en el detalle público y de contar en el promedio.
+  Flujos:
+    - Crear y publicar una reseña: implementado; pruebas automatizadas en backend y frontend;
+      no probado en el navegador.
+    - Recalcular la calificación al publicar: implementado; pruebas automatizadas.
+    - Ocultar una reseña (por denuncia o por el administrador): existía antes. Los dos caminos
+      recalculan la calificación y auditan RESENIA_OCULTADA desde la ENTRADA 003 (antes el
+      camino de la denuncia no recalculaba). Desde la ENTRADA 004 la pantalla "Reseñas" del
+      instructor tampoco cuenta las ocultas en su cantidad ni en su promedio. Pruebas
+      automatizadas; no probado en el navegador.
+    - Responder y denunciar una reseña: existía antes; sin cambios de flujo (se quitó la
+      restricción "pendiente de moderación", que ya no puede darse).
+  Retirado:
+    - Moderación previa: aprobarresenia, rechazarresenia y listarresenaspendientes (la cola
+      "Pendientes de moderación" del administrador).
+    - Edición de la reseña por el alumno: actualizarresenia.
+    - Baja de la reseña por el alumno: eliminarresenia.
+
+Backend
+  Pruebas: 1008 pruebas en 203 archivos. Comando ejecutado el 23/10/2026:
+    JAVA_HOME=$HOME/.jdks/jdk-21.0.12+8 ./mvnw -B test (duración total 01:25 min).
+    Conteo de archivos: find src/test -name "*Test.java" | wc -l -> 203.
+  Resultado: todas en verde. Salida literal: "Tests run: 1008, Failures: 0, Errors: 0,
+    Skipped: 2" y "BUILD SUCCESS". Las 2 omitidas son a propósito: MercadoPagoGatewaySandboxTest
+    (@Disabled, prueba manual contra el sandbox).
+  Casos de uso: 112 (comando: find src/main/java/com/activehub/usecases -mindepth 1 -maxdepth 1
+    -type d | wc -l).
+  Migraciones: hasta V34 (última: V34__recalcular_rating_resenias_ocultas.sql). 34 archivos
+    (comando: ls src/main/resources/db/migration | wc -l).
+  Controllers: 106, 77 de ellos con @PreAuthorize (comandos: find src/main/java/com/activehub/
+    usecases -name "*Controller.java" | wc -l y grep -rl "@PreAuthorize" ... | wc -l).
+  Endpoints nuevos o modificados en este estado:
+    Retirados:
+      GET    /api/admin/resenas                   (listarresenaspendientes, denuncias.resolver)
+      POST   /api/admin/resenas/{id}/aprobar      (aprobarresenia, denuncias.resolver)
+      POST   /api/admin/resenas/{id}/rechazar     (rechazarresenia, denuncias.resolver)
+      PUT    /api/alumno/resenas/{id}             (actualizarresenia, resenias.escribir)
+      DELETE /api/alumno/resenas/{id}             (eliminarresenia, resenias.escribir)
+    Modificados (sin cambio de ruta ni de permiso):
+      POST   /api/alumno/clases/{claseId}/resenas  (crearresenia: publica y recalcula el
+                                                    rating; la respuesta ya no trae
+                                                    enModeracion)
+      GET    /api/alumno/resenas                   (listarmisresenas: sin enModeracion)
+      GET    /api/instructor/resenas               (listarresenasinstructor: sin enModeracion)
+      GET    /api/admin/resenas/publicadas         (listarreseniaspublicadas: devuelve todas)
+      GET    /api/actividades/{id}/resenas         (listarresenasactividad: todas las no
+                                                    ocultas)
+      POST   /api/admin/resenas/{id}/ocultar       (ocultarresenia: sin la validación de
+                                                    moderación)
+      POST   /api/instructor/resenas/{id}/respuesta (responderresenia: sin la validación de
+                                                    moderación)
+      POST   /api/admin/denuncias/{id}/resolver    (resolverdenuncia: con OCULTAR_RESENIA
+                                                    recalcula la calificación y audita
+                                                    RESENIA_OCULTADA; ENTRADA 003)
+  Tareas programadas que intervienen: ninguna.
+
+Frontend
+  Pruebas: 180 pruebas en 24 archivos, todas en verde. Comando ejecutado el 23/10/2026:
+    npm test. Salida literal: "Test Files  24 passed (24)" y "Tests  180 passed (180)". Conteo
+    de archivos: find src -name "*.test.*" | wc -l -> 24.
+  Cobertura: no medida en esta actualización.
+  Análisis estático: 0 errores, 11 advertencias (comando: npx eslint .; salida literal
+    "11 problems (0 errors, 11 warnings)"). Son las mismas 11 de antes del cambio.
+  Verificación de tipos: sin errores (comando: npx tsc -b).
+  Compilación de producción: correcta (comando: npm run build, 23/10/2026, ENTRADA 004).
+
+Integración continua
+  Estado del último flujo ejecutado: no verificado. Los cambios de esta bitácora no están
+    commiteados ni empujados al 23/10/2026, así que el flujo no corrió sobre este código.
+  Ramas sobre las que corre: activehub-frontend, .github/workflows/ci.yml, en cada push y en
+    cada Pull Request sobre integracion y main (ESLint, tsc -b, npm test, npm run build). El
+    backend no tiene flujo de integración continua.
+
+Configuración
+  Variables de entorno requeridas: sin cambios respecto de docs/BITACORA-MERCADOPAGO.txt.
+  Servicios externos en uso: sin cambios. Las migraciones V33 y V34 se aplicaron sobre la base
+    PostgreSQL de Supabase compartida por el equipo.
+
+Despliegue
+  Estado: no desplegado. Sin cambios.
+
+Pendientes abiertos
+  1. Probar en el navegador los tres roles: "Mis reseñas" del alumno, "Reseñas" y "Panel" del
+     instructor, y "Gestión" › "Reseñas" del administrador. Incluir resolver una denuncia de
+     reseña con "Ocultar la reseña" y comprobar que cambia la calificación de la actividad.
+  2. Eliminar la columna resenia.en_moderacion en una migración posterior, cuando todos los
+     integrantes trabajen con el código de la ENTRADA 002 (ver ENTRADA 002, DECISIONES).
+  3. Actualizar el informe y el Anexo 8 (manual de usuario) con los apartados 2.10, 3.6, 3.10,
+     4.5 y la tabla de estados, cuyo texto nuevo está en la ENTRADA 002.
+  4. Commitear los cambios de los dos repositorios, empujarlos y verificar el flujo de
+     integración continua del frontend.
+  5. Confirmar los códigos de historia, criterio y pantalla afectados (ver DUDAS ABIERTAS).
+
+================================================================================
+PARTE B — ENTRADAS
+================================================================================
+
+================================================================================
+ENTRADA 001
+================================================================================
+FECHA: 23/10/2026
+
+REPOSITORIO: activehub-backend
+
+RAMA Y COMMITS: main. Sin commit al momento de escribir esta entrada (el archivo
+  docs/BITACORA-RESENIAS.txt queda en el árbol de trabajo). Sin Pull Request.
+
+TIPO: documentación.
+
+TÍTULO: Alta de la bitácora de reseñas y foto del punto de partida anterior al cambio.
+
+QUÉ CAMBIA PARA EL USUARIO: no cambia nada visible. Se crea este archivo para documentar el
+  cambio en la lógica de las reseñas con el mismo formato que la bitácora de Mercado Pago.
+
+TEXTOS DE INTERFAZ: no aplica.
+
+DETALLE TÉCNICO:
+  - Pedido del usuario (23/10/2026), resumido: hoy todas las reseñas tienen que ser aprobadas
+    por el Administrador, cosa que no tiene lógica; lo que debe hacer el Administrador es
+    atender las denuncias que el instructor hace sobre las reseñas. Tampoco tiene sentido
+    "Editar reseña": una vez hecha, las únicas acciones son, del lado del administrador,
+    darla de baja o no si fue denunciada, y del lado del instructor, responderla. Consultado
+    sobre los casos que el pedido no cubría, el usuario resolvió: el alumno NO puede borrar
+    su reseña; el administrador SÍ conserva la posibilidad de ocultar una reseña publicada sin
+    denuncia (ocultarresenia); el aviso al instructor de una reseña nueva (NUEVA_RESENIA) se
+    mantiene y el aviso al alumno de reseña aprobada (RESENIA_APROBADA) se retira junto con la
+    moderación.
+  - Punto de partida, medido el 23/10/2026 antes de tocar código (commits de partida: backend
+    3b55a97 y frontend ce34147, rama main en los dos, "Corregidos bugs"):
+      Reseñas: toda reseña nacía con resenia.en_moderacion = true (DEFAULT de V7) y no se veía
+        ni sumaba al rating hasta que el administrador la aprobaba desde "Gestión" › "Reseñas"
+        › "Pendientes de moderación". El alumno podía editarla (volvía a moderación) o
+        eliminarla (baja lógica). El administrador también podía ocultar una ya publicada.
+      Casos de uso: 117. Controllers: 111, 82 con @PreAuthorize. Migraciones: V1 a V32.
+      Backend: 1018 pruebas, 0 fallidas, 0 con error, 2 omitidas. Comando:
+        JAVA_HOME=$HOME/.jdks/jdk-21.0.12+8 ./mvnw -B -q test; el total sale de sumar los 212
+        informes de target/surefire-reports.
+      Frontend: 175 pruebas en 22 archivos y ESLint 0 errores y 11 advertencias, según la
+        bitácora general (ENTRADA 040). No se volvió a medir antes del cambio; la primera
+        corrida del 23/10/2026 fue con las pantallas ya modificadas y sin pruebas nuevas, y dio
+        el mismo resultado ("Tests  175 passed (175)", "11 problems (0 errors, 11 warnings)").
+
+ESTADO: terminado.
+
+HISTORIAS Y CRITERIOS: no aplica.
+
+PANTALLAS: no aplica.
+
+REGLAS DE NEGOCIO: no aplica. La regla nueva de la ENTRADA 002 se propone como RN-32, a
+  continuación de las RN-25 a RN-31 que propuso docs/BITACORA-MERCADOPAGO.txt.
+
+MÓDULOS: no aplica.
+
+CASOS DE USO: sin cambios en esta entrada (117 en el punto de partida).
+
+ENTIDADES Y MIGRACIONES: no aplica.
+
+TECNOLOGÍAS: sin cambios.
+
+COSTOS: sin cambios.
+
+RIESGOS: no aplica.
+
+SEGURIDAD: esta bitácora no transcribe tokens, claves, credenciales, cadenas de conexión ni
+  datos personales. De las variables de entorno se escribe solo el nombre.
+
+PRUEBAS: las del punto de partida, citadas en DETALLE TÉCNICO.
+
+ANÁLISIS ESTÁTICO: el del punto de partida, citado en DETALLE TÉCNICO.
+
+DESPLIEGUE Y CONFIGURACIÓN: no aplica.
+
+DECISIONES:
+  - Bitácora propia en lugar de agregar las entradas a docs/BITACORA-MERCADOPAGO.txt.
+    Motivo: el usuario pidió seguir solo el formato de ese archivo; su contenido es de pagos.
+    El cambio se registra además en docs/BITACORA-INFORME.txt de los dos repositorios
+    (ENTRADA 041), que es la bitácora general que exigen los CLAUDE.md.
+
+ERRORES DETECTADOS: no aplica.
+
+CAPTURAS SUGERIDAS: no aplica.
+
+PENDIENTE QUE QUEDA: la ENTRADA 002.
+
+================================================================================
+ENTRADA 002
+================================================================================
+FECHA: 23/10/2026
+
+REPOSITORIO: ambos (activehub-backend y activehub-frontend).
+
+RAMA Y COMMITS: main en los dos repositorios. Sin commit al momento de escribir esta entrada:
+  los cambios quedan en el árbol de trabajo. Sin Pull Request.
+
+TIPO: cambio funcional.
+
+TÍTULO: Las reseñas se publican al crearse, sin moderación previa, y una reseña publicada no
+  se edita ni se elimina.
+
+QUÉ CAMBIA PARA EL USUARIO:
+  - Alumno: al presionar "Publicar", la reseña queda visible en el detalle de la actividad y
+    suma a la calificación promedio en el momento, sin esperar a un administrador. Antes de
+    publicar, el formulario avisa que después no se va a poder cambiar. En "Mis reseñas" ya no
+    están los botones "Editar" ni "Eliminar" ni la etiqueta "En moderación". Una reseña
+    ocultada por un administrador se muestra con la etiqueta "Oculta por un administrador".
+  - Instructor: las reseñas que recibe se ven publicadas desde el primer momento; desaparece
+    la etiqueta "Pendiente de moderación" y puede responder cualquier reseña que no esté
+    oculta. La alerta del Panel que avisaba "reseñas en revisión" ahora cuenta las reseñas que
+    denunció y la administración todavía no resolvió.
+  - Administrador: la pestaña "Reseñas" de "Gestión" ya no tiene la cola "Pendientes de
+    moderación" ni los botones "Aprobar" y "Rechazar". Muestra un solo listado, "Reseñas
+    publicadas", con "Ocultar" por fila. Las reseñas denunciadas por un instructor se siguen
+    resolviendo en "Gestión de denuncias" y en la pestaña "Reclamos", sin cambios.
+
+TEXTOS DE INTERFAZ:
+  Nuevos:
+    - "Mis reseñas", modal "Dejar reseña", aviso: "La reseña se publica en el momento y después
+      no se puede editar ni eliminar."
+    - "Mis reseñas", etiqueta: "Oculta por un administrador" (reemplaza a "Oculta por
+      moderación").
+    - "Panel" del instructor, alerta: "Tenés 1 reseña denunciada en revisión." / "Tenés N
+      reseñas denunciadas en revisión." (reemplaza a "Tenés N reseña(s) en revisión.", que
+      contaba las reseñas en moderación).
+    - "Gestión" › "Reseñas", título con contador: "Reseñas publicadas".
+    - "Gestión" › "Reseñas", texto bajo el título: "Las reseñas se publican en el momento en que
+      el alumno las crea. Las que denuncia un instructor se resuelven en la pestaña "Reclamos"."
+  Sin cambios y vigentes: título del modal "Dejar reseña"; campo "Tu comentario (opcional) —
+    contanos cómo fue tu experiencia…"; botones "Cancelar" y "Publicar"; indicador de proceso
+    "Publicando tu reseña"; en "Gestión" › "Reseñas", botón "Ocultar" y etiqueta "Oculta"; en
+    "Reseñas" del instructor, etiquetas "Denunciada · en revisión", "Oculta" y "Respondida".
+  Retirados:
+    - "Mis reseñas": botones "Editar" y "Eliminar"; etiqueta "En moderación"; título "Editar
+      reseña"; aviso "Al editarla vuelve a moderación hasta que un administrador la apruebe.";
+      botón "Guardar cambios"; confirmación "¿Eliminar esta reseña? No se puede deshacer.";
+      indicador "Eliminando tu reseña"; error "No pudimos eliminar la reseña.".
+    - "Reseñas" del instructor: etiqueta "Pendiente de moderación" con su ayuda "Todavía no es
+      visible para el resto: un administrador tiene que aprobarla."; ayuda del botón
+      "Responder" "Vas a poder responder cuando el administrador apruebe la reseña.".
+    - "Gestión" › "Reseñas": sub-pestañas "Pendientes de moderación" y "Publicadas"; botones
+      "Aprobar" y "Rechazar"; "No hay reseñas pendientes de moderación."; errores "No pudimos
+      aprobar la reseña.", "No pudimos rechazar la reseña." y "No pudimos cargar las reseñas.".
+    - Mensajes del backend: "Todavía no podés responder: la reseña está pendiente de
+      moderación."; "Esta reseña todavía está pendiente de moderación: rechazala desde la cola
+      en vez de ocultarla."; "No podés editar una reseña que no te pertenece."; "No podés
+      eliminar una reseña que no te pertenece.".
+    - Notificaciones: "Tu reseña sobre la clase de "<actividad>" del <fecha y hora> fue
+      publicada." (RESENIA_APROBADA) y "Tu reseña sobre la clase de "<actividad>" del <fecha y
+      hora> no fue aprobada." (RESENIA_RECHAZADA emitida por rechazarresenia). Se mantiene
+      "Recibiste una nueva reseña en la clase de "<actividad>" del <fecha y hora>."
+      (NUEVA_RESENIA, al instructor) y "Un administrador ocultó tu reseña sobre la clase de
+      "<actividad>" del <fecha y hora>. Motivo: <motivo>" (RESENIA_RECHAZADA emitida por
+      ocultarresenia).
+  Manual de usuario (activehub-frontend/src/lib/manual.ts y
+    activehub-backend/src/main/resources/manual/manual-usuario-activehub.txt, idénticos):
+    - 2.10, paso 3: "Presionar "Publicar"." (decía "Presionar "Enviar reseña". El sistema
+      muestra "¡Gracias por tu reseña!"", que no coincidía con la pantalla).
+    - 2.10, párrafo: "Toda reseña se publica en el momento en que se envía: se muestra en el
+      detalle de la actividad y se suma a su calificación promedio. Antes de publicar, el
+      formulario avisa "La reseña se publica en el momento y después no se puede editar ni
+      eliminar.": una vez publicada, la reseña no puede editarse ni eliminarse. El instructor
+      puede responderla y, si la considera inapropiada, denunciarla ante la administración. Si
+      un administrador la oculta, en "Reseñas que hiciste" se muestra con la etiqueta "Oculta
+      por un administrador"."
+    - 3.6: "La calificación promedio se calcula sobre las reseñas visibles, excluyendo las
+      ocultas por un administrador."
+    - 3.10: "La pantalla "Reseñas" muestra a la izquierda las actividades del instructor, con su
+      cantidad de reseñas y su calificación promedio, y a la derecha las reseñas de la
+      actividad seleccionada. Toda reseña se publica en el momento en que el alumno la envía.
+      Cada reseña puede tener una de las siguientes etiquetas: "Denunciada · en revisión",
+      "Oculta" o "Respondida"." y, en "Responder": "No es posible responder reseñas ocultas."
+    - 4.5, título: "Reseñas publicadas" (era "Moderar reseñas"). Texto: "Las reseñas se publican
+      en el momento en que el alumno las envía: no existe una instancia de aprobación previa.
+      En "Gestión", pestaña "Reseñas", el administrador dispone del listado "Reseñas
+      publicadas". Una reseña puede salir de circulación por dos vías:" 1. "El instructor la
+      denuncia y el administrador resuelve la denuncia con "Ocultar la reseña", desde "Gestión
+      de denuncias" o desde la pestaña "Reclamos" de "Gestión" (ver el apartado 4.6)." 2. "El
+      administrador la oculta por su cuenta desde el listado, presionando "Ocultar" e indicando
+      obligatoriamente el motivo." Cierre: "En los dos casos la reseña deja de mostrarse y de
+      computar en el promedio, pero no se borra: se conservan su autor, su texto y su fecha
+      como evidencia. Una reseña publicada no puede editarse ni eliminarse. El listado muestra
+      10 reseñas por página, con los botones "« Primera", "Anterior", "Siguiente" y "Última
+      »"; al presionar el número de página es posible escribir directamente la página a la que
+      se quiere ir."
+    - 4.6: "...con los mismos controles de paginación que el listado de reseñas." (decía "que
+      la moderación de reseñas").
+    - Tabla de estados, Reseña: estado "Oculta · Respondida"; significado "Estado de la reseña:
+      toda reseña se publica al enviarse; puede quedar retirada de circulación por el
+      administrador o tener respuesta del instructor."
+
+DETALLE TÉCNICO:
+  Backend:
+    - Casos de uso retirados (paquete completo, con sus pruebas): aprobarresenia,
+      rechazarresenia, listarresenaspendientes, actualizarresenia y eliminarresenia.
+    - crearresenia: ya no marca la reseña en moderación y, después de guardarla, llama a
+      ActividadRepository.recalcularRating. Como recalcularRating es @Modifying con
+      clearAutomatically = true (deja las entidades detached), el Service arma antes del
+      recálculo todo lo que necesita: id de la actividad, id del instructor, el mensaje de
+      la notificación y la respuesta. CrearReseniaResponse perdió el campo enModeracion.
+    - Resenia: se quitó el campo enModeracion (la columna sigue en la base, ver ENTIDADES Y
+      MIGRACIONES). ReseniaRepository: se quitó findPendientesConDetalle; findVisiblesPorActividad
+      filtra solo por oculta = false; findPublicadasConDetalle devuelve todas.
+      ActividadRepository.recalcularRating: el promedio cuenta las reseñas no borradas y no
+      ocultas (antes, además, las no moderadas).
+    - listarmisresenas y listarresenasinstructor: sus respuestas perdieron enModeracion.
+    - ocultarresenia y responderresenia: se quitó la validación de "pendiente de moderación",
+      que ya no puede darse.
+    - AuditAccion: RESENIA_ELIMINADA, RESENIA_APROBADA, RESENIA_RECHAZADA y
+      RESENIA_ACTUALIZADA se conservan (audit_log es de solo agregado y tiene filas con esos
+      valores) pero ningún caso de uso las escribe. DescripcionAuditoria las describe con el
+      agregado "(función retirada)", por ejemplo "… aprobó una reseña en moderación (función
+      retirada).". TipoNotificacion.RESENIA_APROBADA se conserva por las notificaciones ya
+      guardadas y ya no se emite.
+    - Prueba de arquitectura nueva: domain/resenia/ReseniaInmutableTest. Falla si algún
+      controller de reseñas tiene @PutMapping, @PatchMapping o @DeleteMapping, si alguno
+      expone "/{id}/aprobar" o "/{id}/rechazar", o si vuelve a existir alguno de los cinco
+      paquetes retirados. Se verificó contra el código anterior que sus patrones encuentran
+      los controllers retirados (@PostMapping("/{id}/aprobar") y @DeleteMapping("/{id}")).
+  Frontend:
+    - alumno/MisResenas.tsx: solo crea reseñas; sin "Editar", "Eliminar" ni la etiqueta de
+      moderación; aviso nuevo en el modal.
+    - instructor/Resenas.tsx: sin la etiqueta "Pendiente de moderación"; "Responder" solo se
+      deshabilita en una reseña oculta.
+    - instructor/Panel.tsx: la alerta cuenta las reseñas con denunciada = true.
+    - admin/Gestion.tsx: un solo listado "Reseñas publicadas", sin sub-pestañas.
+    - context/DataContext.tsx: se quitaron listarResenasPendientes, aprobarResenia,
+      rechazarResenia, actualizarResenia y eliminarResenia (de la interfaz, de la
+      implementación y de los dos lugares del useMemo), el campo enModeracion de MiResenia y
+      ReseniaInstructor, y la interfaz ReseniaPendiente (ReseniaPublicada pasó a ser propia).
+      lib/types.ts: Resenia perdió enModeracion.
+  Documentación: los CLAUDE.md de los dos repositorios (sección nueva "Reseñas: se publican al
+    crearse y no se tocan", decisión 8 del backend y conteos actualizados) y
+    activehub-frontend/docs/PRUEBAS.md.
+
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas en los dos repositorios (ver
+  PRUEBAS). No probado en el navegador (PENDIENTE 1 del ESTADO GENERAL).
+
+HISTORIAS Y CRITERIOS:
+  - E3A-HU10 (el alumno califica una clase): se agrega el criterio propuesto como NUEVO "la
+    reseña se publica al enviarse y no puede editarse ni eliminarse". Si la historia tenía
+    criterios de edición o de baja de la reseña propia, quedan RETIRADOS (ver DUDAS ABIERTAS).
+  - E2I-HU11 (el instructor gestiona las reseñas recibidas): criterio 4 (responder) sin
+    cambios; deja de existir la restricción de no responder una reseña en moderación.
+  - Historia del Administrador sobre moderación de reseñas (E4-Ad): la aprobación y el
+    rechazo previos quedan RETIRADOS; se mantienen ocultar una reseña publicada y resolver las
+    denuncias de reseñas. Código de historia a confirmar (ver DUDAS ABIERTAS).
+
+PANTALLAS: "Mis reseñas" del alumno, "Reseñas" y "Panel" del instructor, "Gestión" pestaña
+  "Reseñas" del administrador y la pantalla pública "Manual de usuario" (SYS-PAN-MAN). Códigos
+  del catálogo de las cuatro primeras a confirmar (ver DUDAS ABIERTAS). Ninguna pantalla nueva.
+
+REGLAS DE NEGOCIO: RN-32 (NUEVA, propuesta): "Una reseña se publica en el momento en que el
+  alumno la envía, sin aprobación previa, y una vez publicada no puede editarse ni eliminarse.
+  Solo admite la respuesta y la denuncia del instructor, y el ocultamiento por parte del
+  administrador, que no la borra." Se mantiene la regla de que solo reseña quien estuvo
+  inscripto en una clase finalizada, una vez por clase.
+
+MÓDULOS: 9. Historial y Calificaciones (principal); 11. Administración y Soporte (la pestaña
+  "Reseñas" de Gestión); 15. Ayuda y Soporte al Usuario (manual de usuario).
+
+CASOS DE USO: de 117 a 112. RETIRADOS: aprobarresenia, rechazarresenia,
+  listarresenaspendientes, actualizarresenia, eliminarresenia. Modificados: crearresenia,
+  listarmisresenas, listarresenasinstructor, listarreseniaspublicadas, ocultarresenia,
+  responderresenia y listarauditoria (DescripcionAuditoria). listarresenasactividad cambia de
+  comportamiento a través del repositorio, sin cambios en su código.
+
+ENTIDADES Y MIGRACIONES:
+  - V33__resenia_sin_moderacion.sql (nueva, idempotente): 1) recalcula el rating de las
+    actividades que tenían alguna reseña pendiente de moderación, con la misma fórmula que
+    recalcularRating (reseñas no borradas y no ocultas, sin mirar la moderación); 2) pasa a
+    en_moderacion = false las reseñas que esperaban aprobación, es decir, las publica; 3) le
+    pone DEFAULT false a la columna. Aplicada sobre la base de Supabase al correr la suite;
+    salida literal de Flyway: "Migrating schema "public" to version "33 - resenia sin
+    moderacion"" y "Successfully applied 1 migration to schema "public", now at version v33
+    (execution time 00:01.530s)". La cantidad de reseñas publicadas por la migración no se
+    midió.
+  - Entidad Resenia: sin el atributo enModeracion. La columna resenia.en_moderacion NO se
+    eliminó (ver DECISIONES); Hibernate valida el esquema (ddl-auto: validate) y una columna
+    sin mapear no lo impide.
+
+TECNOLOGÍAS: sin cambios.
+
+COSTOS: sin cambios.
+
+RIESGOS:
+  - R04 (ambigüedad de reglas): mitigado; la regla quedó escrita (RN-32) y resuelta con el
+    usuario en los tres puntos que el pedido no cubría.
+  - R05 (inconsistencias entre documentación y sistema): vigente hasta que se actualicen el
+    informe y el Anexo 8 (PENDIENTE 3). Las dos copias del manual del sistema ya están al día.
+  - R30 (NUEVO, propuesto): cambios de esquema sobre una base compartida por integrantes con
+    versiones distintas del código. Mitigación aplicada: V33 no borra la columna, así el
+    código anterior sigue funcionando. Efecto residual: quien trabaje con el código anterior
+    seguirá creando reseñas con en_moderacion = true; el código nuevo las muestra igual como
+    publicadas.
+
+SEGURIDAD: sin cambios de permisos. resenias.escribir sigue protegiendo crear y listar las
+  reseñas propias; denuncias.resolver sigue protegiendo ocultarresenia,
+  listarreseniaspublicadas y resolverdenuncia; GuardasDePermisoTest pasa (ninguna clave quedó
+  sin usar). La superficie de la API se reduce en cinco endpoints. Una reseña ya no se puede
+  borrar, ni siquiera por su autor: se conserva como evidencia. Qué responde hoy un PUT o un
+  DELETE a /api/alumno/resenas/{id}: no verificado.
+
+PRUEBAS:
+  Backend (JAVA_HOME=$HOME/.jdks/jdk-21.0.12+8 ./mvnw -B test, 23/10/2026): "Tests run: 1004,
+    Failures: 0, Errors: 0, Skipped: 2", "BUILD SUCCESS", 03:43 min. Antes del cambio: 1018.
+    Diferencia: -17 pruebas en 9 archivos retirados con sus slices (AprobarReseniaServiceTest
+    3, AprobarReseniaControllerTest 1, RechazarReseniaServiceTest 2,
+    RechazarReseniaControllerTest 1, ListarResenasPendientesServiceTest 1,
+    ListarResenasPendientesControllerTest 1, ActualizarReseniaServiceTest 4,
+    EliminarReseniaServiceTest 3, EliminarReseniaControllerTest 1); -2 pruebas de moderación
+    (OcultarReseniaServiceTest.ocultar_enModeracion_lanzaValidacionYSugiereRechazar y
+    ResponderReseniaServiceTest.responder_reseniaEnModeracion_lanzaValidacion); +5 nuevas
+    (CrearReseniaServiceTest.crear_noLeeRelacionesLazyDespuesDeRecalcularElRating y
+    CrearReseniaServiceTest.crear_comentarioEnBlanco_seGuardaSinComentario, y las 3 de
+    ReseniaInmutableTest). Cuenta: 1018 - 17 - 2 + 5 = 1004. Además se reescribió
+    crear_alumnoElegible_creaEnModeracion como crear_alumnoElegible_publicaYRecalculaElRating
+    (verifica el orden guardar -> recalcular y la notificación NUEVA_RESENIA con su destino), y
+    se ajustaron a los DTO nuevos CrearReseniaControllerTest, ListarMisResenasServiceTest,
+    ListarMisResenasControllerTest, ListarResenasInstructorServiceTest,
+    ListarResenasInstructorControllerTest, OcultarReseniaServiceTest y
+    ResponderReseniaServiceTest.
+  Frontend (npm test, 23/10/2026): "Test Files  23 passed (23)" y "Tests  178 passed (178)".
+    Antes del cambio: 175 en 22. Nuevo: pages/alumno/MisResenas.test.tsx con 3 pruebas ("no
+    ofrece Editar ni Eliminar, ni dice que está en moderación", "marca la reseña que ocultó un
+    administrador" y "avisa antes de publicar que después no se puede cambiar, y la publica").
+    Se verificó que las 3 fallan contra la versión anterior de la pantalla ("Tests  3 failed
+    (3)") y pasan con la nueva.
+  Manuales: ninguna ejecutada. Falta la prueba en el navegador (PENDIENTE 1).
+
+ANÁLISIS ESTÁTICO: npx eslint . en activehub-frontend: "11 problems (0 errors, 11 warnings)",
+  las mismas 11 de antes. npx tsc -b: sin errores. npm run build: correcto.
+
+DESPLIEGUE Y CONFIGURACIÓN: sin variables de entorno nuevas. Sin despliegue.
+
+DECISIONES:
+  - Retirar los slices en lugar de dejarlos sin uso. Alternativa descartada: conservar los
+    endpoints y ocultar los botones. Motivo: un endpoint que sigue respondiendo es una regla
+    de negocio que sigue existiendo; la convención del proyecto para lo retirado es borrarlo
+    (como la asistencia).
+  - Mantener ocultarresenia (decisión del usuario). Sin él, una reseña impropia que el
+    instructor no denuncia quedaría publicada sin que el administrador pueda actuar.
+  - Retirar también eliminarresenia (decisión del usuario): una reseña publicada no la borra
+    ni su autor.
+  - No eliminar todavía la columna resenia.en_moderacion. En la ENTRADA anterior a esta
+    implementación se había recomendado eliminarla en V33. Al implementar se vio que la base
+    de Supabase es la misma para todos los integrantes y que la suite aplica las migraciones
+    sobre ella: con un DROP COLUMN, cualquier integrante con el código anterior recibiría
+    errores en todas las consultas de reseñas. Se dejó la columna sin mapear y con DEFAULT
+    false; se elimina en una migración posterior (PENDIENTE 2).
+  - Conservar los valores retirados de AuditAccion y TipoNotificacion. Alternativa descartada:
+    borrarlos. Motivo: audit_log y notificacion tienen filas con esos valores y la pantalla de
+    Auditoría y la campana tienen que poder seguir leyéndolas.
+  - Corregir de paso el paso 3 del apartado 2.10 del manual ("Enviar reseña" y "¡Gracias por tu
+    reseña!" no existían en la pantalla; el botón es "Publicar").
+
+ERRORES DETECTADOS: sintoma: el manual de usuario (2.10, paso 3) nombraba un botón "Enviar
+  reseña" y un mensaje "¡Gracias por tu reseña!" que la pantalla no tiene. Causa: el texto no
+  se había actualizado cuando cambió la pantalla. Corrección: el paso dice "Presionar
+  "Publicar".". Cómo se detectó: al revisar los textos literales para esta entrada.
+
+CAPTURAS SUGERIDAS:
+  - "Mis reseñas" del alumno con una reseña publicada, sin botones "Editar" ni "Eliminar".
+  - Modal "Dejar reseña" con el aviso "La reseña se publica en el momento y después no se
+    puede editar ni eliminar.".
+  - "Gestión" › "Reseñas" del administrador con el listado "Reseñas publicadas".
+  - "Reseñas" del instructor con las etiquetas vigentes.
+  - Consola con "Tests run: 1004, Failures: 0, Errors: 0, Skipped: 2" y "BUILD SUCCESS".
+  - Consola con "Tests  178 passed (178)".
+
+PENDIENTE QUE QUEDA: los pendientes abiertos del ESTADO GENERAL.
+
+================================================================================
+ENTRADA 003
+================================================================================
+FECHA: 23/10/2026
+
+REPOSITORIO: activehub-backend
+
+RAMA Y COMMITS: main. Sin commit al momento de escribir esta entrada. Sin Pull Request.
+
+TIPO: corrección de error.
+
+TÍTULO: Al resolver una denuncia de reseña con "Ocultar la reseña" no se recalculaba la
+  calificación de la actividad.
+
+QUÉ CAMBIA PARA EL USUARIO: cuando el administrador resuelve la denuncia de una reseña con
+  "Ocultar la reseña", la reseña deja de contar en la calificación promedio de la actividad en
+  el mismo momento, igual que cuando la oculta desde "Gestión" › "Reseñas". Antes la reseña
+  desaparecía del detalle de la actividad pero su puntaje seguía sumando a las estrellas. En
+  "Auditoría", ese ocultamiento se lee ahora "… ocultó una reseña publicada. Motivo: resolución
+  de una denuncia del instructor.".
+
+TEXTOS DE INTERFAZ: sin textos nuevos en pantallas. Textos de la columna "Detalle" de
+  "Auditoría" (los arma el backend):
+    - Nuevo, para los ocultamientos por denuncia desde esta entrada: "<actor> ocultó una reseña
+      publicada. Motivo: resolución de una denuncia del instructor."
+    - Para las filas anteriores de ese mismo hecho (RESENIA_RECHAZADA con la marca
+      OCULTA_POR_DENUNCIA): "<actor> ocultó una reseña al resolver una denuncia." (en la ENTRADA
+      002 habían pasado a leerse, por error, "<actor> rechazó una reseña en moderación (función
+      retirada).").
+
+DETALLE TÉCNICO:
+  - ResolverDenunciaService recibe ActividadRepository. ocultarResenia lee el id de la
+    actividad, marca la reseña como oculta, la guarda, audita y devuelve ese id. resolver()
+    llama a recalcularRating con él al FINAL, después de notificarResolucion y de la auditoría
+    de la denuncia: recalcularRating es @Modifying con clearAutomatically y deja las entidades
+    detached, y notificarResolucionResenia lee la clase y la actividad de la reseña (relaciones
+    LAZY). Recalcular antes reproduciría el error de "aprobar reseña devuelve 500" ya
+    documentado en el CLAUDE.md.
+  - La auditoría del ocultamiento por denuncia pasa de RESENIA_RECHAZADA (marca
+    OCULTA_POR_DENUNCIA) a RESENIA_OCULTADA (motivo "resolución de una denuncia del
+    instructor"), la misma acción que audita ocultarresenia.
+  - DescripcionAuditoria: RESENIA_RECHAZADA con la marca OCULTA_POR_DENUNCIA se describe como
+    ocultamiento; sin la marca, como la función retirada.
+  - Comentarios corregidos en ActividadRepository.recalcularRating y AuditAccion. Sección nueva
+    en "Bugs reales" del CLAUDE.md del backend.
+
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas (ver PRUEBAS). No probado en el
+  navegador.
+
+HISTORIAS Y CRITERIOS: historia del Administrador sobre resolución de denuncias de reseñas
+  (E4-Ad, código a confirmar, ver DUDAS ABIERTAS de la ENTRADA 002): el criterio "una reseña
+  oculta no cuenta en la calificación" pasa a cumplirse también por este camino.
+
+PANTALLAS: detalle de la actividad (calificación), "Gestión de denuncias" y "Reclamos" del
+  administrador (acción "Ocultar la reseña"), "Auditoría" (texto de la columna "Detalle").
+
+REGLAS DE NEGOCIO: RN-32 (ENTRADA 002) sin cambios; esta corrección hace que se cumpla su
+  parte "el ocultamiento … no la borra" con el mismo efecto sobre el promedio por los dos
+  caminos.
+
+MÓDULOS: 9. Historial y Calificaciones; 4. Auditoría y Trazabilidad; 11. Administración y
+  Soporte.
+
+CASOS DE USO: sin altas ni bajas (112). Modificados: resolverdenuncia y listarauditoria
+  (DescripcionAuditoria).
+
+ENTIDADES Y MIGRACIONES: V34__recalcular_rating_resenias_ocultas.sql (nueva, idempotente):
+  aplicada sobre Supabase al correr la suite (salida de Flyway: "Successfully applied 1
+  migration to schema "public", now at version v34 (execution time 00:01.144s)"); recalcula actividad.rating de todas las actividades con la fórmula de recalcularRating
+  (reseñas no borradas y no ocultas; 0 si no hay). Corrige las actividades que quedaron con el
+  promedio desactualizado por este error. Cuántas actividades cambiaron de valor: no se midió.
+  Sin cambios de esquema.
+
+TECNOLOGÍAS: sin cambios.
+
+COSTOS: sin cambios.
+
+RIESGOS: R05 (inconsistencias entre documentación y sistema): la calificación mostrada ya no
+  contradice a las reseñas visibles. Sin riesgos nuevos.
+
+SEGURIDAD: sin cambios de permisos (resolverdenuncia sigue con denuncias.resolver).
+
+PRUEBAS:
+  - ResolverDenunciaServiceTest, nuevas:
+    resolver_ocultarResenia_recalculaElRatingDespuesDeNotificarYAuditaComoOcultada (verifica el
+    orden guardar -> notificar -> recalcular, la auditoría RESENIA_OCULTADA y que no se audita
+    RESENIA_RECHAZADA) y resolver_ocultarResenia_noLeeRelacionesLazyDespuesDeRecalcular (simula
+    el detach con un spy: leer la clase después del recálculo falla). Ampliada:
+    resolver_desestimarDenunciaDeResenia_noLaOculta verifica que desestimar no recalcula.
+  - DescripcionAuditoriaTest, nuevas: reseniaRechazadaPorDenuncia_seLeeComoOcultamiento y
+    reseniaOcultada_incluyeElMotivo.
+  - Se verificó que las dos nuevas de ResolverDenunciaServiceTest fallan sin la llamada a
+    recalcularRating ("Tests run: 24, Failures: 2") y pasan con ella.
+  - Suite completa (JAVA_HOME=$HOME/.jdks/jdk-21.0.12+8 ./mvnw -B test, 23/10/2026): "Tests
+    run: 1008, Failures: 0, Errors: 0, Skipped: 2", "BUILD SUCCESS", 01:25 min. Antes: 1004
+    (ENTRADA 002); +4 nuevas.
+  - Frontend: sin cambios de código en esta entrada.
+
+ANÁLISIS ESTÁTICO: no aplica (sin cambios en el frontend).
+
+DESPLIEGUE Y CONFIGURACIÓN: sin cambios. Quien tenga el backend corriendo tiene que
+  reiniciarlo para tomar el arreglo.
+
+DECISIONES:
+  - Recalcular al final de resolver() y no dentro de ocultarResenia. Alternativa descartada:
+    recalcular apenas se oculta. Motivo: las notificaciones posteriores leen relaciones LAZY de
+    la reseña y fallarían con las entidades detached.
+  - Recalcular todas las actividades en V34 y no solo las que tienen reseñas ocultas por
+    denuncia. Motivo: desde la base no se distingue con certeza qué reseñas se ocultaron por
+    cada camino, y el valor correcto es siempre el de la fórmula; en las actividades que ya
+    estaban bien no cambia nada.
+  - Auditar con RESENIA_OCULTADA, la misma acción que ocultarresenia: es el mismo hecho por
+    otro camino.
+
+ERRORES DETECTADOS:
+  - Síntoma: una reseña oculta al resolver su denuncia seguía sumando a la calificación de la
+    actividad. Causa: ResolverDenunciaService.ocultarResenia no llamaba a recalcularRating
+    (ocultarresenia sí). Corrección: descrita arriba. Cómo se detectó: pregunta del usuario
+    ("¿se recalcula el rating?") y revisión del código. Error anterior a la ENTRADA 002.
+  - Síntoma: en "Auditoría", el ocultamiento por denuncia se leía "rechazó una reseña en
+    moderación (función retirada).". Causa: en la ENTRADA 002 se dio por hecho que ningún caso
+    de uso escribía RESENIA_RECHAZADA, y resolverdenuncia la usaba. Corrección: descrita
+    arriba. Cómo se detectó: en la misma revisión.
+
+CAPTURAS SUGERIDAS:
+  - Detalle de una actividad antes y después de resolver una denuncia de reseña con "Ocultar la
+    reseña" (cambia la calificación).
+  - "Auditoría" con la fila "… ocultó una reseña publicada. Motivo: resolución de una denuncia
+    del instructor.".
+  - Consola con "Tests run: 1008, Failures: 0, Errors: 0, Skipped: 2" y "BUILD SUCCESS".
+
+PENDIENTE QUE QUEDA: los pendientes abiertos del ESTADO GENERAL.
+
+================================================================================
+ENTRADA 004
+================================================================================
+FECHA: 23/10/2026
+
+REPOSITORIO: activehub-frontend (código) y activehub-backend (copia del manual del asistente).
+
+RAMA Y COMMITS: main en los dos. Sin commit al momento de escribir esta entrada. Sin Pull
+  Request.
+
+TIPO: corrección de error.
+
+TÍTULO: La pantalla "Reseñas" del instructor seguía contando las reseñas ocultas en la
+  cantidad y en la calificación de la actividad.
+
+QUÉ CAMBIA PARA EL USUARIO: cuando el administrador oculta una reseña (al resolver la
+  denuncia o desde "Gestión" › "Reseñas"), el instructor ve en su pantalla "Reseñas" la
+  cantidad y la calificación promedio de la actividad sin esa reseña, igual que el detalle
+  público. La reseña oculta se sigue listando con la etiqueta "Oculta", y el resumen de la
+  actividad avisa cuántas hay.
+
+TEXTOS DE INTERFAZ:
+  - Nuevo, en el resumen de la actividad de "Reseñas" del instructor, sólo si hay ocultas:
+    "1 oculta, no cuenta en la calificación" / "N ocultas, no cuentan en la calificación".
+  - Sin cambios: "N reseñas", el promedio con un decimal y las barras de 5 a 1 estrellas (ahora
+    calculados sobre las reseñas no ocultas).
+  - Manual de usuario, apartado 3.10 (las dos copias del sistema, idénticas), se agrega al
+    primer párrafo: "La cantidad y la calificación promedio no incluyen las reseñas ocultas
+    por un administrador: esas se siguen listando con su etiqueta, y el resumen de la actividad
+    indica cuántas hay ("1 oculta, no cuenta en la calificación")."
+
+DETALLE TÉCNICO:
+  - Reportado por el usuario al probar la ENTRADA 003: después de ocultar una reseña por
+    denuncia, la calificación y la cantidad de reseñas de la actividad no cambiaban en el panel
+    del instructor.
+  - Causa: instructor/Resenas.tsx calculaba la cantidad, el promedio y las barras (de la lista
+    lateral "Mis actividades" y del resumen de la actividad elegida) sobre todas las reseñas
+    que devuelve GET /api/instructor/resenas, que incluye las ocultas a propósito (el
+    instructor las ve con su etiqueta). El backend ya las excluía del rating
+    (recalcularRating) y del detalle público (findVisiblesPorActividad); la pantalla del
+    instructor era la única que las sumaba.
+  - Corrección: función estadisticas() en el mismo archivo, que calcula sobre las reseñas con
+    oculta = false y devuelve también cuántas ocultas hay. La usan la lista lateral y el
+    resumen. La lista de reseñas no cambia: sigue mostrando las ocultas.
+  - No hubo cambios en el backend: la ENTRADA 003 ya recalculaba y la base no se consultó (el
+    usuario prefirió no correr una consulta de verificación contra la base compartida).
+
+ESTADO: IMPLEMENTADO y PROBADO con pruebas automatizadas. No probado en el navegador después
+  de la corrección.
+
+HISTORIAS Y CRITERIOS: E2I-HU11 (reseñas recibidas por el instructor): la calificación que ve
+  el instructor coincide con la pública. Criterio a numerar (ver DUDAS ABIERTAS).
+
+PANTALLAS: "Reseñas" del instructor; "Manual de usuario" (SYS-PAN-MAN, texto).
+
+REGLAS DE NEGOCIO: RN-32 sin cambios; esta corrección la hace cumplir también en la pantalla
+  del instructor.
+
+MÓDULOS: 6. Instructor; 9. Historial y Calificaciones; 15. Ayuda y Soporte al Usuario
+  (manual).
+
+CASOS DE USO: sin cambios (112).
+
+ENTIDADES Y MIGRACIONES: sin cambios.
+
+TECNOLOGÍAS: sin cambios.
+
+COSTOS: sin cambios.
+
+RIESGOS: R05 (inconsistencias entre documentación y sistema): la calificación del instructor
+  ya no contradice a la pública. Sin riesgos nuevos.
+
+SEGURIDAD: sin cambios.
+
+PRUEBAS:
+  - Nueva: pages/instructor/Resenas.test.tsx con 2 pruebas ("una reseña oculta no cuenta en el
+    promedio ni en la cantidad, pero se sigue listando" y "sin reseñas ocultas no muestra el
+    aviso"). Se verificó que la primera falla contra la versión anterior de la pantalla
+    ("Tests  1 failed | 1 passed (2)") y pasa con la nueva.
+  - Frontend completo (npm test, 23/10/2026): "Test Files  24 passed (24)" y "Tests  180
+    passed (180)". Antes: 178 en 23.
+  - Manual: lib/manual.test.ts y pages/public/Manual.test.tsx, "Tests  27 passed (27)";
+    backend ManualUsuarioTest y PreguntarAlAsistenteServiceTest, "Tests run: 21, Failures: 0,
+    Errors: 0, Skipped: 0" y "BUILD SUCCESS".
+  - Manuales: ninguna.
+
+ANÁLISIS ESTÁTICO: npx eslint .: "11 problems (0 errors, 11 warnings)", las mismas de antes
+  (la de instructor/Resenas.tsx, react-hooks/exhaustive-deps en el useCallback de la carga, ya
+  existía). npx tsc -b: sin errores. npm run build: correcto.
+
+DESPLIEGUE Y CONFIGURACIÓN: sin cambios. Recargar la pantalla del frontend para tomar la
+  corrección.
+
+DECISIONES:
+  - Seguir listando las reseñas ocultas en la pantalla del instructor y excluirlas sólo de los
+    números. Alternativa descartada: no listarlas. Motivo: el instructor tiene que ver qué se
+    ocultó de su actividad (es el resultado de su denuncia).
+  - Calcular en el cliente sobre la lista que ya llega, en vez de leer actividad.rating.
+    Motivo: la pantalla necesita también la cantidad y la distribución por estrellas, que el
+    rating guardado no trae; con el mismo filtro el número coincide con el guardado.
+
+ERRORES DETECTADOS: síntoma: en "Reseñas" del instructor, ocultar una reseña no cambiaba la
+  cantidad ni la calificación de la actividad. Causa y corrección: descritas en DETALLE
+  TÉCNICO. Cómo se detectó: prueba en el navegador del usuario. Error anterior a la ENTRADA
+  002.
+
+CAPTURAS SUGERIDAS:
+  - "Reseñas" del instructor con una reseña oculta: el resumen con "1 oculta, no cuenta en la
+    calificación" y la reseña listada con la etiqueta "Oculta".
+  - Consola con "Tests  180 passed (180)".
+
+PENDIENTE QUE QUEDA: los pendientes abiertos del ESTADO GENERAL.
+
+--------------------------------------------------------------------------------
+DUDAS ABIERTAS
+--------------------------------------------------------------------------------
+1. Códigos de historia y criterio: E3A-HU10 y E2I-HU11 se citan con la numeración de los
+   CLAUDE.md; la historia del Administrador sobre moderación de reseñas no tiene código
+   verificado desde el repositorio. Hay que confirmar contra el informe qué criterios se
+   retiran (aprobación previa, edición y baja de la reseña propia) y numerar el criterio nuevo.
+2. Códigos de pantalla de "Mis reseñas" (E3A-PAN), "Reseñas" y "Panel" del instructor (E2I-PAN)
+   y "Gestión" del administrador (E4Ad-PAN): no verificados contra el catálogo.
+3. Numeración de la regla nueva: se propone RN-32 a continuación de las RN-25 a RN-31 de
+   docs/BITACORA-MERCADOPAGO.txt; hay que confirmarla contra el informe.
+4. Numeración del riesgo nuevo: se propone R30 a continuación de los R20 a R29 de
+   docs/BITACORA-MERCADOPAGO.txt; hay que confirmarlo contra el informe.
+5. Cuántas reseñas estaban pendientes de moderación y quedaron publicadas por V33: no se midió
+   antes de aplicar la migración.
+6. Cuántas actividades tenían la calificación desactualizada y la corrigió V34 (ENTRADA 003):
+   no se midió antes de aplicar la migración.
+
+================================================================================
+FIN DE LA BITÁCORA
+================================================================================
