@@ -171,13 +171,50 @@ class CancelarClaseServiceTest {
 
         service.cancelar(claseId, instructorId);
 
-        // E2I-HU08 criterio 5: el reintegro alcanza a los pagos Retenidos y a los cobrados en
-        // Efectivo. No hay gateway al que pedirle nada — la plata la tiene el instructor —
-        // pero el registro no puede quedar como un pago válido de una clase que no existe.
+        // E2I-HU08 criterio 5: no hay gateway al que pedirle nada, pero el registro no puede
+        // quedar como un pago válido de una clase que no existe.
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         assertThat(pendiente.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         verify(operacionesPago, never()).reintegrar(any(), any(), any());
         verify(pagoRepository).save(pago);
+    }
+
+    /** Decisión del usuario (2026-10-31): el efectivo se arregla por fuera de la plataforma. */
+    @Test
+    void cancelar_pagoEfectivo_elAvisoEsSoloLaCancelacion() {
+        Pago pago = new Pago();
+        pago.setEstado(EstadoPago.Efectivo);
+        pago.setMetodo(MetodoPago.EFECTIVO);
+        pago.setMonto(new BigDecimal("4500"));
+        Inscripcion inscripto = inscripcionCon(EstadoInscripcion.INSCRIPTO, pago);
+
+        when(claseRepository.findById(claseId)).thenReturn(Optional.of(clase));
+        when(inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA))
+                .thenReturn(List.of(inscripto));
+
+        service.cancelar(claseId, instructorId);
+
+        verify(notificacionService).notificar(
+                eq(inscripto.getAlumno().getId()), any(),
+                argThat(m -> m.endsWith("Tu inscripción fue cancelada.")), any(), any());
+    }
+
+    /** Una preinscripción no tiene pago ni medio de pago: tampoco hay nada que reintegrar. */
+    @Test
+    void cancelar_preinscripcionSinPago_elAvisoEsSoloLaCancelacion() {
+        Inscripcion preinscripta = inscripcionCon(EstadoInscripcion.PRE_INSCRIPCION, null);
+
+        when(claseRepository.findById(claseId)).thenReturn(Optional.of(clase));
+        when(inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA))
+                .thenReturn(List.of(preinscripta));
+
+        service.cancelar(claseId, instructorId);
+
+        assertThat(preinscripta.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
+        verify(operacionesPago, never()).reintegrar(any(), any(), any());
+        verify(notificacionService).notificar(
+                eq(preinscripta.getAlumno().getId()), any(),
+                argThat(m -> m.endsWith("Tu inscripción fue cancelada.")), any(), any());
     }
 
     @Test

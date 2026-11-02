@@ -236,7 +236,6 @@ public class CrearPenalizacionService {
                 } else if (pago != null && pago.getEstado() == EstadoPago.Efectivo) {
                     pago.setEstado(EstadoPago.Cancelado);
                     pagoRepository.save(pago);
-                    detallePago = " Coordiná con la plataforma la devolución de lo que pagaste en efectivo.";
                 }
                 inscripcion.setEstado(EstadoInscripcion.CANCELADA);
                 inscripcionRepository.save(inscripcion);

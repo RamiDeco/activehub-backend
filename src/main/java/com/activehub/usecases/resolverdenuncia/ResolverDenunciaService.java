@@ -246,7 +246,8 @@ public class ResolverDenunciaService {
      *
      * <p>Alcanza a los pagos {@code Retenido} <b>y</b> {@code Efectivo}, con el mismo criterio
      * que {@code cancelarclase} (decision 6): el efectivo no pasa por el gateway, asi que el
-     * registro queda {@code Cancelado} y al alumno se le dice que coordine la devolucion.
+     * registro queda {@code Cancelado} y el aviso es solo la cancelacion: el efectivo se arregla
+     * por fuera de la plataforma (decision del usuario, 2026-10-31).
      *
      * <p>A cada alumno se le notifica. Al denunciante le llega ademas la notificacion propia de
      * la resolucion de su denuncia, que manda {@code notificarResolucion}.
@@ -266,7 +267,6 @@ public class ResolverDenunciaService {
             } else if (pago != null && pago.getEstado() == EstadoPago.Efectivo) {
                 pago.setEstado(EstadoPago.Cancelado);
                 pagoRepository.save(pago);
-                detallePago = " Coordiná con la plataforma la devolución de lo que pagaste en efectivo.";
             }
             inscripcion.setEstado(EstadoInscripcion.CANCELADA);
             inscripcionRepository.save(inscripcion);
@@ -389,7 +389,6 @@ public class ResolverDenunciaService {
                 } else if (pago != null && pago.getEstado() == EstadoPago.Efectivo) {
                     pago.setEstado(EstadoPago.Cancelado);
                     pagoRepository.save(pago);
-                    detallePago = " Coordiná con la plataforma la devolución de lo que pagaste en efectivo.";
                 }
                 inscripcion.setEstado(EstadoInscripcion.CANCELADA);
                 inscripcionRepository.save(inscripcion);

@@ -212,8 +212,9 @@ class ResolverDenunciaServiceTest {
 
     /**
      * El efectivo tambien se reintegra, con el mismo criterio que {@code cancelarclase}
-     * (decision 6): el registro queda {@code Cancelado} y al alumno se le dice que coordine la
-     * devolucion. Antes el efectivo no se tocaba y el alumno seguia viendo un pago valido por
+     * (decision 6): el registro queda {@code Cancelado} y el aviso es solo la cancelacion, porque
+     * el efectivo se arregla por fuera de la plataforma (decision del usuario, 2026-10-31). Antes
+     * el efectivo no se tocaba y el alumno seguia viendo un pago valido por
      * una clase cuyo reclamo la plataforma le dio la razon. La decision 6 deja el efectivo
      * intacto <b>cuando cancela el propio alumno</b>; acá el reintegro lo ordena la plataforma.
      */
@@ -233,6 +234,33 @@ class ResolverDenunciaServiceTest {
         assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
         assertThat(inscripcion.getEstado()).isEqualTo(EstadoInscripcion.CANCELADA);
         verify(operacionesPago, never()).reintegrar(any(), any(), any());
+        verify(notificacionService).notificar(
+                eq(alumnoId), eq(TipoNotificacion.INSCRIPCION_CANCELADA),
+                argThat(m -> m.endsWith("se canceló tu inscripción.")), any(), any());
+    }
+
+    @Test
+    void resolver_suspenderConPagoEfectivo_elAvisoEsSoloLaCancelacion() {
+        penalizacionConId();
+        Pago pago = new Pago();
+        pago.setEstado(EstadoPago.Efectivo);
+        pago.setMetodo(MetodoPago.EFECTIVO);
+        pago.setMonto(new BigDecimal("4500"));
+        Inscripcion inscripcion = inscripcionDe(alumnoId, pago);
+        var clase = denuncia.getClase();
+
+        when(claseRepository.findVivasDeInstructorEntre(eq(instructorId), any(), any(), any()))
+                .thenReturn(List.of(clase));
+        when(inscripcionRepository.findByClaseIdAndEstadoNot(claseId, EstadoInscripcion.CANCELADA))
+                .thenReturn(List.of(inscripcion));
+
+        service.resolver(denunciaId, new ResolverDenunciaRequest("SUSPENDER", null, null, 30), UUID.randomUUID());
+
+        assertThat(pago.getEstado()).isEqualTo(EstadoPago.Cancelado);
+        verify(operacionesPago, never()).reintegrar(any(), any(), any());
+        verify(notificacionService).notificar(
+                eq(alumnoId), eq(TipoNotificacion.CLASE_CANCELADA),
+                argThat(m -> m.endsWith("Tu inscripción fue cancelada.")), any(), any());
     }
 
     private Inscripcion inscripcionDe(UUID alumno, Pago pago) {

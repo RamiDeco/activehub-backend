@@ -207,6 +207,47 @@ class CrearPenalizacionServiceTest {
                 any(), org.mockito.ArgumentMatchers.eq(clase.getId()), org.mockito.ArgumentMatchers.eq(Destino.clase(clase.getId())));
     }
 
+    /** Decisión del usuario (2026-10-31): el efectivo se arregla por fuera de la plataforma. */
+    @Test
+    void crear_suspensionConPagoEfectivo_elAvisoEsSoloLaCancelacion() {
+        usuarioExiste();
+        guardaDevolviendoLaMisma();
+
+        var actividad = new com.activehub.domain.actividad.Actividad();
+        actividad.setNombre("Yoga");
+        var clase = new com.activehub.domain.actividad.Clase();
+        clase.setActividad(actividad);
+        clase.setFechaHora(java.time.Instant.parse("2026-06-10T15:00:00Z"));
+        ReflectionTestUtils.setField(clase, "id", UUID.randomUUID());
+
+        var alumno = new Usuario();
+        ReflectionTestUtils.setField(alumno, "id", UUID.randomUUID());
+        var pago = new com.activehub.domain.inscripcion.Pago();
+        pago.setEstado(com.activehub.domain.inscripcion.EstadoPago.Efectivo);
+        var inscripcion = new com.activehub.domain.inscripcion.Inscripcion();
+        inscripcion.setAlumno(alumno);
+        inscripcion.setPago(pago);
+        inscripcion.setEstado(com.activehub.domain.inscripcion.EstadoInscripcion.INSCRIPTO);
+
+        when(claseRepository.findVivasDeInstructorEntre(
+                org.mockito.ArgumentMatchers.eq(usuarioId), any(), any(), any()))
+                .thenReturn(List.of(clase));
+        when(inscripcionRepository.findByClaseIdAndEstadoNot(
+                clase.getId(), com.activehub.domain.inscripcion.EstadoInscripcion.CANCELADA))
+                .thenReturn(List.of(inscripcion));
+
+        service.crear(new CrearPenalizacionRequest(
+                usuarioId, List.of("Suspensión temporal"), "Reiteradas cancelaciones", null,
+                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 20)), adminId);
+
+        assertThat(pago.getEstado()).isEqualTo(com.activehub.domain.inscripcion.EstadoPago.Cancelado);
+        verify(operacionesPago, never()).reintegrar(any(), any(), any());
+        verify(notificacionService).notificar(
+                org.mockito.ArgumentMatchers.eq(alumno.getId()),
+                org.mockito.ArgumentMatchers.eq(com.activehub.shared.notificacion.TipoNotificacion.CLASE_CANCELADA),
+                argThat(m -> m.endsWith("Tu inscripción fue cancelada.")), any(), any());
+    }
+
     @Test
     void crear_suspensionSinFechas_lanzaValidacion() {
         usuarioExiste();

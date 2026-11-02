@@ -237,7 +237,7 @@ La pantalla "Mis clases" reúne todas las inscripciones del alumno, organizadas 
 
 Sobre las pestañas hay una barra de filtros que se aplica a cualquiera de ellas: "Actividad" (busca por el nombre de la actividad), "Desde" y "Hasta" (el día de la clase) y "Ordenar por", con las opciones "Más recientes primero" (la inicial) y "Próximas primero", que muestra primero las clases que todavía no empezaron, de la más cercana a la más lejana, y después las ya dictadas. Los contadores de las pestañas se calculan con los filtros aplicados, y el enlace "Limpiar filtros" los restablece. Si ninguna clase de la pestaña coincide, se muestra "Ninguna clase de esta categoría coincide con los filtros." Cada pestaña muestra 10 clases por página; al llegar desde una notificación, la pantalla abre en la página donde está la clase indicada y la resalta.
 
-Cuando es el instructor quien cancela una clase, la tarjeta muestra la etiqueta "Cancelada" y, si se había realizado un pago, el texto correspondiente a la devolución. La notificación distingue qué ocurrió con el dinero: "Se liberó la reserva del pago en tu tarjeta: no se te va a cobrar." cuando el cobro todavía no se había hecho, o "Te reembolsamos el pago por Mercado Pago; según tu banco, puede tardar unos días en verse en tu tarjeta." cuando ya se había cobrado. Si el pago fue en efectivo, el aviso indica coordinar la devolución con el instructor.
+Cuando es el instructor quien cancela una clase, la tarjeta muestra la etiqueta "Cancelada" y, si se había realizado un pago, el texto correspondiente a la devolución. La notificación distingue qué ocurrió con el dinero: "Se liberó la reserva del pago en tu tarjeta: no se te va a cobrar." cuando el cobro todavía no se había hecho, o "Te reembolsamos el pago por Mercado Pago; según tu banco, puede tardar unos días en verse en tu tarjeta." cuando ya se había cobrado. Si el pago era en efectivo, el aviso informa sólo la cancelación.
 
 2.8 Mis pagos
 
@@ -250,7 +250,7 @@ La pantalla "Mis pagos", a la que se accede desde el perfil, presenta tarjetas d
 - "Retención liberada": "No se te cobró: se liberó la reserva de tu tarjeta."
 - "Reembolsado": "Se te devolvió por Mercado Pago."
 - "Efectivo": "Se paga en mano al instructor."
-- "Pago cancelado" (pago en efectivo de una clase cancelada): "Coordiná con el instructor la devolución de lo que pagaste."
+- "Pago cancelado" (pago en efectivo de una inscripción cancelada): "La inscripción se canceló."
 
 La pantalla incluye además un recuadro que resume el circuito: "Con Mercado Pago, el pago queda reservado en tu tarjeta hasta que se dicta la clase y recién ahí se te cobra. Si la clase se cancela antes, la reserva se libera y no se te cobra nada; si ya se te había cobrado, se te reembolsa.", que es el mismo circuito descripto en el apartado 2.6.
 
@@ -360,7 +360,7 @@ Una vez finalizada la clase, el listado queda en modo de solo lectura. El cobro 
 1. En la gestión de la clase, presionar "Cancelar clase".
 2. Confirmar en el diálogo "¿Cancelar esta clase? Se notificará a todos los alumnos inscriptos y se ejecutarán los reintegros correspondientes." con el botón "Sí, cancelar clase".
 
-El sistema cancela la clase y todas sus inscripciones, devuelve los pagos y notifica a cada alumno con el nombre de la actividad y la fecha y hora de la clase. La devolución depende del momento: si el pago con tarjeta todavía no se había cobrado, se libera la reserva y al alumno no se le cobra nada; si ya se había cobrado, se le reembolsa el importe total, lo que según su banco puede tardar unos días en verse reflejado. En el caso de los pagos en efectivo, la notificación indica al alumno coordinar la devolución con el instructor. La operación es transaccional: si algún paso falla —incluida la comunicación con Mercado Pago— no se aplica ningún cambio. Las clases finalizadas no pueden cancelarse.
+El sistema cancela la clase y todas sus inscripciones, devuelve los pagos y notifica a cada alumno con el nombre de la actividad y la fecha y hora de la clase. La devolución depende del momento: si el pago con tarjeta todavía no se había cobrado, se libera la reserva y al alumno no se le cobra nada; si ya se había cobrado, se le reembolsa el importe total, lo que según su banco puede tardar unos días en verse reflejado. En el caso de los pagos en efectivo, la notificación informa sólo la cancelación: el efectivo se arregla por fuera de la plataforma. La operación es transaccional: si algún paso falla —incluida la comunicación con Mercado Pago— no se aplica ningún cambio. Las clases finalizadas no pueden cancelarse.
 
 3.8 Próximas clases e historial
 
@@ -520,7 +520,7 @@ La siguiente tabla resume los estados que el usuario encuentra en las distintas 
 - Entidad: Clase — Estado: Finalizada — Significado para el usuario: Clase ya dictada. Habilita el historial, las reseñas y las denuncias.
 - Entidad: Pago — Estado: Retenido — Significado para el usuario: Pago con tarjeta autorizado. Antes de que la clase se dicte, el importe está reservado en la tarjeta del alumno y todavía no se cobró; una vez dictada, ya se cobró y espera a que venza el período de denuncias. La pantalla "Mis pagos" distingue las dos situaciones.
 - Entidad: Pago — Estado: Liberado — Significado para el usuario: El pago quedó firme: la clase se dictó, venció el período de denuncias y no hubo denuncias abiertas. El dinero está acreditado en la cuenta de Mercado Pago del instructor, según el plazo de acreditación de esa cuenta.
-- Entidad: Pago — Estado: Cancelado — Significado para el usuario: La reserva de la tarjeta se liberó antes de cobrarse, de modo que al alumno no se le cobró nada. También se usa para un pago en efectivo de una clase cancelada, cuya devolución se coordina con el instructor.
+- Entidad: Pago — Estado: Cancelado — Significado para el usuario: La reserva de la tarjeta se liberó antes de cobrarse, de modo que al alumno no se le cobró nada. También se usa para un pago en efectivo de una inscripción cancelada, que se arregla por fuera de la plataforma.
 - Entidad: Pago — Estado: Efectivo — Significado para el usuario: Pago en efectivo, abonado directamente al instructor.
 - Entidad: Pago — Estado: En revisión — Significado para el usuario: Mercado Pago está analizando el pago. El lugar del alumno queda reservado y la inscripción, con pago pendiente, hasta que el resultado se informe por notificación.
 - Entidad: Pago — Estado: Rechazado — Significado para el usuario: Mercado Pago no aprobó el pago. No se cobró nada y el lugar no queda ocupado.
