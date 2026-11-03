@@ -15,6 +15,7 @@ import com.activehub.domain.inscripcion.Inscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.domain.inscripcion.Pago;
 import com.activehub.domain.inscripcion.PagoRepository;
+import com.activehub.domain.penalizacion.EstadoPagoPenalizacion;
 import com.activehub.domain.penalizacion.Penalizacion;
 import com.activehub.domain.penalizacion.PenalizacionRepository;
 import com.activehub.domain.penalizacion.TipoPenalizacion;
@@ -124,7 +125,7 @@ public class ResolverDenunciaService {
         switch (accion) {
             case REINTEGRAR -> reintegrar(denuncia, actorId);
             case SUSPENDER -> suspenderInstructor(denuncia, request, actorId);
-            case PENALIZAR -> penalizarInstructor(denuncia, actorId);
+            case PENALIZAR -> penalizarInstructor(denuncia, request, actorId);
             case OCULTAR_RESENIA -> actividadARecalcular = ocultarResenia(denuncia, actorId);
             case DESESTIMAR -> {
                 // sin efecto secundario: se desestima y se cierra el caso.
@@ -182,7 +183,8 @@ public class ResolverDenunciaService {
             String mensajeInstructor = accion == ResolucionDenuncia.SUSPENDER
                     ? "Fuiste suspendido por una denuncia sobre " + contexto + "."
                     : accion == ResolucionDenuncia.PENALIZAR
-                            ? "Se te aplicó una penalización económica por una denuncia sobre " + contexto + "."
+                            ? "Se te aplicó una penalización económica por una denuncia sobre " + contexto
+                                    + ". Cargá el comprobante de pago desde \"Pago de penalización\" para volver a operar."
                             : "Una denuncia en tu contra sobre " + contexto + " fue desestimada.";
             TipoNotificacion tipo = accion == ResolucionDenuncia.SUSPENDER ? TipoNotificacion.INSTRUCTOR_SUSPENDIDO
                     : accion == ResolucionDenuncia.PENALIZAR ? TipoNotificacion.PENALIZACION_APLICADA
@@ -343,6 +345,8 @@ public class ResolverDenunciaService {
             multa.setMotivo(denuncia.getMotivo());
             multa.setMonto(monto);
             multa.setDenuncia(denuncia);
+            // V36: bloquea al instructor hasta que se apruebe el comprobante de pago.
+            multa.setEstadoPago(EstadoPagoPenalizacion.PENDIENTE_PAGO);
             multa = penalizacionRepository.saveAndFlush(multa);
             aplicadas++;
 
@@ -405,13 +409,27 @@ public class ResolverDenunciaService {
         return clases.size();
     }
 
-    private void penalizarInstructor(Denuncia denuncia, UUID actorId) {
+    /**
+     * V36: la multa exige monto. Antes se guardaba sin monto, y con el pago por comprobante el
+     * instructor no tendria forma de saber cuanto pagar. Nace PENDIENTE_PAGO y lo bloquea hasta
+     * que la administracion apruebe el comprobante.
+     */
+    private void penalizarInstructor(Denuncia denuncia, ResolverDenunciaRequest request, UUID actorId) {
+        BigDecimal monto = request.montoMulta();
+        if (monto == null || monto.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ValidacionException("Ingresá el monto de la penalización económica.");
+        }
+        if (VentanaPenalizacion.multaFueraDeRango(monto)) {
+            throw new ValidacionException(VentanaPenalizacion.mensajeRangoMulta());
+        }
         Usuario instructor = denuncia.getClase().getActividad().getInstructor();
 
         Penalizacion penalizacion = new Penalizacion();
         penalizacion.setUsuario(instructor);
         penalizacion.setTipo(TipoPenalizacion.ECONOMICA);
         penalizacion.setMotivo(denuncia.getMotivo());
+        penalizacion.setMonto(monto);
+        penalizacion.setEstadoPago(EstadoPagoPenalizacion.PENDIENTE_PAGO);
         // Vínculo con su origen: habilita el "Ver denuncia" del listado (criterio 6).
         penalizacion.setDenuncia(denuncia);
         penalizacion = penalizacionRepository.saveAndFlush(penalizacion);

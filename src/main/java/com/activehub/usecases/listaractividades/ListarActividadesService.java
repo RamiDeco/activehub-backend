@@ -40,6 +40,8 @@ public class ListarActividadesService {
         List<Specification<Actividad>> partes = new ArrayList<>();
         // El catálogo público solo muestra oferta de instructores verificados (RN-16).
         partes.add(ActividadSpecifications.deInstructorVerificado());
+        // V36: ni la de un instructor con una multa sin pagar.
+        partes.add(ActividadSpecifications.sinMultaPendiente());
         partes.add(ActividadSpecifications.conTexto(texto));
         partes.add(ActividadSpecifications.conCategoria(categoriaId));
         partes.add(ActividadSpecifications.conTipo(tipoActividadId));

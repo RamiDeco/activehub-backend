@@ -74,7 +74,7 @@ public class CrearClaseService {
         instructorVerificadoGuard.exigirVerificado(instructorId, "crear clases");
         // Una suspension vigente corta la operacion, no la sesion: el penalizado entra y ve
         // lo suyo, pero no publica ni modifica oferta mientras dure la sancion.
-        penalizacionVigenteGuard.exigirSinSuspensionVigente(instructorId, "crear clases");
+        penalizacionVigenteGuard.exigirPuedeOperar(instructorId, "crear clases");
 
         // La hora de fin se DERIVA de la duracion de la actividad (E2I-HU03 criterio 1: la
         // duracion es un dato de la actividad). El formulario pedia inicio y fin por separado,

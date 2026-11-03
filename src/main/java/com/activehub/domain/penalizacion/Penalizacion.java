@@ -4,6 +4,8 @@ import com.activehub.domain.denuncia.Denuncia;
 import com.activehub.domain.usuario.Usuario;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -21,9 +23,9 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 /**
- * Registro de solo-append e inmutable, mismo criterio que AuditLog: no
- * extiende BaseEntity porque no tiene sentido soft-deletar ni actualizar una
- * penalizacion ya aplicada.
+ * No extiende BaseEntity: una penalizacion aplicada no se da de baja. Desde V36 si cambian dos
+ * cosas, y quedan registradas con quien y cuando: el estado del pago de una multa
+ * (PENDIENTE_PAGO -> EN_REVISION -> PAGADA) y el levantamiento anticipado de una suspension.
  */
 @Entity
 @Table(name = "penalizacion")
@@ -61,6 +63,32 @@ public class Penalizacion {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "denuncia_id")
     private Denuncia denuncia;
+
+    /**
+     * Solo para tipo ECONOMICA aplicada desde V36. Null en las multas anteriores, que no
+     * bloquean: nunca se le pidio a nadie que las pagara por la plataforma.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_pago", length = 20)
+    private EstadoPagoPenalizacion estadoPago;
+
+    @Column(name = "pago_aprobado_at")
+    private Instant pagoAprobadoAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pago_aprobado_por_id")
+    private Usuario pagoAprobadoPor;
+
+    /** Solo para SUSPENSION_TEMPORAL: el administrador la levanto antes de fechaFin. */
+    @Column(name = "levantada_at")
+    private Instant levantadaAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "levantada_por_id")
+    private Usuario levantadaPor;
+
+    @Column(name = "motivo_levantamiento", columnDefinition = "TEXT")
+    private String motivoLevantamiento;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

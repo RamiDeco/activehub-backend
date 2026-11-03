@@ -67,7 +67,7 @@ public class EliminarActividadService {
             instructorVerificadoGuard.exigirVerificado(actorId, "eliminar actividades");
             // Solo para el dueño: un moderador no esta operando SU oferta, y si un admin queda
             // penalizado eso no deberia bloquear la moderacion de la plataforma.
-            penalizacionVigenteGuard.exigirSinSuspensionVigente(actorId, "eliminar actividades");
+            penalizacionVigenteGuard.exigirPuedeOperar(actorId, "eliminar actividades");
         }
 
         List<Clase> clasesVigentes = claseRepository.findByActividadIdAndEstadoNotInOrderByFechaHoraAsc(

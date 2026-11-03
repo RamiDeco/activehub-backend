@@ -1,5 +1,7 @@
 package com.activehub.domain.actividad;
 
+import com.activehub.domain.penalizacion.EstadoPagoPenalizacion;
+import com.activehub.domain.penalizacion.Penalizacion;
 import com.activehub.domain.usuario.EstadoVerificacion;
 import com.activehub.domain.usuario.PerfilInstructor;
 import java.math.BigDecimal;
@@ -94,6 +96,24 @@ public final class ActividadSpecifications {
                             cb.equal(perfil.get("usuario").get("id"), root.get("instructor").get("id")),
                             cb.equal(perfil.get("estadoVerificacion"), EstadoVerificacion.APROBADO)));
             return cb.exists(sub);
+        };
+    }
+
+    /**
+     * Excluye la oferta de los instructores con una multa sin pagar (V36): mientras dura el
+     * bloqueo sus actividades salen del catalogo y de las recomendaciones. Va junto con
+     * {@link #deInstructorVerificado()} en los dos lugares que arman el catalogo.
+     */
+    public static Specification<Actividad> sinMultaPendiente() {
+        return (root, query, cb) -> {
+            var sub = query.subquery(UUID.class);
+            var multa = sub.from(Penalizacion.class);
+            sub.select(multa.get("id"))
+                    .where(cb.and(
+                            cb.equal(multa.get("usuario").get("id"), root.get("instructor").get("id")),
+                            multa.get("estadoPago").in(
+                                    EstadoPagoPenalizacion.PENDIENTE_PAGO, EstadoPagoPenalizacion.EN_REVISION)));
+            return cb.not(cb.exists(sub));
         };
     }
 

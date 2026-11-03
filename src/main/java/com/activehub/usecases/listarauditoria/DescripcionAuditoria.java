@@ -118,7 +118,13 @@ final class DescripcionAuditoria {
             case DENUNCIA_EN_AUDITORIA -> actor + " tomó una denuncia para auditarla.";
             case DENUNCIA_RESUELTA -> actor + " resolvió una denuncia" + (meta.isEmpty() ? "." : " (" + resolucion(meta) + ").");
             case PENALIZACION_APLICADA -> actor + " aplicó una penalización" + (meta.isEmpty() ? "." : ": " + penalizacion(meta) + ".");
-            case SUSPENSION_LEVANTADA -> "El sistema levantó una suspensión cuya vigencia venció.";
+            case SUSPENSION_LEVANTADA -> meta.startsWith("ADMIN")
+                    ? actor + " levantó una suspensión antes de tiempo" + motivoDe(meta) + "."
+                    : "El sistema levantó una suspensión cuya vigencia venció.";
+            case COMPROBANTE_PENALIZACION_ENVIADO -> actor + " envió el comprobante de pago de una multa.";
+            case COMPROBANTE_PENALIZACION_INVALIDO -> actor + " marcó inválido el comprobante de pago de una multa"
+                    + motivoDe(meta) + ".";
+            case MULTA_PAGADA -> actor + " aprobó el pago de una multa y desbloqueó al instructor.";
 
             case USUARIO_ESTADO_ACTUALIZADO -> actor + " cambió el estado de una cuenta" + (meta.isEmpty() ? "." : ": " + meta + ".");
             case USUARIO_ACTUALIZADO -> actor + " editó los datos de un usuario.";
@@ -230,5 +236,11 @@ final class DescripcionAuditoria {
             return "suspensión temporal" + (meta.contains("·") ? meta.substring(meta.indexOf('·') + 1).trim() : "");
         }
         return meta;
+    }
+
+    /** La metadata de las acciones con motivo (V36) es "MARCA · motivo": devuelve " (motivo)". */
+    private static String motivoDe(String meta) {
+        int i = meta.indexOf('·');
+        return i < 0 || meta.substring(i + 1).isBlank() ? "" : " (" + meta.substring(i + 1).trim() + ")";
     }
 }

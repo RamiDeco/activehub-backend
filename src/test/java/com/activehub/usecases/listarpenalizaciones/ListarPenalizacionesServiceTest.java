@@ -3,6 +3,10 @@ package com.activehub.usecases.listarpenalizaciones;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.activehub.domain.penalizacion.ComprobantePenalizacion;
+import com.activehub.domain.penalizacion.ComprobantePenalizacionRepository;
+import com.activehub.domain.penalizacion.EstadoComprobantePenalizacion;
+import com.activehub.domain.penalizacion.EstadoPagoPenalizacion;
 import com.activehub.domain.penalizacion.Penalizacion;
 import com.activehub.domain.penalizacion.PenalizacionRepository;
 import com.activehub.domain.penalizacion.TipoPenalizacion;
@@ -33,6 +37,8 @@ class ListarPenalizacionesServiceTest {
 
     @Mock
     private PenalizacionRepository penalizacionRepository;
+    @Mock
+    private ComprobantePenalizacionRepository comprobantePenalizacionRepository;
 
     private ListarPenalizacionesService service;
 
@@ -43,7 +49,8 @@ class ListarPenalizacionesServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ListarPenalizacionesService(penalizacionRepository, relojEn(LocalDate.of(2026, 9, 10)));
+        service = new ListarPenalizacionesService(
+                penalizacionRepository, comprobantePenalizacionRepository, relojEn(LocalDate.of(2026, 9, 10)));
     }
 
     private static Usuario usuario() {
@@ -138,5 +145,51 @@ class ListarPenalizacionesServiceTest {
         when(penalizacionRepository.findAllConDetalle()).thenReturn(List.of());
 
         assertThat(service.listar()).isEmpty();
+    }
+
+    /** V36: una suspension levantada por un administrador ya no esta vigente aunque no haya vencido. */
+    @Test
+    void listar_suspensionLevantada_noEstaVigenteYTraeElMotivo() {
+        Penalizacion p = suspension(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 20));
+        p.setLevantadaAt(Instant.parse("2026-09-05T15:00:00Z"));
+        p.setMotivoLevantamiento("Se aclaró la situación");
+        when(penalizacionRepository.findAllConDetalle()).thenReturn(List.of(p));
+
+        ListarPenalizacionesResponse fila = service.listar().get(0);
+
+        assertThat(fila.vigente()).isFalse();
+        assertThat(fila.motivoLevantamiento()).isEqualTo("Se aclaró la situación");
+    }
+
+    /** V36: la multa trae el estado del pago y sus comprobantes, del mas reciente al mas viejo. */
+    @Test
+    void listar_multa_traeElEstadoDelPagoYSusComprobantes() {
+        Penalizacion multa = economica();
+        multa.setEstadoPago(EstadoPagoPenalizacion.EN_REVISION);
+        ComprobantePenalizacion comprobante = new ComprobantePenalizacion();
+        comprobante.setPenalizacion(multa);
+        comprobante.setNombreArchivo("transferencia.pdf");
+        comprobante.setEstado(EstadoComprobantePenalizacion.EN_REVISION);
+        ReflectionTestUtils.setField(comprobante, "id", UUID.randomUUID());
+        when(penalizacionRepository.findAllConDetalle()).thenReturn(List.of(multa));
+        when(comprobantePenalizacionRepository.findDePenalizaciones(List.of(multa.getId())))
+                .thenReturn(List.of(comprobante));
+
+        ListarPenalizacionesResponse fila = service.listar().get(0);
+
+        assertThat(fila.estadoPago()).isEqualTo("EN_REVISION");
+        assertThat(fila.comprobantes()).singleElement()
+                .satisfies(c -> {
+                    assertThat(c.nombreArchivo()).isEqualTo("transferencia.pdf");
+                    assertThat(c.estado()).isEqualTo("EN_REVISION");
+                });
+    }
+
+    /** Una multa anterior a V36 no tiene estado de pago: no se paga por la plataforma. */
+    @Test
+    void listar_multaAnteriorAV36_viajaSinEstadoDePago() {
+        when(penalizacionRepository.findAllConDetalle()).thenReturn(List.of(economica()));
+
+        assertThat(service.listar().get(0).estadoPago()).isNull();
     }
 }

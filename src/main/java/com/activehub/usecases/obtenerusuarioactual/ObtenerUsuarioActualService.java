@@ -1,5 +1,6 @@
 package com.activehub.usecases.obtenerusuarioactual;
 
+import com.activehub.domain.penalizacion.Penalizacion;
 import com.activehub.domain.permiso.ConfiguracionRol;
 import com.activehub.domain.permiso.ConfiguracionRolRepository;
 import com.activehub.domain.usuario.PerfilAlumno;
@@ -7,6 +8,7 @@ import com.activehub.domain.usuario.PerfilAlumnoRepository;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
 import com.activehub.shared.error.NoEncontradoException;
+import com.activehub.shared.security.PenalizacionVigenteGuard;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,14 +21,17 @@ public class ObtenerUsuarioActualService {
     private final UsuarioRepository usuarioRepository;
     private final PerfilAlumnoRepository perfilAlumnoRepository;
     private final ConfiguracionRolRepository configuracionRolRepository;
+    private final PenalizacionVigenteGuard penalizacionVigenteGuard;
 
     public ObtenerUsuarioActualService(
             UsuarioRepository usuarioRepository,
             PerfilAlumnoRepository perfilAlumnoRepository,
-            ConfiguracionRolRepository configuracionRolRepository) {
+            ConfiguracionRolRepository configuracionRolRepository,
+            PenalizacionVigenteGuard penalizacionVigenteGuard) {
         this.usuarioRepository = usuarioRepository;
         this.perfilAlumnoRepository = perfilAlumnoRepository;
         this.configuracionRolRepository = configuracionRolRepository;
+        this.penalizacionVigenteGuard = penalizacionVigenteGuard;
     }
 
     @Transactional(readOnly = true)
@@ -65,7 +70,10 @@ public class ObtenerUsuarioActualService {
                 usuario.getAuthProveedor().name(),
                 intereses,
                 perfilAlumno.map(PerfilAlumno::getCondicionSalud).orElse(null),
-                permisos
+                permisos,
+                new ObtenerUsuarioActualResponse.Restricciones(
+                        penalizacionVigenteGuard.suspensionVigente(usuarioId).map(Penalizacion::getFechaFin).orElse(null),
+                        penalizacionVigenteGuard.tieneMultaPendiente(usuarioId))
         );
     }
 }

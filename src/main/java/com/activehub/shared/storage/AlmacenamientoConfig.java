@@ -30,6 +30,7 @@ public class AlmacenamientoConfig {
             @Value("${app.storage.fotos-perfil-dir}") String fotosPerfilDir,
             @Value("${app.storage.fotos-actividad-dir}") String fotosActividadDir,
             @Value("${app.storage.documentos-instructor-dir}") String documentosInstructorDir,
+            @Value("${app.storage.comprobantes-penalizacion-dir}") String comprobantesPenalizacionDir,
             @Value("${app.storage.supabase.url:}") String supabaseUrl,
             @Value("${app.storage.supabase.service-key:}") String supabaseServiceKey,
             @Value("${app.storage.supabase.bucket:activehub}") String supabaseBucket
@@ -43,7 +44,7 @@ public class AlmacenamientoConfig {
                     httpClient, supabaseUrl, supabaseBucket, supabaseServiceKey);
         } else {
             almacenamiento = new AlmacenamientoDisco(
-                    fotosPerfilDir, fotosActividadDir, documentosInstructorDir);
+                    fotosPerfilDir, fotosActividadDir, documentosInstructorDir, comprobantesPenalizacionDir);
         }
         log.info("Almacenamiento de archivos: {}", almacenamiento.descripcion());
         return almacenamiento;

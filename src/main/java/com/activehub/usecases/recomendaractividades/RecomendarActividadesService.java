@@ -139,7 +139,8 @@ public class RecomendarActividadesService {
         gustos.agregarResenias(reseniaRepository.findByAlumnoIdConDetalle(alumnoId));
 
         // Solo la oferta vigente de instructores verificados, igual que el catalogo publico.
-        List<Actividad> candidatas = actividadRepository.findAll(ActividadSpecifications.deInstructorVerificado());
+        List<Actividad> candidatas = actividadRepository.findAll(
+                ActividadSpecifications.deInstructorVerificado().and(ActividadSpecifications.sinMultaPendiente()));
 
         gustos.agregarInteracciones(
                 interaccionRepository.ultimasDelAlumno(alumnoId, Limit.of(TOPE_INTERACCIONES)),

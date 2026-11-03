@@ -28,6 +28,7 @@ import com.activehub.domain.inscripcion.MetodoPago;
 import com.activehub.domain.inscripcion.Pago;
 import com.activehub.domain.inscripcion.PagoRepository;
 import com.activehub.domain.denuncia.ResolucionDenuncia;
+import com.activehub.domain.penalizacion.EstadoPagoPenalizacion;
 import com.activehub.domain.penalizacion.PenalizacionRepository;
 import com.activehub.domain.penalizacion.TipoPenalizacion;
 import com.activehub.domain.penalizacion.VentanaPenalizacion;
@@ -142,9 +143,11 @@ class ResolverDenunciaServiceTest {
     }
 
     private ResolverDenunciaRequest req(ResolucionDenuncia accion) {
-        // SUSPENDER exige plazo: se manda el mínimo de negocio y sin multa.
+        // SUSPENDER exige plazo: se manda el mínimo de negocio y sin multa. PENALIZAR exige
+        // monto desde V36: se manda uno dentro del rango.
         Integer dias = accion == ResolucionDenuncia.SUSPENDER ? VentanaPenalizacion.MINIMO_DIAS_SUSPENSION : null;
-        return new ResolverDenunciaRequest(accion.name(), null, null, dias);
+        BigDecimal monto = accion == ResolucionDenuncia.PENALIZAR ? new BigDecimal("5000") : null;
+        return new ResolverDenunciaRequest(accion.name(), null, monto, dias);
     }
 
     @Test
@@ -316,6 +319,38 @@ class ResolverDenunciaServiceTest {
         verify(usuarioRepository).save(instructor);
         verify(notificacionService).notificar(eq(alumnoId), eq(TipoNotificacion.DENUNCIA_RESUELTA), any(), eq(denunciaId), eq(Destino.denuncia(denunciaId)));
         verify(notificacionService).notificar(eq(instructorId), eq(TipoNotificacion.PENALIZACION_APLICADA), any(), eq(denunciaId), eq(Destino.clase(claseId)));
+    }
+
+    /** V36: la multa guarda el monto y nace pendiente de pago, que bloquea al instructor. */
+    @Test
+    void resolver_penalizar_guardaElMontoYNacePendienteDePago() {
+        penalizacionConId();
+
+        service.resolver(denunciaId, req(ResolucionDenuncia.PENALIZAR), UUID.randomUUID());
+
+        ArgumentCaptor<com.activehub.domain.penalizacion.Penalizacion> captor =
+                ArgumentCaptor.forClass(com.activehub.domain.penalizacion.Penalizacion.class);
+        verify(penalizacionRepository).saveAndFlush(captor.capture());
+        assertThat(captor.getValue().getMonto()).isEqualByComparingTo("5000");
+        assertThat(captor.getValue().getEstadoPago()).isEqualTo(EstadoPagoPenalizacion.PENDIENTE_PAGO);
+    }
+
+    /** V36: sin monto el instructor no sabría cuánto pagar. Antes la multa se guardaba sin monto. */
+    @Test
+    void resolver_penalizarSinMonto_lanzaValidacionYNoGuardaNada() {
+        assertThatThrownBy(() -> service.resolver(
+                denunciaId, new ResolverDenunciaRequest("PENALIZAR", null, null, null), UUID.randomUUID()))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessageContaining("monto");
+        verify(penalizacionRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void resolver_penalizarConMontoFueraDeRango_lanzaValidacion() {
+        assertThatThrownBy(() -> service.resolver(
+                denunciaId, new ResolverDenunciaRequest("PENALIZAR", null, new BigDecimal("10"), null), UUID.randomUUID()))
+                .isInstanceOf(ValidacionException.class);
+        verify(penalizacionRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -541,6 +576,9 @@ class ResolverDenunciaServiceTest {
         assertThat(captor.getAllValues()).extracting(p -> p.getTipo())
                 .containsExactly(TipoPenalizacion.SUSPENSION_TEMPORAL, TipoPenalizacion.ECONOMICA);
         assertThat(captor.getAllValues().get(1).getMonto()).isEqualByComparingTo("12000");
+        // V36: la multa que acompaña a la suspensión también se paga con comprobante.
+        assertThat(captor.getAllValues().get(1).getEstadoPago()).isEqualTo(EstadoPagoPenalizacion.PENDIENTE_PAGO);
+        assertThat(captor.getAllValues().get(0).getEstadoPago()).isNull();
         assertThat(instructor.getCantidadPenalizaciones()).isEqualTo(2);
     }
 

@@ -11,8 +11,10 @@ public record ResolverDenunciaRequest(
         // E3A-HU11 criterio 7: el detalle que el denunciante ve junto a la resolución. Opcional.
         @Size(max = 1000, message = "El detalle no puede superar los 1000 caracteres") @SinHtml String detalle,
         /**
-         * Solo para SUSPENDER: multa que acompaña a la suspensión. Puede ser cero (o venir
-         * null), y en ese caso la sanción es solo la suspensión, sin penalización económica.
+         * SUSPENDER: multa que acompaña a la suspensión. Puede ser cero (o venir null), y en
+         * ese caso la sanción es solo la suspensión, sin penalización económica.
+         * PENALIZAR: el monto de la multa, obligatorio (V36: el instructor tiene que saber
+         * cuánto pagar).
          */
         @DecimalMin(value = "0", message = "El monto no puede ser negativo") BigDecimal montoMulta,
         /**

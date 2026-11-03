@@ -125,6 +125,31 @@ class CrearPenalizacionServiceTest {
         assertThat(usuario.getEstado()).isEqualTo(EstadoUsuario.ACTIVO);
     }
 
+    /**
+     * V36: la multa nace pendiente de pago (eso bloquea al instructor hasta que se apruebe el
+     * comprobante) y el aviso lleva a su pantalla de sanciones, donde la paga.
+     */
+    @Test
+    void crear_economica_nacePendienteDePagoYElAvisoLlevaALaPantallaDePago() {
+        usuarioExiste();
+        guardaDevolviendoLaMisma();
+        var request = new CrearPenalizacionRequest(
+                usuarioId, List.of("Económica"), "No se presentó", new BigDecimal("5000"), null, null);
+
+        service.crear(request, adminId);
+
+        org.mockito.ArgumentCaptor<Penalizacion> captor = org.mockito.ArgumentCaptor.forClass(Penalizacion.class);
+        verify(penalizacionRepository).saveAndFlush(captor.capture());
+        Penalizacion multa = captor.getValue();
+        assertThat(multa.getEstadoPago()).isEqualTo(com.activehub.domain.penalizacion.EstadoPagoPenalizacion.PENDIENTE_PAGO);
+        verify(notificacionService).notificar(
+                org.mockito.ArgumentMatchers.eq(usuarioId),
+                org.mockito.ArgumentMatchers.eq(com.activehub.shared.notificacion.TipoNotificacion.PENALIZACION_APLICADA),
+                argThat(m -> m.contains("comprobante de pago")),
+                org.mockito.ArgumentMatchers.eq(multa.getId()),
+                org.mockito.ArgumentMatchers.eq(Destino.penalizacion(multa.getId())));
+    }
+
     @Test
     void crear_economicaSinMonto_lanzaValidacion() {
         usuarioExiste();

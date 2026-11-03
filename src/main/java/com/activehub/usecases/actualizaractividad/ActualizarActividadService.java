@@ -77,7 +77,7 @@ public class ActualizarActividadService {
 
         // Una suspension vigente corta la operacion, no la sesion: el penalizado entra y ve
         // lo suyo, pero no publica ni modifica oferta mientras dure la sancion.
-        penalizacionVigenteGuard.exigirSinSuspensionVigente(instructorId, "editar actividades");
+        penalizacionVigenteGuard.exigirPuedeOperar(instructorId, "editar actividades");
 
         TipoActividad tipo = tipoActividadRepository.findById(request.tipoActividadId())
                 .orElseThrow(() -> new NoEncontradoException("Tipo de actividad no encontrado."));

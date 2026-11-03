@@ -75,6 +75,8 @@ public class LevantarSuspensionesVencidasService {
                 .filter(p -> p.getUsuario().getId().equals(usuario.getId()))
                 .filter(p -> p.getTipo() == TipoPenalizacion.SUSPENSION_TEMPORAL)
                 .filter(p -> p.getFechaFin() != null)
+                // V36: una suspension que el administrador levanto ya no cuenta.
+                .filter(p -> p.getLevantadaAt() == null)
                 .anyMatch(p -> !hoy.isAfter(p.getFechaFin()));
     }
 }

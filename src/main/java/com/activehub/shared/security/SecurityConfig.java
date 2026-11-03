@@ -16,6 +16,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final EmailVerificadoFilter emailVerificadoFilter;
+    private final MultaPendienteFilter multaPendienteFilter;
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final RestAccessDeniedHandler restAccessDeniedHandler;
 
@@ -23,10 +24,12 @@ public class SecurityConfig {
             JwtService jwtService,
             tools.jackson.databind.ObjectMapper objectMapper,
             RestAuthenticationEntryPoint restAuthenticationEntryPoint,
-            RestAccessDeniedHandler restAccessDeniedHandler
+            RestAccessDeniedHandler restAccessDeniedHandler,
+            PenalizacionVigenteGuard penalizacionVigenteGuard
     ) {
         this.jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtService);
         this.emailVerificadoFilter = new EmailVerificadoFilter(jwtService, objectMapper);
+        this.multaPendienteFilter = new MultaPendienteFilter(penalizacionVigenteGuard, objectMapper);
         this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
         this.restAccessDeniedHandler = restAccessDeniedHandler;
     }
@@ -96,7 +99,9 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 // Después del de autenticación: primero se sabe quién es, después si puede
                 // hacer algo más que confirmar su correo.
-                .addFilterAfter(emailVerificadoFilter, JwtAuthenticationFilter.class);
+                .addFilterAfter(emailVerificadoFilter, JwtAuthenticationFilter.class)
+                // V36: con la multa sin pagar, el instructor no modifica su oferta.
+                .addFilterAfter(multaPendienteFilter, EmailVerificadoFilter.class);
 
         return http.build();
     }

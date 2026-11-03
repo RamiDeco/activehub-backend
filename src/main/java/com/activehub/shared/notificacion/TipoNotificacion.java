@@ -43,9 +43,17 @@ public enum TipoNotificacion {
     ALUMNO_CANCELO_INSCRIPCION(false),
     NUEVA_RESENIA(false),
     MERCADOPAGO_TOKEN_VENCIDO(true),
+    /** V36: el administrador marcó inválido el comprobante de pago de una multa. */
+    COMPROBANTE_PENALIZACION_INVALIDO(true),
+    /** V36: el administrador aprobó el comprobante: la multa quedó pagada. */
+    MULTA_PAGADA(true),
+    /** V36: el administrador levantó una suspensión antes de tiempo. */
+    SUSPENSION_LEVANTADA(true),
 
     // Administrador
-    CAPTURA_PAGO_FALLIDA(true);
+    CAPTURA_PAGO_FALLIDA(true),
+    /** V36: un instructor mandó el comprobante de pago de una multa y espera la revisión. */
+    COMPROBANTE_PENALIZACION_ENVIADO(false);
 
     /**
      * Sólo lo importante va por correo: lo que le cambia a alguien la agenda o la plata

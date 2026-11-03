@@ -62,7 +62,7 @@ public class CrearActividadService {
 
         // Una suspension vigente corta la operacion, no la sesion: el penalizado entra y ve
         // lo suyo, pero no publica ni modifica oferta mientras dure la sancion.
-        penalizacionVigenteGuard.exigirSinSuspensionVigente(instructorId, "publicar actividades");
+        penalizacionVigenteGuard.exigirPuedeOperar(instructorId, "publicar actividades");
 
         TipoActividad tipo = tipoActividadRepository.findById(request.tipoActividadId())
                 .orElseThrow(() -> new NoEncontradoException("Tipo de actividad no encontrado."));

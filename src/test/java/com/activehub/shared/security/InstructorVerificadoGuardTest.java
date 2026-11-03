@@ -4,10 +4,13 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.activehub.domain.penalizacion.Penalizacion;
+import com.activehub.domain.penalizacion.PenalizacionRepository;
 import com.activehub.domain.usuario.EstadoVerificacion;
 import com.activehub.domain.usuario.PerfilInstructor;
 import com.activehub.domain.usuario.PerfilInstructorRepository;
 import com.activehub.shared.error.SinPermisoException;
+import com.activehub.shared.error.ValidacionException;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -22,7 +25,33 @@ class InstructorVerificadoGuardTest {
 
     @Mock private PerfilInstructorRepository perfilInstructorRepository;
 
+    @Mock private PenalizacionRepository penalizacionRepository;
     @InjectMocks private InstructorVerificadoGuard guard;
+
+    /** V36: la oferta de un instructor con la multa sin pagar no acepta inscripciones. */
+    @Test
+    void ofertaVigente_conMultaSinPagar_lanzaValidacionSinDecirElMotivo() {
+        UUID id = UUID.randomUUID();
+        when(perfilInstructorRepository.findByUsuarioId(id))
+                .thenReturn(Optional.of(perfilCon(EstadoVerificacion.APROBADO)));
+        when(penalizacionRepository.findMultaQueBloquea(id, PenalizacionVigenteGuard.MULTA_QUE_BLOQUEA))
+                .thenReturn(Optional.of(new Penalizacion()));
+
+        assertThatThrownBy(() -> guard.exigirOfertaVigente(id))
+                .isInstanceOf(ValidacionException.class)
+                .hasMessage("Esta actividad no está disponible en este momento.");
+    }
+
+    @Test
+    void ofertaVigente_aprobadoSinMulta_dejaPasar() {
+        UUID id = UUID.randomUUID();
+        when(perfilInstructorRepository.findByUsuarioId(id))
+                .thenReturn(Optional.of(perfilCon(EstadoVerificacion.APROBADO)));
+        when(penalizacionRepository.findMultaQueBloquea(id, PenalizacionVigenteGuard.MULTA_QUE_BLOQUEA))
+                .thenReturn(Optional.empty());
+
+        assertThatCode(() -> guard.exigirOfertaVigente(id)).doesNotThrowAnyException();
+    }
 
     private PerfilInstructor perfilCon(EstadoVerificacion estado) {
         PerfilInstructor perfil = new PerfilInstructor();

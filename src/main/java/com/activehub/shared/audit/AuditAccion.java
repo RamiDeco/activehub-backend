@@ -69,7 +69,14 @@ public enum AuditAccion {
     DENUNCIA_EN_AUDITORIA,
     DENUNCIA_RESUELTA,
     PENALIZACION_APLICADA,
+    /** La suspension termino por vigencia (sistema) o la levanto un administrador con motivo (V36). */
     SUSPENSION_LEVANTADA,
+    /** V36: el instructor mando el comprobante de pago de una multa. */
+    COMPROBANTE_PENALIZACION_ENVIADO,
+    /** V36: el administrador marco invalido un comprobante; la multa vuelve a pendiente de pago. */
+    COMPROBANTE_PENALIZACION_INVALIDO,
+    /** V36: el administrador aprobo el comprobante y desbloqueo al instructor. */
+    MULTA_PAGADA,
     USUARIO_ESTADO_ACTUALIZADO,
     USUARIO_ACTUALIZADO,
     PERFIL_ACTUALIZADO,

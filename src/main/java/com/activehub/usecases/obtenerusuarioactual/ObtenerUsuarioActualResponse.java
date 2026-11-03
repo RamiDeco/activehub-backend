@@ -33,10 +33,23 @@ public record ObtenerUsuarioActualResponse(
          */
         String condicionSalud,
         /** Claves habilitadas para el rol (RN-19): el frontend oculta lo que el usuario no puede. */
-        List<String> permisos
+        List<String> permisos,
+        /**
+         * V36: las penalizaciones que hoy le cortan la operación. El frontend las usa para mandar
+         * al instructor con una multa sin pagar a su pantalla de pago y para el cartel de la
+         * suspensión. El control real lo hace el backend; esto es sólo para la pantalla.
+         */
+        Restricciones restricciones
 ) {
 
     /** Un interés es un TipoActividad (V19), con su categoría a cuestas. */
     public record Interes(UUID tipoActividadId, String nombre, UUID categoriaId, String categoria) {
+    }
+
+    /**
+     * @param suspendidoHasta último día de la suspensión que rige hoy (incluido), o null.
+     * @param multaPendiente  si tiene una multa pendiente de pago o con el comprobante en revisión.
+     */
+    public record Restricciones(LocalDate suspendidoHasta, boolean multaPendiente) {
     }
 }

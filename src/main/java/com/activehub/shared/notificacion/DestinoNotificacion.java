@@ -28,6 +28,11 @@ public enum DestinoNotificacion {
     DENUNCIA,
     /** "Mis datos" del instructor: el estado de su solicitud de verificación. */
     PERFIL_INSTRUCTOR,
+    /**
+     * Una penalización (V36). Instructor: su pantalla de sanciones, donde paga la multa.
+     * Administrador: Penalizaciones, para revisar el comprobante.
+     */
+    PENALIZACION,
     /** No hay pantalla a dónde ir: la notificación se muestra, pero no es clickeable. */
     NINGUNO
 }

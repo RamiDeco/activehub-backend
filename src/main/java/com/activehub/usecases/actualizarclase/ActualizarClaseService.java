@@ -47,7 +47,7 @@ public class ActualizarClaseService {
         instructorVerificadoGuard.exigirVerificado(instructorId, "editar clases");
         // Una suspension vigente corta la operacion, no la sesion: el penalizado entra y ve
         // lo suyo, pero no publica ni modifica oferta mientras dure la sancion.
-        penalizacionVigenteGuard.exigirSinSuspensionVigente(instructorId, "editar clases");
+        penalizacionVigenteGuard.exigirPuedeOperar(instructorId, "editar clases");
         Clase clase = claseRepository.findById(id)
                 .orElseThrow(() -> new NoEncontradoException("Clase no encontrada."));
 

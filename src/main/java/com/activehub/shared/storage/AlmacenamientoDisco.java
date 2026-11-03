@@ -22,10 +22,19 @@ public class AlmacenamientoDisco implements AlmacenamientoArchivos {
 
     private final Map<CarpetaArchivos, Path> directorios = new EnumMap<>(CarpetaArchivos.class);
 
-    public AlmacenamientoDisco(String fotosPerfilDir, String fotosActividadDir, String documentosInstructorDir) {
+    public AlmacenamientoDisco(
+            String fotosPerfilDir, String fotosActividadDir, String documentosInstructorDir,
+            String comprobantesPenalizacionDir) {
         directorios.put(CarpetaArchivos.FOTOS_PERFIL, Path.of(fotosPerfilDir));
         directorios.put(CarpetaArchivos.FOTOS_ACTIVIDAD, Path.of(fotosActividadDir));
         directorios.put(CarpetaArchivos.DOCUMENTOS_INSTRUCTOR, Path.of(documentosInstructorDir));
+        directorios.put(CarpetaArchivos.COMPROBANTES_PENALIZACION, Path.of(comprobantesPenalizacionDir));
+    }
+
+    /** Sin carpeta propia de comprobantes (V36): van al lado de la documentación del instructor. */
+    public AlmacenamientoDisco(String fotosPerfilDir, String fotosActividadDir, String documentosInstructorDir) {
+        this(fotosPerfilDir, fotosActividadDir, documentosInstructorDir,
+                Path.of(documentosInstructorDir).resolveSibling("comprobantes-penalizacion").toString());
     }
 
     @Override

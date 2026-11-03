@@ -1,5 +1,6 @@
 package com.activehub.shared.security;
 
+import com.activehub.domain.penalizacion.PenalizacionRepository;
 import com.activehub.domain.usuario.EstadoVerificacion;
 import com.activehub.domain.usuario.PerfilInstructorRepository;
 import com.activehub.shared.error.SinPermisoException;
@@ -23,9 +24,12 @@ import org.springframework.stereotype.Component;
 public class InstructorVerificadoGuard {
 
     private final PerfilInstructorRepository perfilInstructorRepository;
+    private final PenalizacionRepository penalizacionRepository;
 
-    public InstructorVerificadoGuard(PerfilInstructorRepository perfilInstructorRepository) {
+    public InstructorVerificadoGuard(
+            PerfilInstructorRepository perfilInstructorRepository, PenalizacionRepository penalizacionRepository) {
         this.perfilInstructorRepository = perfilInstructorRepository;
+        this.penalizacionRepository = penalizacionRepository;
     }
 
     /**
@@ -47,11 +51,14 @@ public class InstructorVerificadoGuard {
     }
 
     /**
-     * Version orientada al alumno: la oferta de un instructor no verificado no se puede
-     * consumir. El mensaje no menciona el estado del instructor — no es asunto del alumno.
+     * Version orientada al alumno: no se puede consumir la oferta de un instructor no
+     * verificado, ni la de uno con una multa sin pagar (V36: sus actividades salen del
+     * catalogo y no aceptan inscripciones ni preinscripciones, tampoco pasar una preinscripcion
+     * a inscripcion). El mensaje no menciona el motivo: no es asunto del alumno.
      */
     public void exigirOfertaVigente(UUID instructorId) {
-        if (!estaVerificado(instructorId)) {
+        if (!estaVerificado(instructorId)
+                || penalizacionRepository.findMultaQueBloquea(instructorId, PenalizacionVigenteGuard.MULTA_QUE_BLOQUEA).isPresent()) {
             throw new ValidacionException("Esta actividad no está disponible en este momento.");
         }
     }

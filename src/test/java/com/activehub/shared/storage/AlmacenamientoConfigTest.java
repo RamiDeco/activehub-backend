@@ -18,6 +18,7 @@ class AlmacenamientoConfigTest {
                 "./uploads/fotos-perfil",
                 "./uploads/fotos-actividad",
                 "./uploads/documentos-instructor",
+                "./uploads/comprobantes-penalizacion",
                 url,
                 serviceKey,
                 "activehub");

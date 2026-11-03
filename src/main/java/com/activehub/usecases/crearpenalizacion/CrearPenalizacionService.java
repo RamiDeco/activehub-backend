@@ -9,6 +9,7 @@ import com.activehub.domain.inscripcion.Inscripcion;
 import com.activehub.domain.inscripcion.InscripcionRepository;
 import com.activehub.domain.inscripcion.Pago;
 import com.activehub.domain.inscripcion.PagoRepository;
+import com.activehub.domain.penalizacion.EstadoPagoPenalizacion;
 import com.activehub.domain.penalizacion.Penalizacion;
 import com.activehub.domain.penalizacion.PenalizacionRepository;
 import com.activehub.domain.penalizacion.TipoPenalizacion;
@@ -143,6 +144,8 @@ public class CrearPenalizacionService {
             multa.setTipo(TipoPenalizacion.ECONOMICA);
             multa.setMotivo(motivo);
             multa.setMonto(request.monto());
+            // V36: bloquea al instructor hasta que se apruebe el comprobante de pago.
+            multa.setEstadoPago(EstadoPagoPenalizacion.PENDIENTE_PAGO);
             aplicadas.add(multa);
         }
 
@@ -195,10 +198,14 @@ public class CrearPenalizacionService {
                     + (clasesCanceladas == 1 ? " clase tuya" : " clases tuyas")
                     + " dentro del período de la suspensión y se reintegró a los inscriptos.";
         }
+        if (tipos.contains(TipoPenalizacion.ECONOMICA)) {
+            aviso += " Cargá el comprobante de pago desde \"Pago de penalización\" para volver a operar.";
+        }
         notificacionService.notificar(
-                // Sin destino: el usuario penalizado no tiene una pantalla donde ver sus
-                // penalizaciones (el ABM es del admin), asi que el aviso se muestra sin link.
-                usuario.getId(), TipoNotificacion.PENALIZACION_APLICADA, aviso, aplicadas.get(0).getId(), Destino.ninguno());
+                // V36: lleva a la pantalla de sanciones del instructor, donde ve la sancion y
+                // paga la multa. Antes no tenia ninguna pantalla y el aviso no era clickeable.
+                usuario.getId(), TipoNotificacion.PENALIZACION_APLICADA, aviso, aplicadas.get(0).getId(),
+                Destino.penalizacion(aplicadas.get(0).getId()));
 
         return new CrearPenalizacionResponse(
                 usuario.getId(), usuario.getCantidadPenalizaciones(), respuesta);

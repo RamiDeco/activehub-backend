@@ -70,6 +70,13 @@ app:
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  # A donde transfiere el instructor el pago de una multa (V36). Se muestran tal cual en su
+  # pantalla de pago. Vacias, la pantalla le dice que consulte los datos con la administracion.
+  penalizaciones:
+    transferencia:
+      alias: ${PENALIZACION_TRANSFERENCIA_ALIAS:}
+      cbu: ${PENALIZACION_TRANSFERENCIA_CBU:}
+      titular: ${PENALIZACION_TRANSFERENCIA_TITULAR:}
   mercadopago:
     access-token: ${MP_ACCESS_TOKEN:}
     # AES-256 (32 bytes en base64) para cifrar los tokens OAuth de los instructores en la base.
@@ -137,6 +144,7 @@ app:
     documentos-instructor-dir: ${DOCUMENTOS_INSTRUCTOR_DIR:./uploads/documentos-instructor}
     fotos-perfil-dir: ${FOTOS_PERFIL_DIR:./uploads/fotos-perfil}
     fotos-actividad-dir: ${FOTOS_ACTIVIDAD_DIR:./uploads/fotos-actividad}
+    comprobantes-penalizacion-dir: ${COMPROBANTES_PENALIZACION_DIR:./uploads/comprobantes-penalizacion}
     # Supabase Storage. Con url y service-key cargadas, los archivos van al bucket y los
     # directorios de arriba quedan sin uso; vacias, se sigue escribiendo en disco. No hay
     # ningun flag de modo a proposito: ver AlmacenamientoConfig.

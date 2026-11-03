@@ -1,7 +1,7 @@
 package com.activehub.shared.storage;
 
 /**
- * Los tres tipos de archivo que guarda la plataforma. Cada uno tiene su propio destino, y esa
+ * Los tipos de archivo que guarda la plataforma. Cada uno tiene su propio destino, y esa
  * separación es la que permite que las fotos sean públicas de hecho (cualquiera ve el catálogo)
  * y la documentación del instructor no lo sea nunca.
  *
@@ -18,7 +18,10 @@ public enum CarpetaArchivos {
     FOTOS_ACTIVIDAD("fotos-actividad"),
 
     /** Documentación que respalda la solicitud del instructor ({@code documento_instructor.ruta_archivo}). */
-    DOCUMENTOS_INSTRUCTOR("documentos-instructor");
+    DOCUMENTOS_INSTRUCTOR("documentos-instructor"),
+
+    /** Comprobante de pago de una multa ({@code comprobante_penalizacion.ruta_archivo}, V36). Privado. */
+    COMPROBANTES_PENALIZACION("comprobantes-penalizacion");
 
     private final String prefijo;
 

@@ -36,6 +36,10 @@ public record Destino(DestinoNotificacion tipo, UUID id) {
     }
 
     /** Para lo que no tiene pantalla propia (una penalización, una actividad ya eliminada). */
+    public static Destino penalizacion(UUID penalizacionId) {
+        return new Destino(DestinoNotificacion.PENALIZACION, penalizacionId);
+    }
+
     public static Destino ninguno() {
         return new Destino(DestinoNotificacion.NINGUNO, null);
     }

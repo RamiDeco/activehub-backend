@@ -15,7 +15,10 @@ import com.activehub.domain.usuario.PerfilAlumnoRepository;
 import com.activehub.domain.usuario.Rol;
 import com.activehub.domain.usuario.Usuario;
 import com.activehub.domain.usuario.UsuarioRepository;
+import com.activehub.domain.penalizacion.Penalizacion;
 import com.activehub.shared.error.NoEncontradoException;
+import com.activehub.shared.security.PenalizacionVigenteGuard;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,6 +42,8 @@ class ObtenerUsuarioActualServiceTest {
     private PerfilAlumnoRepository perfilAlumnoRepository;
     @Mock
     private ConfiguracionRolRepository configuracionRolRepository;
+    @Mock
+    private PenalizacionVigenteGuard penalizacionVigenteGuard;
 
     private ObtenerUsuarioActualService service;
     private UUID usuarioId;
@@ -48,7 +53,7 @@ class ObtenerUsuarioActualServiceTest {
     @BeforeEach
     void setUp() {
         service = new ObtenerUsuarioActualService(
-                usuarioRepository, perfilAlumnoRepository, configuracionRolRepository);
+                usuarioRepository, perfilAlumnoRepository, configuracionRolRepository, penalizacionVigenteGuard);
 
         rolId = UUID.randomUUID();
         Rol rol = new Rol();
@@ -136,5 +141,34 @@ class ObtenerUsuarioActualServiceTest {
         when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.obtener(usuarioId)).isInstanceOf(NoEncontradoException.class);
+    }
+
+    /** V36: con esto el frontend manda al instructor con la multa sin pagar a su pantalla de pago. */
+    @Test
+    void obtener_informaLaSuspensionVigenteYLaMultaSinPagar() {
+        Penalizacion suspension = new Penalizacion();
+        suspension.setFechaFin(LocalDate.of(2026, 12, 1));
+        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(perfilAlumnoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.empty());
+        when(configuracionRolRepository.findByRolId(rolId)).thenReturn(List.of());
+        when(penalizacionVigenteGuard.suspensionVigente(usuarioId)).thenReturn(Optional.of(suspension));
+        when(penalizacionVigenteGuard.tieneMultaPendiente(usuarioId)).thenReturn(true);
+
+        ObtenerUsuarioActualResponse response = service.obtener(usuarioId);
+
+        assertThat(response.restricciones().suspendidoHasta()).isEqualTo(LocalDate.of(2026, 12, 1));
+        assertThat(response.restricciones().multaPendiente()).isTrue();
+    }
+
+    @Test
+    void obtener_sinSanciones_noInformaRestricciones() {
+        when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(perfilAlumnoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.empty());
+        when(configuracionRolRepository.findByRolId(rolId)).thenReturn(List.of());
+
+        ObtenerUsuarioActualResponse response = service.obtener(usuarioId);
+
+        assertThat(response.restricciones().suspendidoHasta()).isNull();
+        assertThat(response.restricciones().multaPendiente()).isFalse();
     }
 }
