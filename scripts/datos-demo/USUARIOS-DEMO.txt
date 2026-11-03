@@ -1,0 +1,149 @@
+USUARIOS DE DEMOSTRACIÓN - ActiveHub
+====================================
+Cuentas que crea scripts/datos-demo/03-limpieza-y-carga-demo.sql (17 en total).
+
+CONTRASEÑA: todas usan la misma, la que se acordó para la demostración. No se escribe
+en este archivo a propósito: el script sólo guarda su hash BCrypt.
+Se puede entrar con el correo o con el DNI. Todas tienen el correo verificado.
+Los correos son del dominio activehub.test, que no existe: no llega ningún mail.
+Las cuentas de administrador que ya existían no se tocan y no figuran acá.
+
+INSTRUCTORES (5, todos aprobados)
+------------------------------------------------------------
+1. Lucía Fernández
+   Correo:       lucia.fernandez@activehub.test
+   DNI:          30111137
+   Teléfono:     +54 9 261 555 0100
+   Especialidad: Entrenamiento funcional y de fuerza (8 años de experiencia)
+   Actividades:
+     - Pesas para principiantes (Trabajo con pesas, Física media, $9.000 por clase)
+     - Tonificación con cargas livianas (Trabajo con cargas livianas, Física baja, $7.000 por clase)
+     - Funcional en el parque (Funcional, Física media, $8.000 por clase)
+     - Defensa personal para el día a día (Defensa Personal, Física media, $8.500 por clase)
+
+2. Martín Gómez
+   Correo:       martin.gomez@activehub.test
+   DNI:          30111274
+   Teléfono:     +54 9 261 555 0101
+   Especialidad: Running recreativo y ciclismo (6 años de experiencia)
+   Actividades:
+     - Running recreativo en grupo (Running, Física media, $6.000 por clase)
+     - Bicicleteada por los caminos de Maipú (Andar en bicicleta, Física media, $9.500 por clase)
+     - Resistencia con el propio cuerpo (Ejercicios de resistencia corporal, Física alta, $7.500 por clase)
+
+3. Valentina Ruiz
+   Correo:       valentina.ruiz@activehub.test
+   DNI:          30111411
+   Teléfono:     +54 9 261 555 0102
+   Especialidad: Yoga, pilates y bienestar (10 años de experiencia)
+   Actividades:
+     - Yoga al amanecer (Yoga, Física baja, $7.000 por clase)
+     - Pilates en colchoneta (Pilates, Física baja, $8.000 por clase)
+     - Estiramientos y movilidad (Estiramientos, Física baja, $5.500 por clase)
+     - Relajación y respiración consciente (Relajación, Física baja, $5.000 por clase)
+
+4. Diego Morales
+   Correo:       diego.morales@activehub.test
+   DNI:          30111548
+   Teléfono:     +54 9 261 555 0103
+   Especialidad: Senderismo y actividades de montaña (12 años de experiencia)
+   Actividades:
+     - Senderismo al Cerro Arco (Senderismo, Física media, $10.000 por clase)
+     - Trekking en Potrerillos (Trekking, Física alta, $18.000 por clase)
+     - Mountain bike en El Challao (Mountain Bike, Física alta, $12.000 por clase)
+     - Escalada para principiantes en palestra (Escalada, Física media, $11.000 por clase)
+
+5. Carolina Sosa
+   Correo:       carolina.sosa@activehub.test
+   DNI:          30111685
+   Teléfono:     +54 9 261 555 0104
+   Especialidad: Natación, baile y tai chi (7 años de experiencia)
+   Actividades:
+     - Natación para adultos (Nadar, Física media, $9.000 por clase)
+     - Ritmos latinos para moverse (Bailar, Física media, $6.500 por clase)
+     - Tai Chi en la plaza (Tai Chi, Física baja, $5.000 por clase)
+
+ALUMNOS (12)
+------------------------------------------------------------
+1. Sofía Álvarez
+   Correo:    sofia.alvarez@activehub.test
+   DNI:       30111896
+   Teléfono:  +54 9 261 555 0200
+   Intereses: Yoga, Pilates, Relajación
+
+2. Juan Pérez
+   Correo:    juan.perez@activehub.test
+   DNI:       30112107
+   Teléfono:  +54 9 261 555 0201
+   Intereses: Running, Andar en bicicleta, Funcional
+
+3. Camila Romero
+   Correo:    camila.romero@activehub.test
+   DNI:       30112318
+   Teléfono:  +54 9 261 555 0202
+   Intereses: Bailar, Yoga, Estiramientos
+
+4. Tomás Herrera
+   Correo:    tomas.herrera@activehub.test
+   DNI:       30112529
+   Teléfono:  +54 9 261 555 0203
+   Intereses: Mountain Bike, Escalada, Trekking
+
+5. Agustina Díaz
+   Correo:    agustina.diaz@activehub.test
+   DNI:       30112740
+   Teléfono:  +54 9 261 555 0204
+   Intereses: Senderismo, Trekking, Tai Chi
+
+6. Nicolás Castro
+   Correo:    nicolas.castro@activehub.test
+   DNI:       30112951
+   Teléfono:  +54 9 261 555 0205
+   Intereses: Trabajo con pesas, Ejercicios de resistencia corporal, Running
+
+7. Florencia Molina
+   Correo:    florencia.molina@activehub.test
+   DNI:       30113162
+   Teléfono:  +54 9 261 555 0206
+   Intereses: Pilates, Nadar, Trabajo con cargas livianas
+   Información de salud: Lesión de rodilla operada hace dos años.
+
+8. Mateo Torres
+   Correo:    mateo.torres@activehub.test
+   DNI:       30113373
+   Teléfono:  +54 9 261 555 0207
+   Intereses: Defensa Personal, Funcional, Escalada
+
+9. Julieta Medina
+   Correo:    julieta.medina@activehub.test
+   DNI:       30113584
+   Teléfono:  +54 9 261 555 0208
+   Intereses: Nadar, Bailar, Relajación
+
+10. Federico Rojas
+   Correo:    federico.rojas@activehub.test
+   DNI:       30113795
+   Teléfono:  +54 9 261 555 0209
+   Intereses: Andar en bicicleta, Senderismo, Mountain Bike
+
+11. Micaela Suárez
+   Correo:    micaela.suarez@activehub.test
+   DNI:       30114006
+   Teléfono:  +54 9 261 555 0210
+   Intereses: Estiramientos, Tai Chi, Yoga
+   Información de salud: Asma leve, controlada.
+
+12. Lautaro Benítez
+   Correo:    lautaro.benitez@activehub.test
+   DNI:       30114217
+   Teléfono:  +54 9 261 555 0211
+   Intereses: Trabajo con pesas, Defensa Personal, Running
+
+PARA PROBAR RÁPIDO
+------------------------------------------------------------
+- Alumna con muchas clases y reseñas: sofia.alvarez@activehub.test
+- Alumna con información de salud cargada: florencia.molina@activehub.test
+- Instructora con 4 actividades: lucia.fernandez@activehub.test
+- Instructor de aventura (trekking, mountain bike, escalada): diego.morales@activehub.test
+- En "Próximas clases" de cualquier instructor hay inscripciones con el cobro en efectivo
+  pendiente, para mostrar "Confirmar cobro".

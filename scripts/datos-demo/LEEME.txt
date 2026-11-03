@@ -1,0 +1,51 @@
+DATOS DE DEMOSTRACION DE ActiveHub
+==================================
+
+Tres scripts SQL para dejar la base con datos coherentes para mostrar la aplicacion.
+NO son migraciones de Flyway (por eso no estan en src/main/resources/db/migration):
+se ejecutan a mano, una sola vez, en el SQL Editor de Supabase.
+
+ORDEN
+1. Avisar al equipo: la base es compartida y el paso 3 borra datos de todos.
+2. 01-copia-de-seguridad.sql
+   Copia todas las tablas de public al esquema respaldo_pre_demo. Al final muestra
+   las filas de cada tabla en public y en la copia: tienen que coincidir.
+3. 03-limpieza-y-carga-demo.sql
+   Borra alumnos, instructores, toda la oferta y la taxonomia, y carga los datos de
+   demostracion. Al final muestra un resumen con las cantidades.
+4. Reiniciar el backend si estaba levantado (no es obligatorio, pero evita ver datos
+   viejos en alguna pantalla abierta).
+
+PARA VOLVER ATRAS
+   02-restaurar-copia.sql deja public como estaba al hacer la copia (pierde lo que se
+   haya hecho despues).
+
+CUANDO YA NO HAGA FALTA LA COPIA
+   DROP SCHEMA respaldo_pre_demo CASCADE;
+   La copia tiene los hashes de contrasenia de las cuentas viejas: no dejarla para siempre.
+
+CUENTAS QUE QUEDAN
+   - Las de administrador no se tocan.
+   - 5 instructores aprobados y 12 alumnos, todos con correo nombre.apellido@activehub.test
+     (por ejemplo lucia.fernandez@activehub.test o sofia.alvarez@activehub.test) y la
+     contrasenia que se acordo para la demostracion. La contrasenia no esta escrita en
+     ningun archivo: el script solo tiene su hash BCrypt. Para cambiarla hay que generar
+     otro hash y reemplazarlo en el script.
+   - Instructores: Lucia Fernandez, Martin Gomez, Valentina Ruiz, Diego Morales y
+     Carolina Sosa.
+   - Alumnos: Sofia Alvarez, Juan Perez, Camila Romero, Tomas Herrera, Agustina Diaz,
+     Nicolas Castro, Florencia Molina, Mateo Torres, Julieta Medina, Federico Rojas,
+     Micaela Suarez y Lautaro Benitez.
+
+QUE NO TRAEN LOS DATOS
+   - Fotos: las actividades se ven con su color de fondo hasta que el instructor suba una.
+   - Documentacion de los instructores: estan aprobados pero sin archivos (un registro sin
+     archivo daria error al abrirlo).
+   - Pagos con Mercado Pago: todo es en efectivo, para que los procesos automaticos no
+     intenten capturar pagos inexistentes. Ningun instructor tiene la cuenta vinculada.
+
+COMO SE GENERO
+   El script 03 se genera con un programa en Python (datos fijos, sin azar entre corridas)
+   y se probo entero en un PostgreSQL 16 local con las 35 migraciones aplicadas: la copia,
+   la carga dos veces seguidas, la restauracion (las 27 tablas iguales a la copia) y el
+   backend levantado contra esa base (login de alumno e instructor, catalogo y listados).
